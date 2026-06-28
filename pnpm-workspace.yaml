@@ -1,0 +1,12 @@
+# pnpm config for this package (dev/test only — pi ignores this at runtime).
+#
+# tree-sitter-bash ships a prebuilt .wasm; its `node-gyp-build` install script
+# just links the platform prebuild (no compilation). The other three are
+# transitive native builds pulled in by @earendil-works/pi-coding-agent (the
+# dev dependency used for type-checking/linting). pnpm 11 blocks build scripts
+# by default and errors on ignored builds; approving avoids that.
+allowBuilds:
+  tree-sitter-bash: true
+  "@google/genai": true
+  koffi: true
+  protobufjs: true

@@ -1,0 +1,72 @@
+{
+  "name": "permission",
+  "version": "1.0.0",
+  "description": "Permission enforcement extension for the Pi coding agent.",
+  "type": "module",
+  "exports": {
+    ".": "./extensions/permission/service.ts"
+  },
+  "imports": {
+    "#src/*": "./extensions/permission/*",
+    "#test/*": "./extensions/permission/test/*"
+  },
+  "files": [
+    "extensions",
+    "schemas/permissions.schema.json",
+    "README.md",
+    "permission.example.json"
+  ],
+  "scripts": {
+    "format": "biome format --write .",
+    "lint": "biome check . && eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "pi-coding-agent",
+    "coding-agent",
+    "permissions",
+    "policy",
+    "access-control",
+    "authorization",
+    "security"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/casonadams/permission.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.79.0",
+    "@earendil-works/pi-tui": ">=0.79.0"
+  },
+  "dependencies": {
+    "tree-sitter-bash": "^0.25.1",
+    "web-tree-sitter": "^0.26.9"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@eslint/js": "^10.0.1",
+    "@earendil-works/pi-coding-agent": "0.79.6",
+    "@earendil-works/pi-tui": "0.79.6",
+    "@types/node": "^22.15.3",
+    "eslint": "^10.4.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0",
+    "vitest": "^4.1.8"
+  }
+}

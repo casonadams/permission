@@ -1,0 +1,115 @@
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { createRuntime, type Runtime, registerCommand } from "./composition-runtime";
+import { GateDecisionReporter } from "./decision-reporter";
+import { AgentPrepHandler, PermissionGateHandler, SessionLifecycleHandler } from "./handlers";
+import { GateRunner } from "./handlers/gates/runner";
+import { SkillInputGatePipeline } from "./handlers/gates/skill-input-gate-pipeline";
+import { ToolCallGatePipeline } from "./handlers/gates/tool-call-gate-pipeline";
+import { requestPermissionDecisionFromUi } from "./permission-dialog";
+import { registerPermissionRpcHandlers } from "./permission-event-rpc";
+import { PermissionResolver } from "./permission-resolver";
+import { LocalPermissionsService } from "./permissions-service";
+import { PermissionServiceLifecycle } from "./service-lifecycle";
+import { isSubagentExecutionContext } from "./subagent-context";
+import { subscribeSubagentLifecycle } from "./subagent-lifecycle-events";
+import { installLocalPrompter } from "./ui/prompter.ts";
+import { canResolveAskPermissionRequest } from "./yolo-mode";
+
+export function installPermissionExtension(pi: ExtensionAPI): void {
+  const runtime = createRuntime(pi);
+  runtime.config.refresh();
+  registerCommand(pi, runtime);
+  registerHandlers(pi, runtime);
+  installPromptDispatcher(pi, runtime);
+}
+
+function registerHandlers(pi: ExtensionAPI, runtime: Runtime): void {
+  const resolver = new PermissionResolver(runtime.manager, runtime.rules);
+  const toolRegistry = createToolRegistry(pi);
+  const lifecycle = new SessionLifecycleHandler({
+    session: runtime.session,
+    resolver,
+    serviceLifecycle: createServiceLifecycle(pi, runtime),
+    logger: runtime.logger,
+  });
+  const gates = createGateHandler({ runtime, resolver, pi, toolRegistry });
+  const agentPrep = new AgentPrepHandler(runtime.session, resolver, toolRegistry);
+  pi.on("session_start", (event, ctx) => lifecycle.handleSessionStart(event, ctx));
+  pi.on("resources_discover", (event) => lifecycle.handleResourcesDiscover(event));
+  pi.on("session_shutdown", () => lifecycle.handleSessionShutdown());
+  pi.on("before_agent_start", (event, ctx) => agentPrep.handle(event, ctx));
+  pi.on("input", (event, ctx) => gates.handleInput(event, ctx));
+  pi.on("tool_call", (event, ctx) => gates.handleToolCall(event, ctx));
+}
+
+function createServiceLifecycle(pi: ExtensionAPI, runtime: Runtime): PermissionServiceLifecycle {
+  const rpcHandles = registerPermissionRpcHandlers(pi.events, {
+    permissionManager: runtime.manager,
+    sessionRules: runtime.rules,
+    session: runtime.session,
+    requestPermissionDecisionFromUi,
+    logger: runtime.logger,
+  });
+  const service = new LocalPermissionsService({
+    permissionManager: runtime.manager,
+    sessionRules: runtime.rules,
+    formatterRegistry: runtime.registries.formatters,
+    accessExtractorRegistry: runtime.registries.extractors,
+  });
+  const unsubSubagents = subscribeSubagentLifecycle(pi.events, runtime.registries.subagents);
+  return new PermissionServiceLifecycle({
+    service,
+    registry: runtime.registries.subagents,
+    events: pi.events,
+    subscriptions: [rpcHandles.unsubCheck, rpcHandles.unsubPrompt, unsubSubagents],
+  });
+}
+
+function createGateHandler(args: {
+  runtime: Runtime;
+  resolver: PermissionResolver;
+  pi: ExtensionAPI;
+  toolRegistry: ReturnType<typeof createToolRegistry>;
+}): PermissionGateHandler {
+  const { runtime, resolver, pi, toolRegistry } = args;
+  const reporter = new GateDecisionReporter(runtime.logger, pi.events);
+  const runner = new GateRunner({ resolver, recorder: runtime.rules, defaultPrompter: runtime.gateway, reporter });
+  return new PermissionGateHandler({
+    session: runtime.session,
+    toolRegistry,
+    pipeline: new ToolCallGatePipeline({
+      resolver,
+      inputs: runtime.session,
+      customFormatters: runtime.registries.formatters,
+      customExtractors: runtime.registries.extractors,
+    }),
+    skillInputPipeline: new SkillInputGatePipeline(resolver),
+    runner,
+  });
+}
+
+function createToolRegistry(pi: ExtensionAPI) {
+  return {
+    getAll: () => pi.getAllTools(),
+    getActive: () => pi.getActiveTools(),
+    setActive: (names: string[]) => pi.setActiveTools(names),
+  };
+}
+
+function installPromptDispatcher(pi: ExtensionAPI, runtime: Runtime): void {
+  installLocalPrompter(pi, {
+    prompter: runtime.prompter,
+    canResolve: (ctx) => canResolvePrompt(ctx, runtime),
+    config: runtime.config,
+    logger: runtime.logger,
+  });
+}
+
+function canResolvePrompt(ctx: ExtensionContext, runtime: Runtime): boolean {
+  if (ctx.hasUI) return true;
+  return canResolveAskPermissionRequest({
+    config: runtime.config.current(),
+    hasUI: false,
+    isSubagent: isSubagentExecutionContext(ctx, runtime.paths.subagentSessionsDir, runtime.registries.subagents),
+  });
+}

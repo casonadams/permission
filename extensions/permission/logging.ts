@@ -1,0 +1,96 @@
+import { appendFileSync } from "node:fs";
+
+import { EXTENSION_ID, type PermissionSystemExtensionConfig } from "./extension-config";
+
+export function safeJsonStringify(value: unknown): string | undefined {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(value, (_key, currentValue) => {
+    if (currentValue instanceof Error) {
+      return {
+        name: currentValue.name,
+        message: currentValue.message,
+        stack: currentValue.stack,
+      };
+    }
+
+    if (typeof currentValue === "bigint") {
+      return currentValue.toString();
+    }
+
+    const circular = circularMarker(currentValue, seen);
+    return circular ?? currentValue;
+  });
+}
+
+function circularMarker(value: unknown, seen: WeakSet<object>): string | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  if (seen.has(value)) return "[Circular]";
+  seen.add(value);
+  return undefined;
+}
+
+export interface PermissionSystemLogger {
+  debug: (event: string, details?: Record<string, unknown>) => string | undefined;
+  review: (event: string, details?: Record<string, unknown>) => string | undefined;
+}
+
+interface PermissionSystemLoggerOptions {
+  getConfig: () => PermissionSystemExtensionConfig;
+  debugLogPath: string;
+  reviewLogPath: string;
+  ensureLogsDirectory: () => string | undefined;
+}
+
+type LogLine = {
+  stream: "debug" | "review";
+  path: string;
+  event: string;
+  details: Record<string, unknown>;
+};
+
+export function createPermissionSystemLogger(options: PermissionSystemLoggerOptions): PermissionSystemLogger {
+  const { debugLogPath, reviewLogPath, ensureLogsDirectory } = options;
+
+  const writeLine = (entry: LogLine): string | undefined => {
+    const directoryError = ensureLogsDirectory();
+    if (directoryError) {
+      return directoryError;
+    }
+
+    try {
+      const line = safeJsonStringify({
+        timestamp: new Date().toISOString(),
+        extension: EXTENSION_ID,
+        stream: entry.stream,
+        event: entry.event,
+        ...entry.details,
+      });
+      if (!line) {
+        return `Failed to write permission-system ${entry.stream} log '${entry.path}': event could not be serialized.`;
+      }
+      appendFileSync(entry.path, `${line}\n`, "utf-8");
+      return undefined;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return `Failed to write permission-system ${entry.stream} log '${entry.path}': ${message}`;
+    }
+  };
+
+  const debug = (event: string, details: Record<string, unknown> = {}): string | undefined => {
+    if (!options.getConfig().debugLog) {
+      return undefined;
+    }
+
+    return writeLine({ stream: "debug", path: debugLogPath, event, details });
+  };
+
+  const review = (event: string, details: Record<string, unknown> = {}): string | undefined => {
+    if (!options.getConfig().permissionReviewLog) {
+      return undefined;
+    }
+
+    return writeLine({ stream: "review", path: reviewLogPath, event, details });
+  };
+
+  return { debug, review };
+}
