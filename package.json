@@ -37,7 +37,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/casonadams/permission.git"
+    "url": "git+https://github.com/casonadams/permission.git"
   },
   "engines": {
     "node": ">=22"

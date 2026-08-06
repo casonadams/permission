@@ -7,18 +7,20 @@ Permission enforcement extension for the [Pi coding agent](https://pi.mariozechn
 Either run `pi install`, which clones the package and adds it to `~/.pi/agent/settings.json` for you:
 
 ```bash
-pi install git:git@github.com:casonadams/permission.git
+pi install git:github.com/casonadams/permission
 ```
 
 Or add the same entry to `~/.pi/agent/settings.json` by hand:
 
 ```json
 "packages": [
-  "git:git@github.com:casonadams/permission.git"
+  "git:github.com/casonadams/permission"
 ]
 ```
 
 Either way, restart Pi and the extension loads automatically.
+Both forms clone over HTTPS; use `git:git@github.com:casonadams/permission.git` to clone over SSH instead.
+Add `-l` to `pi install` to write to project settings (`.pi/settings.json`) so a team shares the same policy.
 
 ## How it works
 
