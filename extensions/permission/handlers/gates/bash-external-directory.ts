@@ -163,5 +163,5 @@ function buildExternalDirectorySessionLabel(paths: readonly string[]): string {
   if (paths.length === 1) {
     return suggestSessionPattern("external_directory", paths[0]).label;
   }
-  return "Yes, allow these external directories for this session";
+  return "Session: these directories";
 }

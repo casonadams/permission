@@ -159,7 +159,7 @@ describe("describeBashExternalDirectoryGate", () => {
       command: "cat /outside/project/file.ts",
       promptSurface: "external_directory",
       promptValue: "cat /outside/project/file.ts",
-      sessionLabel: expect.stringContaining("external directory"),
+      sessionLabel: expect.stringContaining("Session: "),
       sessionPattern: expect.stringContaining("/outside/project/"),
     });
   });

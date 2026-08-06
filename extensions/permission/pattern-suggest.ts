@@ -58,26 +58,15 @@ export function suggestMcpPattern(target: string): string {
   return "*";
 }
 
-/** Surface-aware human-readable labels for the session-approval option. */
-const LABEL_BUILDERS: Record<string, (pattern: string) => string> = {
-  bash: (pattern) => `Yes, allow bash "${pattern}" for this session`,
-  mcp: (pattern) => `Yes, allow mcp tool "${pattern}" for this session`,
-  skill: (pattern) => `Yes, allow skill "${pattern}" for this session`,
-  external_directory: (pattern) => `Yes, allow access to external directory "${pattern}" for this session`,
-  path: (pattern) => `Yes, allow path "${pattern}" for this session`,
-};
-
-function buildLabel(pattern: string, surface: string): string {
-  const builder = LABEL_BUILDERS[surface];
-  if (builder) return builder(pattern);
-  if (shouldShowPathToolPattern(surface, pattern)) {
-    return `Yes, allow ${surface} "${pattern}" for this session`;
-  }
-  return `Yes, allow tool "${surface}" for this session`;
-}
-
-function shouldShowPathToolPattern(surface: string, pattern: string): boolean {
-  return PATH_BEARING_TOOLS.has(surface) && pattern !== "*";
+/**
+ * Label for the session-approval option.
+ *
+ * Kept to the pattern alone: the prompt title already names the surface and
+ * subject, and the option sits inline between `Allow` and `Deny`, where a long
+ * label is truncated.
+ */
+function buildSessionLabel(pattern: string): string {
+  return `Session: ${pattern}`;
 }
 
 /**
@@ -96,7 +85,7 @@ const PATTERN_BUILDERS: Record<string, (value: string) => string> = {
 
 export function suggestSessionPattern(surface: string, value: string): SessionApprovalSuggestion {
   const pattern = buildSessionPattern(surface, value);
-  return { surface, pattern, label: buildLabel(pattern, surface) };
+  return { surface, pattern, label: buildSessionLabel(pattern) };
 }
 
 function buildSessionPattern(surface: string, value: string): string {

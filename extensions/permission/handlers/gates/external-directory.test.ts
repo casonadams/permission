@@ -145,7 +145,7 @@ describe("describeExternalDirectoryGate", () => {
       path: "/outside/project/file.ts",
       promptSurface: "external_directory",
       promptValue: "/outside/project/file.ts",
-      sessionLabel: expect.stringContaining("external directory"),
+      sessionLabel: expect.stringContaining("Session: "),
       sessionPattern: expect.stringContaining("/outside/project/"),
     });
   });
@@ -185,7 +185,7 @@ describe("describeExternalDirectoryGate — extension and MCP tools (#352)", () 
     );
     expect(isGateDescriptor(result)).toBe(true);
     expect((result as GateDescriptor).promptDetails).toMatchObject({
-      sessionLabel: expect.stringContaining("external directory"),
+      sessionLabel: expect.stringContaining("Session: "),
       sessionPattern: expect.stringContaining("/outside/project/"),
     });
   });
@@ -204,7 +204,7 @@ describe("describeExternalDirectoryGate — extension and MCP tools (#352)", () 
     );
     expect(isGateDescriptor(result)).toBe(true);
     expect((result as GateDescriptor).promptDetails).toMatchObject({
-      sessionLabel: expect.stringContaining("external directory"),
+      sessionLabel: expect.stringContaining("Session: "),
       sessionPattern: expect.stringContaining("/outside/project/"),
     });
   });
