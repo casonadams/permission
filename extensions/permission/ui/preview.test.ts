@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { looksLikeWebhook, previewToolCall, toolTitle } from "#src/ui/preview";
+import { looksLikeWebhook, previewToolCall, promptBody, toolTitle } from "#src/ui/preview";
 
 describe("toolTitle", () => {
   test("names the resolved MCP target instead of the generic tool name", () => {
@@ -64,5 +64,27 @@ describe("previewToolCall", () => {
 
   test("reads the read path", () => {
     expect(previewToolCall("read", { path: "src/index.ts" })).toBe("src/index.ts");
+  });
+});
+
+describe("promptBody", () => {
+  test("drops the message-only 'with' preposition", () => {
+    expect(promptBody("Tool: mcpScript", "with code: 'emit(1)'")).toBe("code: 'emit(1)'");
+  });
+
+  test("keeps a body that reads on its own", () => {
+    expect(promptBody("Tool: read", "for path 'src/index.ts'")).toBe("for path 'src/index.ts'");
+  });
+
+  test("drops a body the title already states", () => {
+    expect(promptBody("Bash: pwd", "pwd")).toBe("");
+  });
+
+  test("keeps a body that extends the title", () => {
+    expect(promptBody("Bash: uname", "uname -sr")).toBe("uname -sr");
+  });
+
+  test("passes an empty body through", () => {
+    expect(promptBody("MCP: playwright_browser_snapshot", "")).toBe("");
   });
 });

@@ -9,7 +9,7 @@ import {
 import type { PermissionPrompterApi, PromptPermissionDetails } from "../permission-prompter.ts";
 import { type GatePrompter, setGatePrompter } from "../service.ts";
 import type { ReviewLogger } from "../session-logger.ts";
-import { previewToolCall, toolTitle } from "./preview.ts";
+import { previewToolCall, promptBody, toolTitle } from "./preview.ts";
 import { chooseHorizontalApproval, renderPromptBody } from "./prompt/horizontal.ts";
 import { queueDialog } from "./prompt/queue.ts";
 import {
@@ -87,9 +87,10 @@ function promptForHorizontalDecision(
 
 function buildHorizontalPromptDetails(details: PromptPermissionDetails) {
   const toolName = details.toolName ?? "tool";
+  const title = toolTitle(toolName, details);
   return {
-    title: toolTitle(toolName, details),
-    preview: details.toolInputPreview ?? previewToolCall(toolName, details),
+    title,
+    preview: promptBody(title, details.toolInputPreview ?? previewToolCall(toolName, details)),
     suggestion: buildSessionOption(details, toolName),
   };
 }

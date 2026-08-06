@@ -118,6 +118,18 @@ const TOOL_PREVIEW_READERS: Record<string, (input: ToolInput) => string> = {
   subagent: readSubagentPreview,
 };
 
+/**
+ * Shape a preview for display under a prompt title.
+ *
+ * The preview doubles as a clause in the agent-visible ask message, where it
+ * needs the leading "with"; standalone in the dialog it does not. Drops the
+ * body entirely when the title already states it, e.g. `Bash: pwd` over `pwd`.
+ */
+export function promptBody(title: string, preview: string): string {
+  const body = preview.replace(/^with /, "");
+  return title.endsWith(`: ${body}`) ? "" : body;
+}
+
 export function previewToolCall(toolName: string, input: unknown): string {
   const record = input as ToolInput;
   const reader = TOOL_PREVIEW_READERS[toolName];

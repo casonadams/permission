@@ -41,6 +41,7 @@ describe("formatMcpInputForPrompt", () => {
     });
     expect(result).toContain("42");
     expect(result).not.toContain('"42"');
+    expect(result).not.toContain("'42'");
   });
 
   test("renders boolean arguments without quotes", () => {

@@ -182,7 +182,7 @@ describe("ToolPreviewFormatter.formatToolInputForPrompt", () => {
 
   test("summarizes unknown tool arguments as key/value pairs", () => {
     const f = makeFormatter();
-    expect(f.formatToolInputForPrompt("unknown", { x: 1, name: "abc" })).toBe('with x: 1, name: "abc"');
+    expect(f.formatToolInputForPrompt("unknown", { x: 1, name: "abc" })).toBe("with x: 1, name: 'abc'");
   });
 
   test("falls back to inline JSON when unknown tool input is not a record", () => {

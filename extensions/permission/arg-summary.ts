@@ -22,14 +22,14 @@ function isNestedObject(value: unknown): boolean {
 /**
  * Render a single argument value as a compact, readable fragment.
  *
- * - Strings: quoted and truncated.
+ * - Strings: single-quoted and truncated, so embedded double quotes stay readable.
  * - Numbers / booleans: plain string conversion.
  * - Arrays: `[N items]`.
  * - Objects: `{…}`.
  * - Everything else: plain string conversion.
  */
 function renderArgValue(value: unknown): string {
-  if (typeof value === "string") return `"${truncateInlineText(value, ARG_VALUE_MAX_LENGTH)}"`;
+  if (typeof value === "string") return `'${truncateInlineText(value, ARG_VALUE_MAX_LENGTH)}'`;
   if (isInlinePrimitive(value)) return String(value);
   if (Array.isArray(value)) return `[${value.length} items]`;
   if (isNestedObject(value)) return "{…}";

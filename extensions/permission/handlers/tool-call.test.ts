@@ -364,6 +364,6 @@ describe("handleToolCall — generic ask prompt content", () => {
     await handler.handleToolCall(event, makeCtx());
     expect(vi.mocked(prompter.prompt)).toHaveBeenCalledTimes(1);
     const promptDetails = vi.mocked(prompter.prompt).mock.calls[0][0];
-    expect(promptDetails.message).toContain('with city: "Chicago", units: "metric"');
+    expect(promptDetails.message).toContain("with city: 'Chicago', units: 'metric'");
   });
 });
