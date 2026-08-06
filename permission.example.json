@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/casonadams/permission/main/schemas/permissions.schema.json",
   "permission": {
     "*": "allow",
     "path": {

@@ -46,10 +46,12 @@ Project overrides global.
 **Project**: `<cwd>/.pi/agent/permission.json`
 
 A full starting template lives at [`permission.example.json`](./permission.example.json) — copy it to one of the paths above.
+The `$schema` key is optional and only drives editor autocomplete and validation; the extension ignores it.
 Quick preview:
 
 ```json
 {
+  "$schema": "https://raw.githubusercontent.com/casonadams/permission/main/schemas/permissions.schema.json",
   "permission": {
     "*": "allow",
     "path": {
