@@ -46,6 +46,21 @@ function truncate(text: string, max: number): string {
 }
 
 /**
+ * Resolve the MCP call being gated, so prompts name the target tool rather
+ * than the generic `mcp` entry point.
+ *
+ * Prefers the `target` resolved by the permission check, then falls back to
+ * composing the raw `server`/`tool` input fields. Empty when neither is known.
+ */
+function mcpTarget(input: ToolInput): string {
+  const target = readString(input, "target");
+  if (target) return target;
+  const server = readString(input, "server");
+  const tool = readString(input, "tool");
+  return server && tool ? `${server}:${tool}` : tool;
+}
+
+/**
  * Identify a webhook-shaped call so the prompt title can call it out.
  * Matches tool names that contain "webhook" (case-insensitive) and
  * `mcp` calls whose target tool name contains "webhook".
@@ -53,28 +68,22 @@ function truncate(text: string, max: number): string {
 export function looksLikeWebhook(toolName: string, input: unknown): boolean {
   if (toolName.toLowerCase().includes(WEBHOOK_KEYWORD)) return true;
   if (toolName !== "mcp") return false;
-  const record = input as ToolInput;
-  const action = readString(record, "action").toLowerCase();
-  if (action !== "call") return false;
-  return readString(record, "tool").toLowerCase().includes(WEBHOOK_KEYWORD);
+  return mcpTarget(input as ToolInput)
+    .toLowerCase()
+    .includes(WEBHOOK_KEYWORD);
 }
 
 /**
  * Build the prompt title. The category prefix ("Webhook" vs "Tool") is
- * the user's only signal that a call is webhook-shaped; everything else
- * is uniform.
+ * the user's only signal that a call is webhook-shaped; MCP calls are named
+ * by their target so `mcp` alone never stands in for the real call.
  */
 export function toolTitle(toolName: string, input: unknown): string {
+  const target = toolName === "mcp" ? mcpTarget(input as ToolInput) : "";
   if (looksLikeWebhook(toolName, input)) {
-    if (toolName === "mcp") {
-      const record = input as ToolInput;
-      const server = readString(record, "server") || "?";
-      const target = readString(record, "tool") || "?";
-      return `Webhook: ${server}/${target}`;
-    }
-    return `Webhook: ${toolName}`;
+    return `Webhook: ${target || toolName}`;
   }
-  return `Tool: ${toolName}`;
+  return target ? `MCP: ${target}` : `Tool: ${toolName}`;
 }
 
 const TOOL_PREVIEW_READERS: Record<string, (input: ToolInput) => string> = {
