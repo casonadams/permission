@@ -1,3 +1,4 @@
+import { formatArgsSummary } from "./arg-summary";
 import { getNonEmptyString, toRecord } from "./common";
 import type { PermissionSystemExtensionConfig } from "./extension-config";
 import { SEARCH_PATH_TOOLS } from "./permission-surfaces";
@@ -10,8 +11,10 @@ import {
   truncateInlineText,
 } from "./tool-input-preview";
 import {
+  formatBashInputForPrompt,
   formatEditInputForPrompt,
   formatReadInputForPrompt,
+  formatSkillInputForPrompt,
   formatWriteInputForPrompt,
   getPromptPath,
 } from "./tool-input-prompt-formatters";
@@ -54,6 +57,8 @@ const TOOL_INPUT_FORMATTERS: Record<string, (input: Record<string, unknown>) => 
   edit: formatEditInputForPrompt,
   write: formatWriteInputForPrompt,
   read: formatReadInputForPrompt,
+  bash: formatBashInputForPrompt,
+  skill: formatSkillInputForPrompt,
 };
 
 function isSearchTool(toolName: string): boolean {
@@ -93,6 +98,15 @@ export class ToolPreviewFormatter {
     return inline ? `with input ${truncateInlineText(inline, this.options.toolInputPreviewMaxLength)}` : "";
   }
 
+  /**
+   * Summarize the arguments of a tool with no dedicated formatter, falling back
+   * to inline JSON when the input is not a key/value record.
+   */
+  formatArgsInputForPrompt(input: unknown): string {
+    const summary = formatArgsSummary(toRecord(input), this.options.toolInputPreviewMaxLength);
+    return summary ? `with ${summary}` : this.formatJsonInputForPrompt(input);
+  }
+
   /** Format search-tool (grep/find/ls) input for a permission prompt. */
   formatSearchInputForPrompt(toolName: string, input: Record<string, unknown>): string {
     const parts = [
@@ -129,7 +143,7 @@ export class ToolPreviewFormatter {
     if (formatter) return formatter(inputRecord);
     if (isSearchTool(toolName)) return this.formatSearchInputForPrompt(toolName, inputRecord);
     if (toolName === "mcp") return "";
-    return this.formatJsonInputForPrompt(input);
+    return this.formatArgsInputForPrompt(input);
   }
 
   // ── Log formatting ──────────────────────────────────────────────────────

@@ -9,9 +9,14 @@
  * for the prompt.
  */
 
+import { prefix } from "../bash-arity";
+
 type ToolInput = Record<string, unknown> | undefined;
 
 const WEBHOOK_KEYWORD = "webhook";
+
+/** Longest subject rendered in a prompt title before truncation. */
+const TITLE_SUBJECT_MAX_LENGTH = 60;
 
 function readString(input: ToolInput, key: string): string {
   const value = input?.[key];
@@ -74,16 +79,32 @@ export function looksLikeWebhook(toolName: string, input: unknown): boolean {
 }
 
 /**
+ * Name the subject of a gated call: the MCP target, the bash sub-command, or
+ * the skill. Empty for tools whose identity is just their name.
+ */
+function titleSubject(toolName: string, input: ToolInput): string {
+  if (toolName === "mcp") return mcpTarget(input);
+  if (toolName === "bash") return prefix(readString(input, "command").split(/\s+/).filter(Boolean)).join(" ");
+  if (toolName === "skill") return readString(input, "skillName") || readString(input, "name");
+  return "";
+}
+
+/** Capitalized label for a surface that carries a named subject. */
+const SUBJECT_LABELS: Record<string, string> = { mcp: "MCP", bash: "Bash", skill: "Skill" };
+
+/**
  * Build the prompt title. The category prefix ("Webhook" vs "Tool") is
- * the user's only signal that a call is webhook-shaped; MCP calls are named
- * by their target so `mcp` alone never stands in for the real call.
+ * the user's only signal that a call is webhook-shaped; calls that carry a
+ * named subject are titled by it so a bare surface name like `mcp` or `bash`
+ * never stands in for the real call.
  */
 export function toolTitle(toolName: string, input: unknown): string {
-  const target = toolName === "mcp" ? mcpTarget(input as ToolInput) : "";
+  const subject = titleSubject(toolName, input as ToolInput);
   if (looksLikeWebhook(toolName, input)) {
-    return `Webhook: ${target || toolName}`;
+    return `Webhook: ${subject || toolName}`;
   }
-  return target ? `MCP: ${target}` : `Tool: ${toolName}`;
+  if (!subject) return `Tool: ${toolName}`;
+  return `${SUBJECT_LABELS[toolName]}: ${truncate(subject, TITLE_SUBJECT_MAX_LENGTH)}`;
 }
 
 const TOOL_PREVIEW_READERS: Record<string, (input: ToolInput) => string> = {

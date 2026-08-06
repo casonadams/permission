@@ -180,11 +180,15 @@ describe("ToolPreviewFormatter.formatToolInputForPrompt", () => {
     }
   });
 
-  test("falls back to formatJsonInputForPrompt for unknown tools", () => {
-    mockedStringify.mockReturnValue('{"x":1}');
+  test("summarizes unknown tool arguments as key/value pairs", () => {
     const f = makeFormatter();
-    const result = f.formatToolInputForPrompt("unknown", { x: 1 });
-    expect(result).toContain('{"x":1}');
+    expect(f.formatToolInputForPrompt("unknown", { x: 1, name: "abc" })).toBe('with x: 1, name: "abc"');
+  });
+
+  test("falls back to inline JSON when unknown tool input is not a record", () => {
+    mockedStringify.mockReturnValue('["a"]');
+    const f = makeFormatter();
+    expect(f.formatToolInputForPrompt("unknown", ["a"])).toContain('["a"]');
   });
 
   test("unknown tool truncates at constructor toolInputPreviewMaxLength", () => {
@@ -231,8 +235,8 @@ describe("ToolPreviewFormatter.formatToolInputForPrompt — custom formatter sea
       },
       lookup,
     );
-    // Falls through to JSON default for unknown tools
-    expect(f.formatToolInputForPrompt("unknown-tool", { x: 1 })).toContain('{"x":1}');
+    // Falls through to the argument summary default for unknown tools
+    expect(f.formatToolInputForPrompt("unknown-tool", { x: 1 })).toBe("with x: 1");
   });
 
   test("custom formatter for a built-in tool overrides the built-in preview", () => {

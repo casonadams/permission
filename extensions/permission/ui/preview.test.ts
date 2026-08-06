@@ -18,8 +18,24 @@ describe("toolTitle", () => {
     expect(toolTitle("mcp", {})).toBe("Tool: mcp");
   });
 
-  test("labels non-MCP tools by name", () => {
-    expect(toolTitle("bash", { command: "ls" })).toBe("Tool: bash");
+  test("names the bash sub-command that triggered the gate", () => {
+    expect(toolTitle("bash", { command: "git push --force" })).toBe("Bash: git push");
+  });
+
+  test("names a bare bash command", () => {
+    expect(toolTitle("bash", { command: "date -u +%Y" })).toBe("Bash: date");
+  });
+
+  test("names the skill being loaded", () => {
+    expect(toolTitle("skill", { skillName: "plan" })).toBe("Skill: plan");
+  });
+
+  test("labels tools with no named subject by name", () => {
+    expect(toolTitle("websearch", { query: "pi" })).toBe("Tool: websearch");
+  });
+
+  test("falls back to the tool name when bash has no command", () => {
+    expect(toolTitle("bash", {})).toBe("Tool: bash");
   });
 
   test("flags a webhook-shaped MCP target", () => {
