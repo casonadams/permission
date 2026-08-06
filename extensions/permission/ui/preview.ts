@@ -51,17 +51,6 @@ function truncate(text: string, max: number): string {
 }
 
 /**
- * Truncate from the middle, keeping both ends. Used for paths, where the
- * trailing filename carries as much meaning as the leading directories.
- */
-function truncateMiddle(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const head = Math.ceil((max - 1) / 2);
-  const tail = max - 1 - head;
-  return `${text.slice(0, head)}…${text.slice(text.length - tail)}`;
-}
-
-/**
  * Resolve the MCP call being gated, so prompts name the target tool rather
  * than the generic `mcp` entry point.
  *
@@ -103,10 +92,6 @@ function isExternalDirectoryPrompt(input: ToolInput): boolean {
   return readString(input, "promptSurface") === "external_directory";
 }
 
-function capitalize(value: string): string {
-  return value ? `${value[0].toUpperCase()}${value.slice(1)}` : value;
-}
-
 /**
  * Ordered most to least specific: the reason a call is gated outweighs the tool
  * it came through, so a read or bash command reaching outside the working
@@ -141,8 +126,7 @@ export function toolTitle(toolName: string, input: unknown): string {
     return `Webhook: ${mcpTarget(input as ToolInput) || toolName}`;
   }
   if (isExternalDirectoryPrompt(input as ToolInput)) {
-    const path = readString(input as ToolInput, "path");
-    return `${capitalize(toolName)} ${truncateMiddle(path, TITLE_SUBJECT_MAX_LENGTH)}`.trim();
+    return `External ${toolName}`;
   }
   const titled = titledSubject(toolName, input as ToolInput);
   if (!titled) return `Tool: ${toolName}`;
