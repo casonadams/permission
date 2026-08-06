@@ -4,13 +4,13 @@ Permission enforcement extension for the [Pi coding agent](https://pi.mariozechn
 
 ## Install
 
-Consume this package from your git repo via `pi install`:
+Either run `pi install`, which clones the package and adds it to `~/.pi/agent/settings.json` for you:
 
 ```bash
 pi install git:git@github.com:casonadams/permission.git
 ```
 
-Then add it to `~/.pi/agent/settings.json`:
+Or add the same entry to `~/.pi/agent/settings.json` by hand:
 
 ```json
 "packages": [
@@ -18,7 +18,7 @@ Then add it to `~/.pi/agent/settings.json`:
 ]
 ```
 
-Restart Pi and the extension loads automatically.
+Either way, restart Pi and the extension loads automatically.
 
 ## How it works
 
