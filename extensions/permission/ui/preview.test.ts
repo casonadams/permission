@@ -46,19 +46,29 @@ describe("toolTitle", () => {
     expect(toolTitle("read", { skillName: "librarian", path: "/skills/librarian/SKILL.md" })).toBe("Skill: librarian");
   });
 
-  test("names the operation and the boundary, leaving the path to the body", () => {
+  test("names the operation and the path it reaches for", () => {
     expect(toolTitle("read", { promptSurface: "external_directory", path: "/other/notes.md" })).toBe(
-      "Read outside cwd",
+      "Read /other/notes.md",
     );
     expect(toolTitle("write", { promptSurface: "external_directory", path: "/other/notes.md" })).toBe(
-      "Write outside cwd",
+      "Write /other/notes.md",
     );
   });
 
-  test("the boundary outranks the bash sub-command", () => {
+  test("the external path outranks the bash sub-command", () => {
     expect(
       toolTitle("bash", { promptSurface: "external_directory", path: "/etc/hosts", command: "cat /etc/hosts" }),
-    ).toBe("Bash outside cwd");
+    ).toBe("Bash /etc/hosts");
+  });
+
+  test("keeps the filename when a long path is truncated", () => {
+    const title = toolTitle("read", {
+      promptSurface: "external_directory",
+      path: "/Users/cason/very/deeply/nested/project/directory/tree/notes.md",
+    });
+    expect(title.startsWith("Read /Users/cason/")).toBe(true);
+    expect(title.endsWith("notes.md")).toBe(true);
+    expect(title).toContain("…");
   });
 
   test("flags a webhook-shaped MCP target", () => {
@@ -105,6 +115,11 @@ describe("promptBody", () => {
 
   test("drops a body the title already states", () => {
     expect(promptBody("Bash: pwd", "pwd")).toBe("");
+    expect(promptBody("Read /other/notes.md", "/other/notes.md")).toBe("");
+  });
+
+  test("keeps the full path when the title truncated it", () => {
+    expect(promptBody("Read /Users/…/notes.md", "/Users/cason/deep/notes.md")).toBe("/Users/cason/deep/notes.md");
   });
 
   test("keeps a body that extends the title", () => {

@@ -51,6 +51,17 @@ function truncate(text: string, max: number): string {
 }
 
 /**
+ * Truncate from the middle, keeping both ends. Used for paths, where the
+ * trailing filename carries as much meaning as the leading directories.
+ */
+function truncateMiddle(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const head = Math.ceil((max - 1) / 2);
+  const tail = max - 1 - head;
+  return `${text.slice(0, head)}…${text.slice(text.length - tail)}`;
+}
+
+/**
  * Resolve the MCP call being gated, so prompts name the target tool rather
  * than the generic `mcp` entry point.
  *
@@ -130,7 +141,8 @@ export function toolTitle(toolName: string, input: unknown): string {
     return `Webhook: ${mcpTarget(input as ToolInput) || toolName}`;
   }
   if (isExternalDirectoryPrompt(input as ToolInput)) {
-    return `${capitalize(toolName)} outside cwd`;
+    const path = readString(input as ToolInput, "path");
+    return `${capitalize(toolName)} ${truncateMiddle(path, TITLE_SUBJECT_MAX_LENGTH)}`.trim();
   }
   const titled = titledSubject(toolName, input as ToolInput);
   if (!titled) return `Tool: ${toolName}`;
@@ -157,7 +169,7 @@ const TOOL_PREVIEW_READERS: Record<string, (input: ToolInput) => string> = {
  */
 export function promptBody(title: string, preview: string): string {
   const body = preview.replace(/^with /, "");
-  return title.endsWith(`: ${body}`) ? "" : body;
+  return body && title.endsWith(body) ? "" : body;
 }
 
 export function previewToolCall(toolName: string, input: unknown): string {
