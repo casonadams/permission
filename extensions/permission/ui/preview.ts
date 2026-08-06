@@ -78,19 +78,44 @@ export function looksLikeWebhook(toolName: string, input: unknown): boolean {
     .includes(WEBHOOK_KEYWORD);
 }
 
-/**
- * Name the subject of a gated call: the MCP target, the bash sub-command, or
- * the skill. Empty for tools whose identity is just their name.
- */
-function titleSubject(toolName: string, input: ToolInput): string {
-  if (toolName === "mcp") return mcpTarget(input);
-  if (toolName === "bash") return prefix(readString(input, "command").split(/\s+/).filter(Boolean)).join(" ");
-  if (toolName === "skill") return readString(input, "skillName") || readString(input, "name");
-  return "";
+type TitledSubject = { label: string; subject: string };
+
+function bashSubject(input: ToolInput): string {
+  return prefix(readString(input, "command").split(/\s+/).filter(Boolean)).join(" ");
 }
 
-/** Capitalized label for a surface that carries a named subject. */
-const SUBJECT_LABELS: Record<string, string> = { mcp: "MCP", bash: "Bash", skill: "Skill" };
+function skillName(toolName: string, input: ToolInput): string {
+  return readString(input, "skillName") || (toolName === "skill" ? readString(input, "name") : "");
+}
+
+function externalDirectorySubject(input: ToolInput): TitledSubject | null {
+  const isBoundary = readString(input, "promptSurface") === "external_directory";
+  return isBoundary ? { label: "Outside cwd", subject: readString(input, "path") } : null;
+}
+
+/**
+ * Ordered most to least specific: the reason a call is gated outweighs the tool
+ * it came through, so a read or bash command reaching outside the working
+ * directory is titled by that boundary rather than by the tool.
+ */
+const SUBJECT_RESOLVERS: Array<(toolName: string, input: ToolInput) => TitledSubject | null> = [
+  (_toolName, input) => externalDirectorySubject(input),
+  (toolName, input) => ({ label: "Skill", subject: skillName(toolName, input) }),
+  (toolName, input) => (toolName === "mcp" ? { label: "MCP", subject: mcpTarget(input) } : null),
+  (toolName, input) => (toolName === "bash" ? { label: "Bash", subject: bashSubject(input) } : null),
+];
+
+/**
+ * Name the subject of a gated call and label it by what is being decided.
+ * Returns `null` for calls whose identity is just their tool name.
+ */
+function titledSubject(toolName: string, input: ToolInput): TitledSubject | null {
+  for (const resolve of SUBJECT_RESOLVERS) {
+    const titled = resolve(toolName, input);
+    if (titled?.subject) return titled;
+  }
+  return null;
+}
 
 /**
  * Build the prompt title. The category prefix ("Webhook" vs "Tool") is
@@ -99,12 +124,12 @@ const SUBJECT_LABELS: Record<string, string> = { mcp: "MCP", bash: "Bash", skill
  * never stands in for the real call.
  */
 export function toolTitle(toolName: string, input: unknown): string {
-  const subject = titleSubject(toolName, input as ToolInput);
+  const titled = titledSubject(toolName, input as ToolInput);
   if (looksLikeWebhook(toolName, input)) {
-    return `Webhook: ${subject || toolName}`;
+    return `Webhook: ${titled?.subject || toolName}`;
   }
-  if (!subject) return `Tool: ${toolName}`;
-  return `${SUBJECT_LABELS[toolName]}: ${truncate(subject, TITLE_SUBJECT_MAX_LENGTH)}`;
+  if (!titled) return `Tool: ${toolName}`;
+  return `${titled.label}: ${truncate(titled.subject, TITLE_SUBJECT_MAX_LENGTH)}`;
 }
 
 const TOOL_PREVIEW_READERS: Record<string, (input: ToolInput) => string> = {

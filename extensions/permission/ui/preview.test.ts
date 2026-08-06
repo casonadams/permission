@@ -38,6 +38,26 @@ describe("toolTitle", () => {
     expect(toolTitle("bash", {})).toBe("Tool: bash");
   });
 
+  test("names the skill when a skill gate carries no tool name", () => {
+    expect(toolTitle("tool", { skillName: "librarian" })).toBe("Skill: librarian");
+  });
+
+  test("names the skill when a skill file is read through the read tool", () => {
+    expect(toolTitle("read", { skillName: "librarian", path: "/skills/librarian/SKILL.md" })).toBe("Skill: librarian");
+  });
+
+  test("titles an external-directory gate by the boundary, not the tool", () => {
+    expect(toolTitle("read", { promptSurface: "external_directory", path: "/other/notes.md" })).toBe(
+      "Outside cwd: /other/notes.md",
+    );
+  });
+
+  test("the boundary outranks the bash sub-command", () => {
+    expect(
+      toolTitle("bash", { promptSurface: "external_directory", path: "/etc/hosts", command: "cat /etc/hosts" }),
+    ).toBe("Outside cwd: /etc/hosts");
+  });
+
   test("flags a webhook-shaped MCP target", () => {
     expect(toolTitle("mcp", { target: "gateway_send_webhook" })).toBe("Webhook: gateway_send_webhook");
   });
