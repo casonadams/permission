@@ -40,10 +40,9 @@ export default tseslint.config(
       "@typescript-eslint/no-non-null-assertion": "off",
       // Underscore-prefixed names are intentionally unused stub params/fixtures.
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
-      // This codebase predates the mudroom size limits and its tests are far
-      // larger than mudroom's small test suite. Size limits apply to source;
-      // tests are exempt from file/function line caps but still held to the
-      // other policy rules (complexity, max-params).
+      // This codebase predates these size limits and its test suite is large.
+      // Size limits apply to source; tests are exempt from file/function line
+      // caps but still held to the other policy rules (complexity, max-params).
       "max-lines": "off",
       "max-lines-per-function": "off",
     },
