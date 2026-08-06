@@ -33,11 +33,13 @@ function buildContent<T extends string>(args: {
   selected: number;
 }): string[] {
   const contentWidth = Math.max(10, args.innerWidth - 2);
+  // An absent body contributes no lines at all: `wrapParagraphs("")` still
+  // yields one line, which together with its separator left a blank gap.
+  const body = args.body.trim() ? [...wrapParagraphs(args.body, contentWidth), ""] : [];
   return [
     args.theme.fg("warning", args.theme.bold(args.title)),
     "",
-    ...wrapParagraphs(args.body, contentWidth),
-    "",
+    ...body,
     renderOptions(args.theme, args.options, args.selected),
   ];
 }
