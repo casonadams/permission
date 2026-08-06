@@ -127,6 +127,9 @@ These sit next to `"permission"` at the top level, and `/permission-system` togg
 | `toolTextSummaryMaxLength`  | `80`    | Truncation length for inline pattern/path summaries in prompts         |
 | `piInfrastructureReadPaths` | `[]`    | Extra directories to auto-allow for reads, bypassing the boundary gate |
 
+Both logs are JSONL under `~/.pi/agent/extensions/pi-permission-system/logs/`, named `pi-permission-system-debug.jsonl` and `pi-permission-system-permission-review.jsonl`.
+`pi-permission-system` is the extension's internal id: it names that directory, prefixes every denial message, and is why the command is `/permission-system`.
+
 ## Development
 
 ```bash
