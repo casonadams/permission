@@ -95,7 +95,6 @@ For a `playwright` server that is `playwright_browser_click`, `playwright_browse
   "playwright_browser_type": "allow",
   "playwright_browser_evaluate": { "action": "deny", "reason": "arbitrary JS in the page" },
   "playwright_browser_run_code_unsafe": { "action": "deny", "reason": "arbitrary code execution" },
-  "linear_*": "allow",
   "mcp_status": "allow"
 }
 ```
