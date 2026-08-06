@@ -46,16 +46,19 @@ describe("toolTitle", () => {
     expect(toolTitle("read", { skillName: "librarian", path: "/skills/librarian/SKILL.md" })).toBe("Skill: librarian");
   });
 
-  test("titles an external-directory gate by the boundary, not the tool", () => {
+  test("names the operation and the boundary, leaving the path to the body", () => {
     expect(toolTitle("read", { promptSurface: "external_directory", path: "/other/notes.md" })).toBe(
-      "Outside cwd: /other/notes.md",
+      "Read outside cwd",
+    );
+    expect(toolTitle("write", { promptSurface: "external_directory", path: "/other/notes.md" })).toBe(
+      "Write outside cwd",
     );
   });
 
   test("the boundary outranks the bash sub-command", () => {
     expect(
       toolTitle("bash", { promptSurface: "external_directory", path: "/etc/hosts", command: "cat /etc/hosts" }),
-    ).toBe("Outside cwd: /etc/hosts");
+    ).toBe("Bash outside cwd");
   });
 
   test("flags a webhook-shaped MCP target", () => {
@@ -84,6 +87,10 @@ describe("previewToolCall", () => {
 
   test("reads the read path", () => {
     expect(previewToolCall("read", { path: "src/index.ts" })).toBe("src/index.ts");
+  });
+
+  test("falls back to the path for a tool with no dedicated reader", () => {
+    expect(previewToolCall("custom_tool", { path: "/other/notes.md" })).toBe("/other/notes.md");
   });
 });
 

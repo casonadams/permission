@@ -88,9 +88,12 @@ function skillName(toolName: string, input: ToolInput): string {
   return readString(input, "skillName") || (toolName === "skill" ? readString(input, "name") : "");
 }
 
-function externalDirectorySubject(input: ToolInput): TitledSubject | null {
-  const isBoundary = readString(input, "promptSurface") === "external_directory";
-  return isBoundary ? { label: "Outside cwd", subject: readString(input, "path") } : null;
+function isExternalDirectoryPrompt(input: ToolInput): boolean {
+  return readString(input, "promptSurface") === "external_directory";
+}
+
+function capitalize(value: string): string {
+  return value ? `${value[0].toUpperCase()}${value.slice(1)}` : value;
 }
 
 /**
@@ -99,7 +102,6 @@ function externalDirectorySubject(input: ToolInput): TitledSubject | null {
  * directory is titled by that boundary rather than by the tool.
  */
 const SUBJECT_RESOLVERS: Array<(toolName: string, input: ToolInput) => TitledSubject | null> = [
-  (_toolName, input) => externalDirectorySubject(input),
   (toolName, input) => ({ label: "Skill", subject: skillName(toolName, input) }),
   (toolName, input) => (toolName === "mcp" ? { label: "MCP", subject: mcpTarget(input) } : null),
   (toolName, input) => (toolName === "bash" ? { label: "Bash", subject: bashSubject(input) } : null),
@@ -124,10 +126,13 @@ function titledSubject(toolName: string, input: ToolInput): TitledSubject | null
  * never stands in for the real call.
  */
 export function toolTitle(toolName: string, input: unknown): string {
-  const titled = titledSubject(toolName, input as ToolInput);
   if (looksLikeWebhook(toolName, input)) {
-    return `Webhook: ${titled?.subject || toolName}`;
+    return `Webhook: ${mcpTarget(input as ToolInput) || toolName}`;
   }
+  if (isExternalDirectoryPrompt(input as ToolInput)) {
+    return `${capitalize(toolName)} outside cwd`;
+  }
+  const titled = titledSubject(toolName, input as ToolInput);
   if (!titled) return `Tool: ${toolName}`;
   return `${titled.label}: ${truncate(titled.subject, TITLE_SUBJECT_MAX_LENGTH)}`;
 }
@@ -158,5 +163,6 @@ export function promptBody(title: string, preview: string): string {
 export function previewToolCall(toolName: string, input: unknown): string {
   const record = input as ToolInput;
   const reader = TOOL_PREVIEW_READERS[toolName];
-  return reader ? reader(record) : readString(record, "command") || "";
+  if (reader) return reader(record);
+  return readString(record, "command") || readString(record, "path");
 }
