@@ -1,14 +1,14 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { ConfigReader } from "../config-store.ts";
+import type { ConfigReader } from "../config/config-store.ts";
+import type { ReviewLogger } from "../integrations/session-logger.ts";
 import {
   createApprovedPermissionDecision,
   createDeniedPermissionDecision,
   createSessionApprovedPermissionDecision,
   type PermissionPromptDecision,
-} from "../permission-dialog.ts";
-import type { PermissionPrompterApi, PromptPermissionDetails } from "../permission-prompter.ts";
+} from "../prompting/permission-dialog.ts";
+import type { PermissionPrompterApi, PromptPermissionDetails } from "../prompting/permission-prompter.ts";
 import { type GatePrompter, setGatePrompter } from "../service.ts";
-import type { ReviewLogger } from "../session-logger.ts";
 import { previewToolCall, promptBody, toolTitle } from "./preview.ts";
 import { chooseHorizontalApproval, renderPromptBody } from "./prompt/horizontal.ts";
 import { queueDialog } from "./prompt/queue.ts";

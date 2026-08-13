@@ -9,19 +9,18 @@
  */
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { vi } from "vitest";
-
-import { GateDecisionReporter } from "#src/decision-reporter";
-import type { GatePrompter } from "#src/gate-prompter";
-import { GateRunner } from "#src/handlers/gates/runner";
-import { type SkillInputGateInputs, SkillInputGatePipeline } from "#src/handlers/gates/skill-input-gate-pipeline";
-import { type ToolCallGateInputs, ToolCallGatePipeline } from "#src/handlers/gates/tool-call-gate-pipeline";
-import { PermissionGateHandler } from "#src/handlers/permission-gate-handler";
-import type { PermissionDecisionEvent } from "#src/permission-events";
-import { PERMISSIONS_DECISION_CHANNEL } from "#src/permission-events";
-import type { Rule } from "#src/rule";
-import { SessionRules } from "#src/session-rules";
-import type { ToolRegistry } from "#src/tool-registry";
-import type { PermissionCheckResult, PermissionState } from "#src/types";
+import { PermissionGateHandler } from "#src/app/handlers/permission-gate-handler";
+import { GateRunner } from "#src/gates/runner";
+import { type SkillInputGateInputs, SkillInputGatePipeline } from "#src/gates/skill-input-gate-pipeline";
+import { type ToolCallGateInputs, ToolCallGatePipeline } from "#src/gates/tool-call-gate-pipeline";
+import { GateDecisionReporter } from "#src/integrations/decision-reporter";
+import type { PermissionDecisionEvent } from "#src/integrations/permission-events";
+import { PERMISSIONS_DECISION_CHANNEL } from "#src/integrations/permission-events";
+import type { ToolRegistry } from "#src/integrations/tool-registry";
+import type { Rule } from "#src/policy/rule";
+import { SessionRules } from "#src/policy/session-rules";
+import type { PermissionCheckResult, PermissionState } from "#src/policy/types";
+import type { GatePrompter } from "#src/prompting/gate-prompter";
 import { makeRealResolver, makeRealSession } from "#test/helpers/session-fixtures";
 
 // ── MockGateHandlerSession ────────────────────────────────────────────────

@@ -12,19 +12,18 @@
  */
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { vi } from "vitest";
-
-import type { SessionConfigStore } from "#src/config-store";
-import { DEFAULT_EXTENSION_CONFIG } from "#src/extension-config";
-import type { ExtensionPaths } from "#src/extension-paths";
-import type { ForwardingController } from "#src/forwarding-manager";
-import type { ScopedPermissionManager } from "#src/permission-manager";
-import { PermissionResolver } from "#src/permission-resolver";
-import { PermissionSession } from "#src/permission-session";
-import type { PromptingGatewayLifecycle } from "#src/prompting-gateway";
-import type { Ruleset } from "#src/rule";
-import type { SessionLogger } from "#src/session-logger";
-import { SessionRules } from "#src/session-rules";
-import type { PermissionCheckResult, PermissionState } from "#src/types";
+import type { ExtensionPaths } from "#src/app/extension-paths";
+import { PermissionSession } from "#src/app/permission-session";
+import type { ForwardingController } from "#src/forwarding/forwarding-manager";
+import type { SessionLogger } from "#src/integrations/session-logger";
+import type { ScopedPermissionManager } from "#src/policy/permission-manager";
+import { PermissionResolver } from "#src/policy/permission-resolver";
+import type { Ruleset } from "#src/policy/rule";
+import { SessionRules } from "#src/policy/session-rules";
+import type { PermissionCheckResult, PermissionState } from "#src/policy/types";
+import type { PromptingGatewayLifecycle } from "#src/prompting/prompting-gateway";
+import type { SessionConfigStore } from "../../config/config-store";
+import { DEFAULT_EXTENSION_CONFIG } from "../../config/extension-config";
 
 // ── Per-collaborator fake factories ────────────────────────────────────────
 

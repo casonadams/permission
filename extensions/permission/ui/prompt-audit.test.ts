@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { PERMISSIONS_UI_PROMPT_CHANNEL, type PermissionEventBus } from "#src/permission-events";
-import type { PromptPermissionDetails } from "#src/permission-prompter";
-import type { ReviewLogger } from "#src/session-logger";
+import { PERMISSIONS_UI_PROMPT_CHANNEL, type PermissionEventBus } from "#src/integrations/permission-events";
+import type { ReviewLogger } from "#src/integrations/session-logger";
+import type { PromptPermissionDetails } from "#src/prompting/permission-prompter";
 import {
   type LocalPromptAuditDeps,
   maybeAutoApprovePrompt,

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildInputForSurface } from "#src/input-normalizer";
+import { ToolAccessExtractorRegistry } from "#src/integrations/tool-access-extractor-registry";
+import { ToolInputFormatterRegistry } from "#src/integrations/tool-input-formatter-registry";
+import { buildInputForSurface } from "#src/policy/input-normalizer";
+import type { PermissionCheckResult } from "#src/policy/types";
 import type { PermissionsService } from "#src/service";
 import { getPermissionsService, publishPermissionsService, unpublishPermissionsService } from "#src/service";
-import { ToolAccessExtractorRegistry } from "#src/tool-access-extractor-registry";
-import { ToolInputFormatterRegistry } from "#src/tool-input-formatter-registry";
-import type { PermissionCheckResult } from "#src/types";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 

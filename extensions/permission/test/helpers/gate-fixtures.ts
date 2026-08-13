@@ -2,19 +2,19 @@
  * Shared gate-level test fixtures for gate descriptor and runner tests.
  */
 import { vi } from "vitest";
-import type { DecisionReporter } from "#src/decision-reporter";
-import type { DenialContext } from "#src/denial-messages";
-import type { GatePrompter } from "#src/gate-prompter";
-import type { GateDescriptor } from "#src/handlers/gates/descriptor";
-import { GateRunner } from "#src/handlers/gates/runner";
-import type { SkillInputGateInputs } from "#src/handlers/gates/skill-input-gate-pipeline";
-import type { ToolCallGateInputs } from "#src/handlers/gates/tool-call-gate-pipeline";
-import type { ToolCallContext } from "#src/handlers/gates/types";
-import type { ScopedPermissionResolver } from "#src/permission-resolver";
-import type { SessionApprovalRecorder } from "#src/session-approval-recorder";
-import type { SkillPromptEntry } from "#src/skill-prompt-sanitizer";
-import type { ToolPreviewFormatterOptions } from "#src/tool-preview-formatter";
-import type { PermissionCheckResult } from "#src/types";
+import type { SkillPromptEntry } from "#src/app/skill-prompt-sanitizer";
+import type { GateDescriptor } from "#src/gates/descriptor";
+import { GateRunner } from "#src/gates/runner";
+import type { SkillInputGateInputs } from "#src/gates/skill-input-gate-pipeline";
+import type { ToolCallGateInputs } from "#src/gates/tool-call-gate-pipeline";
+import type { ToolCallContext } from "#src/gates/types";
+import type { DecisionReporter } from "#src/integrations/decision-reporter";
+import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
+import type { SessionApprovalRecorder } from "#src/policy/session-approval-recorder";
+import type { PermissionCheckResult } from "#src/policy/types";
+import type { DenialContext } from "#src/prompting/denial-messages";
+import type { GatePrompter } from "#src/prompting/gate-prompter";
+import type { ToolPreviewFormatterOptions } from "#src/prompting/tool-preview-formatter";
 
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 

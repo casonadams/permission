@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PromptPermissionDetails } from "#src/permission-prompter";
+import type { PromptPermissionDetails } from "#src/prompting/permission-prompter";
 import { buildApprovalOptions, buildSessionOption } from "#src/ui/prompt-options";
 
 function makeDetails(overrides: Partial<PromptPermissionDetails> = {}): PromptPermissionDetails {

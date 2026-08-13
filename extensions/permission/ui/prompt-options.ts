@@ -1,5 +1,5 @@
-import { suggestSessionPattern } from "../pattern-suggest.ts";
-import type { PromptPermissionDetails } from "../permission-prompter.ts";
+import { suggestSessionPattern } from "../prompting/pattern-suggest.ts";
+import type { PromptPermissionDetails } from "../prompting/permission-prompter.ts";
 
 export type ApprovalValue = "allow" | "allow_session" | "deny";
 

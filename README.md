@@ -139,3 +139,17 @@ pnpm typecheck  # type-check (tsc --noEmit)
 pnpm lint       # biome + eslint
 pnpm format     # biome format --write .
 ```
+
+### Architecture
+
+`extensions/permission/index.ts` is the Pi entry point, and `extensions/permission/service.ts` is the stable API for other extensions. The remaining code is organized by feature:
+
+- `config/` loads, validates, merges, stores, and displays configuration.
+- `policy/` contains framework-independent permission rules and evaluation.
+- `gates/` turns tool, skill, path, and bash inputs into policy decisions.
+- `prompting/` resolves interactive permission requests.
+- `forwarding/` relays requests between parent and subagent sessions.
+- `integrations/` adapts the domain to Pi events, registries, logging, and lifecycle APIs.
+- `ui/` renders terminal interfaces without defining permission policy.
+
+Tests are co-located with their source modules. Cross-module integration tests belong at the nearest shared feature boundary. Pi and infrastructure adapters depend toward the policy domain; the policy primitives do not depend on Pi or the TUI.

@@ -9,7 +9,7 @@
  * for the prompt.
  */
 
-import { prefix } from "../bash-arity";
+import { prefix } from "../gates/bash-arity";
 
 type ToolInput = Record<string, unknown> | undefined;
 

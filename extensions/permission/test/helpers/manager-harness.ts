@@ -8,8 +8,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { PermissionManager } from "#src/permission-manager";
-import type { ScopeConfig } from "#src/types";
+import { PermissionManager } from "#src/policy/permission-manager";
+import type { ScopeConfig } from "#src/policy/types";
 
 export type CreateManagerOptions = {
   mcpServerNames?: readonly string[];

@@ -1,10 +1,10 @@
-import type { ConfigReader } from "../config-store.ts";
-import { createAutoApprovedPermissionDecision, type PermissionPromptDecision } from "../permission-dialog.ts";
-import { emitUiPromptEvent, type PermissionEventBus } from "../permission-events.ts";
-import type { PromptPermissionDetails } from "../permission-prompter.ts";
-import { buildDirectUiPrompt } from "../permission-ui-prompt.ts";
-import type { ReviewLogger } from "../session-logger.ts";
-import { shouldAutoApprovePermissionState } from "../yolo-mode.ts";
+import type { ConfigReader } from "../config/config-store.ts";
+import { emitUiPromptEvent, type PermissionEventBus } from "../integrations/permission-events.ts";
+import type { ReviewLogger } from "../integrations/session-logger.ts";
+import { createAutoApprovedPermissionDecision, type PermissionPromptDecision } from "../prompting/permission-dialog.ts";
+import type { PromptPermissionDetails } from "../prompting/permission-prompter.ts";
+import { buildDirectUiPrompt } from "../prompting/permission-ui-prompt.ts";
+import { shouldAutoApprovePermissionState } from "../prompting/yolo-mode.ts";
 
 export type LocalPromptAuditDeps = {
   config: ConfigReader;

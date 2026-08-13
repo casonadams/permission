@@ -11,11 +11,9 @@
  * reference — this ensures resilience across `/reload` and load-order edge cases.
  */
 
-import type { ToolAccessExtractor } from "./tool-access-extractor-registry";
-import type { ToolInputFormatter } from "./tool-input-formatter-registry";
-import type { PermissionCheckResult, PermissionState } from "./types";
-
-export type { GatePrompter } from "./gate-prompter";
+import type { ToolAccessExtractor } from "./integrations/tool-access-extractor-registry";
+import type { ToolInputFormatter } from "./integrations/tool-input-formatter-registry";
+import type { PermissionCheckResult, PermissionState } from "./policy/types";
 
 export type {
   ForwardedPromptContext,
@@ -26,14 +24,15 @@ export type {
   PermissionsRpcReply,
   PermissionUiPromptEvent,
   PermissionUiPromptSource,
-} from "./permission-events";
+} from "./integrations/permission-events";
 export {
   PERMISSIONS_DECISION_CHANNEL,
   PERMISSIONS_PROTOCOL_VERSION,
   PERMISSIONS_READY_CHANNEL,
   PERMISSIONS_RPC_PROMPT_CHANNEL,
   PERMISSIONS_UI_PROMPT_CHANNEL,
-} from "./permission-events";
+} from "./integrations/permission-events";
+export type { GatePrompter } from "./prompting/gate-prompter";
 export type { PermissionCheckResult, PermissionState, ToolInputFormatter };
 
 /** Process-global key for the service slot. */
@@ -161,4 +160,4 @@ export function unpublishPermissionsService(service: PermissionsService): void {
  * a prompter swap. The companion local extension under
  * `extensions/pi-permission-ui/` is the intended consumer.
  */
-export { setGatePrompter } from "./gate-prompter-registry";
+export { setGatePrompter } from "./prompting/gate-prompter-registry";
