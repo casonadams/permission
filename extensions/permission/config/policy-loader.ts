@@ -1,9 +1,10 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { extractFrontmatter, parseSimpleYamlMap } from "../shared/common";
-import { loadUnifiedConfig, normalizeUnifiedConfig } from "./config-loader";
+import { loadUnifiedConfig } from "./config-loader";
+import { normalizeUnifiedConfig } from "./config-normalize";
 import { getConfiguredMcpServerNamesFromPaths } from "./mcp-config-loader";
-import { resolvePolicyLoaderOptions } from "./policy-loader-resolve-options";
+import { resolvePolicyLoaderOptions } from "./policy-loader-options";
 import type { PolicyLoader, PolicyLoaderOptions, ResolvedPolicyPaths } from "./policy-loader-types";
 
 export type { PolicyLoader, PolicyLoaderOptions, ResolvedPolicyPaths } from "./policy-loader-types";
@@ -18,10 +19,7 @@ function getFileStamp(path: string): string {
   }
 }
 
-type FileCacheEntry<TValue> = {
-  stamp: string;
-  value: TValue;
-};
+type FileCacheEntry<TValue> = { stamp: string; value: TValue };
 
 /**
  * Production `PolicyLoader` that reads config files from disk with

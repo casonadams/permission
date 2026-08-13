@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NUMBER_CONFIG_KEYS, STRING_ARRAY_CONFIG_KEYS } from "./config-keys";
-import type { UnifiedPermissionConfig } from "./config-loader";
+import type { UnifiedPermissionConfig } from "./config-normalize";
 
 export const EXTENSION_ID = "pi-permission-system";
 

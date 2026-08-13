@@ -17,9 +17,13 @@ vi.mock("node:fs", () => ({
   default: { realpathSync: (p: string) => p },
 }));
 
-import { extractExternalPathsFromBashCommand } from "#src/gates/bash-path-extractor";
+import { BashProgram } from "#src/gates/bash-program";
 import { formatBashExternalDirectoryAskPrompt } from "#src/gates/external-directory-messages";
 import { formatDenyReason } from "#src/prompting/denial-messages";
+
+async function extractExternalPathsFromBashCommand(command: string, cwd: string): Promise<string[]> {
+  return (await BashProgram.parse(command)).externalPaths(cwd);
+}
 
 afterEach(() => {
   vi.restoreAllMocks();

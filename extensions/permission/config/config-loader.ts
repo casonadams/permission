@@ -11,10 +11,6 @@ import {
   getProjectConfigPath,
 } from "./config-paths";
 
-export { stripJsonComments } from "./config-json-comments";
-export { mergeUnifiedConfigs } from "./config-merge";
-export { normalizeUnifiedConfig, type UnifiedConfigLoadResult, type UnifiedPermissionConfig } from "./config-normalize";
-
 export interface MergedConfigResult {
   global: UnifiedPermissionConfig;
   project: UnifiedPermissionConfig;

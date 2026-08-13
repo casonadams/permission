@@ -3,7 +3,9 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { loadAndMergeConfigs, loadUnifiedConfig, mergeUnifiedConfigs, stripJsonComments } from "./config-loader";
+import { stripJsonComments } from "./config-json-comments";
+import { loadAndMergeConfigs, loadUnifiedConfig } from "./config-loader";
+import { mergeUnifiedConfigs } from "./config-merge";
 import { getGlobalConfigPath, getProjectConfigPath } from "./config-paths";
 
 describe("stripJsonComments", () => {

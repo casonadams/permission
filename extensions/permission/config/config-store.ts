@@ -4,7 +4,8 @@ import type { ExtensionCommandContext, ExtensionContext } from "@earendil-works/
 import { syncPermissionSystemStatus } from "../app/status";
 import type { DebugReviewLogger } from "../integrations/session-logger";
 import { MODAL_BOOLEAN_CONFIG_KEYS } from "./config-keys";
-import { loadAndMergeConfigs, loadUnifiedConfig, type UnifiedPermissionConfig } from "./config-loader";
+import { loadAndMergeConfigs, loadUnifiedConfig } from "./config-loader";
+import type { UnifiedPermissionConfig } from "./config-normalize";
 import {
   getGlobalConfigPath,
   getLegacyExtensionConfigPath,

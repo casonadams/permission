@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { toRecord } from "../shared/common";
-import { stripJsonComments } from "./config-loader";
+import { stripJsonComments } from "./config-json-comments";
 
 export function readConfiguredMcpServerNamesFromConfigPath(configPath: string): string[] {
   try {
