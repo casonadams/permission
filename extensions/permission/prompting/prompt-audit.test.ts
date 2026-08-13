@@ -1,13 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { PERMISSIONS_UI_PROMPT_CHANNEL, type PermissionEventBus } from "#src/integrations/permission-events";
-import type { ReviewLogger } from "#src/integrations/session-logger";
 import type { PromptPermissionDetails } from "#src/prompting/permission-prompter";
 import {
-  type LocalPromptAuditDeps,
   maybeAutoApprovePrompt,
+  type PromptAuditDeps,
   recordPromptDecision,
   recordPromptWaiting,
-} from "#src/ui/prompt-audit";
+} from "#src/prompting/prompt-audit";
 
 function makeDetails(overrides: Partial<PromptPermissionDetails> = {}): PromptPermissionDetails {
   return {
@@ -22,7 +21,7 @@ function makeDetails(overrides: Partial<PromptPermissionDetails> = {}): PromptPe
   };
 }
 
-function makeDeps(yoloMode = false): LocalPromptAuditDeps & { logger: ReviewLogger; events: PermissionEventBus } {
+function makeDeps(yoloMode = false): PromptAuditDeps & { events: PermissionEventBus } {
   return {
     config: { current: () => ({ debugLog: false, permissionReviewLog: true, yoloMode }) },
     logger: { review: vi.fn() },
@@ -30,7 +29,7 @@ function makeDeps(yoloMode = false): LocalPromptAuditDeps & { logger: ReviewLogg
   };
 }
 
-describe("local prompt audit helpers", () => {
+describe("prompt audit helpers", () => {
   it("records and returns an auto-approved decision when yolo mode is enabled", () => {
     const deps = makeDeps(true);
     const decision = maybeAutoApprovePrompt(makeDetails(), deps);

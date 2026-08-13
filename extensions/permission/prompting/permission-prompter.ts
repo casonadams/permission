@@ -3,16 +3,11 @@ import type { ConfigReader } from "../config/config-store";
 import type { ApprovalRequester } from "../forwarding/permission-forwarder";
 import { emitUiPromptEvent, type PermissionEventBus } from "../integrations/permission-events";
 import type { ReviewLogger } from "../integrations/session-logger";
-import { createAutoApprovedPermissionDecision, type PermissionPromptDecision } from "./permission-dialog";
+import type { PermissionPromptDecision } from "./permission-dialog";
 import { buildDirectUiPrompt } from "./permission-ui-prompt";
-import { shouldAutoApprovePermissionState } from "./yolo-mode";
+import { maybeAutoApprovePrompt, recordPromptDecision, recordPromptWaiting } from "./prompt-audit";
 
 export type PermissionReviewSource = "tool_call" | "skill_input" | "skill_read";
-
-type PermissionReviewLogDetails = PromptPermissionDetails & {
-  resolution?: string;
-  denialReason?: string;
-};
 
 /** Details passed when prompting the user for a permission decision. */
 export interface PromptPermissionDetails {
@@ -42,45 +37,21 @@ export interface PermissionPrompterApi {
   prompt(ctx: ExtensionContext, details: PromptPermissionDetails): Promise<PermissionPromptDecision>;
 }
 
-/**
- * Dependencies required by PermissionPrompter.
- *
- * Keeps the prompter's external surface narrow: callers provide config
- * access, a review logger, the UI-prompt event bus, and the forwarder
- * that owns the UI/subagent-forwarding branching logic.
- */
 export interface PermissionPrompterDeps {
-  /** Read current config for yolo-mode check (called at prompt time). */
   config: ConfigReader;
-  /** Write structured entries to the permission review log. */
   logger: ReviewLogger;
-  /** Event bus used for UI prompt broadcasts. */
   events: PermissionEventBus;
-  /** Resolves the permission decision: direct UI dialog or forwarded to parent. */
   forwarder: ApprovalRequester;
 }
 
-/**
- * Encapsulates the full permission-prompt flow:
- *   1. Yolo-mode auto-approval check.
- *   2. Review-log "waiting" entry.
- *   3. UI-present vs. subagent-forwarding branching (via confirmPermission).
- *   4. Review-log "approved" / "denied" entry.
- *
- * Injecting a single PermissionPrompter instance means adding a new prompt
- * parameter (e.g. a future sessionLabel variant) only requires changing
- * PromptPermissionDetails and this class — not the full threading chain.
- */
 export class PermissionPrompter implements PermissionPrompterApi {
   constructor(private readonly deps: PermissionPrompterDeps) {}
 
   async prompt(ctx: ExtensionContext, details: PromptPermissionDetails): Promise<PermissionPromptDecision> {
-    if (shouldAutoApprovePermissionState("ask", this.deps.config.current())) {
-      this.writeReviewEntry("permission_request.auto_approved", details);
-      return createAutoApprovedPermissionDecision();
-    }
+    const autoDecision = maybeAutoApprovePrompt(details, this.deps);
+    if (autoDecision) return autoDecision;
 
-    this.writeReviewEntry("permission_request.waiting", details);
+    recordPromptWaiting(details, { logger: this.deps.logger });
 
     // Build the event once. When this session has UI it broadcasts directly;
     // when it does not (a forwarding subagent), the display fields ride along
@@ -102,43 +73,7 @@ export class PermissionPrompter implements PermissionPrompterApi {
       },
     });
 
-    this.writeReviewEntry(decision.approved ? "permission_request.approved" : "permission_request.denied", {
-      ...details,
-      resolution: decision.state,
-      denialReason: decision.denialReason,
-    });
-
+    recordPromptDecision(details, decision, this.deps.logger);
     return decision;
   }
-
-  // ── Private helpers ──────────────────────────────────────────────────────
-
-  private writeReviewEntry(event: string, details: PermissionReviewLogDetails): void {
-    this.deps.logger.review(event, buildReviewLogDetails(details));
-  }
-}
-
-function buildReviewLogDetails(details: PermissionReviewLogDetails): Record<string, unknown> {
-  return {
-    requestId: details.requestId,
-    source: details.source,
-    agentName: details.agentName,
-    message: details.message,
-    toolCallId: optionalLogValue(details.toolCallId),
-    toolName: optionalLogValue(details.toolName),
-    skillName: optionalLogValue(details.skillName),
-    path: optionalLogValue(details.path),
-    command: optionalLogValue(details.command),
-    target: optionalLogValue(details.target),
-    toolInputPreview: optionalLogValue(details.toolInputPreview),
-    promptSurface: optionalLogValue(details.promptSurface),
-    promptValue: optionalLogValue(details.promptValue),
-    sessionPattern: optionalLogValue(details.sessionPattern),
-    resolution: optionalLogValue(details.resolution),
-    denialReason: optionalLogValue(details.denialReason),
-  };
-}
-
-function optionalLogValue(value: string | undefined): string | null {
-  return value ?? null;
 }

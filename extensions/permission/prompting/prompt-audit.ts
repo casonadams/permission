@@ -1,29 +1,31 @@
-import type { ConfigReader } from "../config/config-store.ts";
-import { emitUiPromptEvent, type PermissionEventBus } from "../integrations/permission-events.ts";
-import type { ReviewLogger } from "../integrations/session-logger.ts";
-import { createAutoApprovedPermissionDecision, type PermissionPromptDecision } from "../prompting/permission-dialog.ts";
-import type { PromptPermissionDetails } from "../prompting/permission-prompter.ts";
-import { buildDirectUiPrompt } from "../prompting/permission-ui-prompt.ts";
-import { shouldAutoApprovePermissionState } from "../prompting/yolo-mode.ts";
+import type { ConfigReader } from "../config/config-store";
+import { emitUiPromptEvent, type PermissionEventBus } from "../integrations/permission-events";
+import type { ReviewLogger } from "../integrations/session-logger";
+import { createAutoApprovedPermissionDecision, type PermissionPromptDecision } from "./permission-dialog";
+import type { PromptPermissionDetails } from "./permission-prompter";
+import { buildDirectUiPrompt } from "./permission-ui-prompt";
+import { shouldAutoApprovePermissionState } from "./yolo-mode";
 
-export type LocalPromptAuditDeps = {
+export type PromptAuditDeps = {
   config: ConfigReader;
-  events: PermissionEventBus;
   logger: ReviewLogger;
 };
 
 export function maybeAutoApprovePrompt(
   details: PromptPermissionDetails,
-  deps: LocalPromptAuditDeps,
+  deps: PromptAuditDeps,
 ): PermissionPromptDecision | null {
   if (!shouldAutoApprovePermissionState("ask", deps.config.current())) return null;
   deps.logger.review("permission_request.auto_approved", buildReviewLogDetails(details));
   return createAutoApprovedPermissionDecision();
 }
 
-export function recordPromptWaiting(details: PromptPermissionDetails, deps: LocalPromptAuditDeps): void {
+export function recordPromptWaiting(
+  details: PromptPermissionDetails,
+  deps: { logger: ReviewLogger; events?: PermissionEventBus },
+): void {
   deps.logger.review("permission_request.waiting", buildReviewLogDetails(details));
-  emitUiPromptEvent(deps.events, buildDirectUiPrompt(details));
+  if (deps.events) emitUiPromptEvent(deps.events, buildDirectUiPrompt(details));
 }
 
 export function recordPromptDecision(

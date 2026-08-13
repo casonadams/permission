@@ -1,5 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { ConfigReader } from "../config/config-store.ts";
+import type { PermissionEventBus } from "../integrations/permission-events.ts";
 import type { ReviewLogger } from "../integrations/session-logger.ts";
 import {
   createApprovedPermissionDecision,
@@ -8,22 +9,22 @@ import {
   type PermissionPromptDecision,
 } from "../prompting/permission-dialog.ts";
 import type { PermissionPrompterApi, PromptPermissionDetails } from "../prompting/permission-prompter.ts";
+import {
+  maybeAutoApprovePrompt,
+  type PromptAuditDeps,
+  recordPromptDecision,
+  recordPromptWaiting,
+} from "../prompting/prompt-audit.ts";
 import { type GatePrompter, setGatePrompter } from "../service.ts";
 import { previewToolCall, promptBody, toolTitle } from "./preview.ts";
 import { chooseHorizontalApproval, renderPromptBody } from "./prompt/horizontal.ts";
 import { queueDialog } from "./prompt/queue.ts";
-import {
-  type LocalPromptAuditDeps,
-  maybeAutoApprovePrompt,
-  recordPromptDecision,
-  recordPromptWaiting,
-} from "./prompt-audit.ts";
 import { type ApprovalValue, buildApprovalOptions, buildSessionOption } from "./prompt-options.ts";
 
 type LocalPrompterDeps = {
   prompter: PermissionPrompterApi;
   canResolve: (ctx: ExtensionContext) => boolean;
-  audit: LocalPromptAuditDeps;
+  audit: PromptAuditDeps & { events: PermissionEventBus };
 };
 
 function makeGatePromter(getCtx: () => ExtensionContext | null, deps: LocalPrompterDeps): GatePrompter {
@@ -54,7 +55,7 @@ function makeGatePromter(getCtx: () => ExtensionContext | null, deps: LocalPromp
 async function promptWithHorizontalPicker(
   ctx: ExtensionContext,
   details: PromptPermissionDetails,
-  deps: LocalPromptAuditDeps,
+  deps: PromptAuditDeps & { events: PermissionEventBus },
 ): Promise<PermissionPromptDecision> {
   const autoDecision = maybeAutoApprovePrompt(details, deps);
   if (autoDecision) return autoDecision;

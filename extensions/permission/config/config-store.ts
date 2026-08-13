@@ -21,33 +21,19 @@ import {
 } from "./extension-config";
 import type { ResolvedPolicyPaths } from "./policy-loader";
 
-/** Read-only view of the current config — for consumers that only read. */
 export interface ConfigReader {
   current(): PermissionSystemExtensionConfig;
 }
 
-/**
- * Narrow subset of `ConfigStore` that `PermissionSession` depends on.
- *
- * Using an interface rather than the concrete class avoids private-member
- * coupling between the class and test doubles.
- */
 export interface SessionConfigStore extends ConfigReader {
   refresh(ctx?: ExtensionContext): void;
   logResolvedPaths(cwd?: string): void;
 }
 
-/**
- * Narrow subset of `ConfigStore` for the `/permission-system` command.
- *
- * Using an interface rather than the concrete class avoids private-member
- * coupling between the class and test doubles.
- */
 export interface CommandConfigStore extends ConfigReader {
   save(next: PermissionSystemExtensionConfig, ctx: ExtensionCommandContext): void;
 }
 
-/** Narrow view of the manager's resolved policy paths (for `logResolvedPaths`). */
 export interface ResolvedPolicyPathProvider {
   getResolvedPolicyPaths(): ResolvedPolicyPaths;
 }
@@ -62,13 +48,6 @@ function syncStatusIfAvailable(ctx: ExtensionContext | undefined, config: Permis
   if (ctx?.hasUI) syncPermissionSystemStatus(ctx, config);
 }
 
-function mergeModalBooleanConfig(
-  existing: UnifiedPermissionConfig,
-  normalized: PermissionSystemExtensionConfig,
-): UnifiedPermissionConfig {
-  return { ...existing, ...modalBooleanConfigDetails(normalized) };
-}
-
 function modalBooleanConfigDetails(config: PermissionSystemExtensionConfig): Record<string, boolean> {
   const details: Record<string, boolean> = {};
   for (const key of MODAL_BOOLEAN_CONFIG_KEYS) {
@@ -77,35 +56,16 @@ function modalBooleanConfigDetails(config: PermissionSystemExtensionConfig): Rec
   return details;
 }
 
-/**
- * Owns the mutable extension config and the operations that read/write it.
- *
- * Replaces the three `(runtime, …)` config free functions
- * (`refreshExtensionConfig`, `saveExtensionConfig`, `logResolvedConfigPaths`)
- * with methods that privately own `config` and `lastConfigWarning`.
- *
- * Implements {@link ConfigReader} so consumers that only read the current config
- * can depend on the narrow interface rather than the full class.
- */
 export class ConfigStore implements SessionConfigStore, CommandConfigStore {
-  private config: PermissionSystemExtensionConfig;
+  private config: PermissionSystemExtensionConfig = { ...DEFAULT_EXTENSION_CONFIG };
   private lastConfigWarning: string | null = null;
 
-  constructor(private readonly deps: ConfigStoreDeps) {
-    this.config = { ...DEFAULT_EXTENSION_CONFIG };
-  }
+  constructor(private readonly deps: ConfigStoreDeps) {}
 
-  /** Return the current extension config. */
   current(): PermissionSystemExtensionConfig {
     return this.config;
   }
 
-  /**
-   * Reload merged config from disk.
-   *
-   * If `ctx` is provided, uses it to derive the cwd and sync UI status.
-   * Equivalent to `refreshExtensionConfig(runtime, ctx?)`.
-   */
   refresh(ctx?: ExtensionContext): void {
     const cwd = ctx?.cwd ?? null;
     const mergeResult = loadAndMergeConfigs(this.deps.agentDir, cwd ?? "", EXTENSION_ROOT);
@@ -139,12 +99,6 @@ export class ConfigStore implements SessionConfigStore, CommandConfigStore {
     });
   }
 
-  /**
-   * Save updated runtime knobs to the global config file, then update
-   * the current config and sync UI status.
-   *
-   * Equivalent to `saveExtensionConfig(runtime, next, ctx)`.
-   */
   // Called via the CommandConfigStore interface from config-modal.ts — fallow cannot trace through interfaces.
   // fallow-ignore-next-line unused-class-member
   save(next: PermissionSystemExtensionConfig, ctx: ExtensionCommandContext): void {
@@ -152,7 +106,7 @@ export class ConfigStore implements SessionConfigStore, CommandConfigStore {
     const globalPath = getGlobalConfigPath(this.deps.agentDir);
 
     const existing = loadUnifiedConfig(globalPath);
-    const merged = mergeModalBooleanConfig(existing.config, normalized);
+    const merged: UnifiedPermissionConfig = { ...existing.config, ...modalBooleanConfigDetails(normalized) };
 
     const tmpPath = `${globalPath}.tmp`;
     try {
@@ -179,11 +133,6 @@ export class ConfigStore implements SessionConfigStore, CommandConfigStore {
     this.deps.logger.debug("config.saved", modalBooleanConfigDetails(normalized));
   }
 
-  /**
-   * Write the resolved config path set to the review and debug logs.
-   *
-   * Equivalent to `logResolvedConfigPaths(runtime)`.
-   */
   logResolvedPaths(cwd?: string): void {
     const policyPaths = this.deps.policyPaths.getResolvedPolicyPaths();
     const { agentDir } = this.deps;

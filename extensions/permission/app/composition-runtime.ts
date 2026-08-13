@@ -49,8 +49,20 @@ export function createRuntime(pi: ExtensionAPI): Runtime {
   state.config = config;
   const forwarder = createForwarder({ pi, core, config, logger });
   const prompter = new PermissionPrompter({ config, logger, events: pi.events, forwarder });
-  const gateway = createGateway(core, config, prompter);
-  const session = createSession({ core, config, forwarder, gateway });
+  const gateway = new PromptingGateway({
+    config,
+    subagentSessionsDir: core.paths.subagentSessionsDir,
+    registry: core.registries.subagents,
+    prompter,
+  });
+  const session = new PermissionSession({
+    paths: core.paths,
+    forwarding: new ForwardingManager(core.paths.subagentSessionsDir, forwarder, core.registries.subagents),
+    permissionManager: core.manager,
+    sessionRules: core.rules,
+    configStore: config,
+    gateway,
+  });
   state.session = session;
   return { ...core, config, session, logger, forwarder, prompter, gateway };
 }
@@ -100,35 +112,6 @@ function createForwarder(args: {
     config: args.config,
   };
   return new PermissionForwarder(deps);
-}
-
-function createGateway(core: Core, config: ConfigStore, prompter: PermissionPrompter): PromptingGateway {
-  return new PromptingGateway({
-    config,
-    subagentSessionsDir: core.paths.subagentSessionsDir,
-    registry: core.registries.subagents,
-    prompter,
-  });
-}
-
-function createSession(args: {
-  core: Core;
-  config: ConfigStore;
-  forwarder: PermissionForwarder;
-  gateway: PromptingGateway;
-}): PermissionSession {
-  return new PermissionSession({
-    paths: args.core.paths,
-    forwarding: new ForwardingManager(
-      args.core.paths.subagentSessionsDir,
-      args.forwarder,
-      args.core.registries.subagents,
-    ),
-    permissionManager: args.core.manager,
-    sessionRules: args.core.rules,
-    configStore: args.config,
-    gateway: args.gateway,
-  });
 }
 
 export function registerCommand(pi: ExtensionAPI, runtime: Runtime): void {
