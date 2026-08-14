@@ -1,4 +1,5 @@
 import { Key, matchesKey } from "@earendil-works/pi-tui";
+import { BodyScroller } from "./body-scroller.ts";
 import { renderComponent, type ThemeLike } from "./horizontal-render.ts";
 
 export type HorizontalOption<T extends string> = {
@@ -37,21 +38,27 @@ export function createHorizontalPickerComponent<T extends string>(args: {
   done: (value: T) => void;
 }): Component {
   let state = createInitialState<T>();
+  const bodyScroller = new BodyScroller(args.tui);
   const currentOptions = (): HorizontalOption<T>[] =>
     state.confirmStep ? state.confirmStep.options : args.step.options;
 
   return {
-    render: (width) =>
-      renderComponent({
+    render: (width) => {
+      const body = currentBody(args.step, state);
+      return renderComponent({
         width,
         theme: args.theme,
         title: args.title,
-        body: currentBody(args.step, state),
+        body,
+        bodyOffset: bodyScroller.prepare(body, width),
         options: currentOptions(),
         selected: state.selected,
-      }),
+      });
+    },
     invalidate(): void {},
     handleInput(data: string): void {
+      if (bodyScroller.handleInput(data)) return;
+      const previousBody = currentBody(args.step, state);
       state = handleHorizontalInput({
         data,
         state,
@@ -61,15 +68,14 @@ export function createHorizontalPickerComponent<T extends string>(args: {
         done: args.done,
         tui: args.tui,
       });
+      if (currentBody(args.step, state) !== previousBody) bodyScroller.reset();
     },
   };
 }
 
 type PickerState<T extends string> = { confirmStep: ConfirmStep<T> | null; selected: number };
 
-function createInitialState<T extends string>(): PickerState<T> {
-  return { confirmStep: null, selected: 0 };
-}
+const createInitialState = <T extends string>(): PickerState<T> => ({ confirmStep: null, selected: 0 });
 
 function currentBody<T extends string>(step: Step<T>, state: PickerState<T>): string {
   return state.confirmStep ? state.confirmStep.body : step.body;
@@ -93,13 +99,8 @@ function handleHorizontalInput<T extends string>(args: {
   return args.state;
 }
 
-function isPreviousKey(data: string): boolean {
-  return matchesKey(data, Key.left) || matchesKey(data, Key.shift("tab"));
-}
-
-function isNextKey(data: string): boolean {
-  return matchesKey(data, Key.right) || matchesKey(data, Key.tab);
-}
+const isPreviousKey = (data: string): boolean => matchesKey(data, Key.left) || matchesKey(data, Key.shift("tab"));
+const isNextKey = (data: string): boolean => matchesKey(data, Key.right) || matchesKey(data, Key.tab);
 
 function moveSelection<T extends string>(args: {
   state: PickerState<T>;

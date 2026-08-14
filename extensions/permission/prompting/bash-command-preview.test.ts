@@ -4,7 +4,13 @@ import { formatBashCommandPreview } from "#src/prompting/bash-command-preview";
 describe("formatBashCommandPreview", () => {
   test("places flags and chained commands on separate lines", () => {
     expect(formatBashCommandPreview("pnpm vitest run --coverage && pnpm lint --write")).toBe(
-      ["pnpm vitest run \\", "  --coverage \\", "&&", "pnpm lint \\", "  --write"].join("\n"),
+      ["pnpm vitest run \\", "  --coverage &&", "pnpm lint \\", "  --write"].join("\n"),
+    );
+  });
+
+  test("keeps conditional operators on the preceding line", () => {
+    expect(formatBashCommandPreview("test --file config.json || echo missing")).toBe(
+      ["test \\", "  --file config.json ||", "echo missing"].join("\n"),
     );
   });
 
@@ -16,13 +22,13 @@ describe("formatBashCommandPreview", () => {
 
   test("does not treat quoted flags or operators as syntax", () => {
     expect(formatBashCommandPreview("printf '%s && %s' '--flag' value && echo done")).toBe(
-      ["printf '%s && %s' '--flag' value \\", "&&", "echo done"].join("\n"),
+      ["printf '%s && %s' '--flag' value &&", "echo done"].join("\n"),
     );
   });
 
   test("keeps file-descriptor redirections intact", () => {
     expect(formatBashCommandPreview("cat --number file 2>&1 && echo done")).toBe(
-      ["cat \\", "  --number file 2>&1 \\", "&&", "echo done"].join("\n"),
+      ["cat \\", "  --number file 2>&1 &&", "echo done"].join("\n"),
     );
   });
 

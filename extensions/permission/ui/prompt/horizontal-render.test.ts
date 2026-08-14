@@ -47,4 +47,25 @@ describe("renderComponent", () => {
   test("treats a whitespace-only body as absent", () => {
     expect(render("Skill: plan", "   ")).toHaveLength(5);
   });
+
+  test("renders a scrollable window without discarding body lines", () => {
+    const body = Array.from({ length: 12 }, (_, index) => `line ${index + 1}`).join("\n");
+    const lines = renderComponent({
+      width: 60,
+      theme,
+      title: "Bash",
+      body,
+      bodyOffset: 2,
+      options: [
+        { label: "Allow", value: "allow" },
+        { label: "Deny", value: "deny" },
+      ],
+      selected: 0,
+    }).join("\n");
+
+    expect(lines).toContain("line 3");
+    expect(lines).toContain("line 10");
+    expect(lines).not.toContain("line 2 ");
+    expect(lines).toContain("lines 3-10 of 12 (up/down to scroll)");
+  });
 });

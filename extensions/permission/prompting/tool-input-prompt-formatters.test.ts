@@ -11,7 +11,7 @@ import {
 describe("formatBashInputForPrompt", () => {
   test("formats flags and command chains across lines", () => {
     expect(formatBashInputForPrompt({ command: "git push --force && git status --short" })).toBe(
-      ["git push \\", "  --force \\", "&&", "git status \\", "  --short"].join("\n"),
+      ["git push \\", "  --force &&", "git status \\", "  --short"].join("\n"),
     );
   });
 });
