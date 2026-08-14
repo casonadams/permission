@@ -77,8 +77,8 @@ describe("looksLikeWebhook", () => {
 });
 
 describe("previewToolCall", () => {
-  test("reads the bash command", () => {
-    expect(previewToolCall("bash", { command: "ls -la" })).toBe("ls -la");
+  test("formats the bash command for display", () => {
+    expect(previewToolCall("bash", { command: "ls -la" })).toBe("ls \\\n  -la");
   });
 
   test("reads the read path", () => {

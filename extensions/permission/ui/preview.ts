@@ -10,6 +10,7 @@
  */
 
 import { prefix } from "../gates/bash-arity";
+import { formatBashCommandPreview } from "../prompting/bash-command-preview";
 
 type ToolInput = Record<string, unknown> | undefined;
 
@@ -134,7 +135,7 @@ export function toolTitle(toolName: string, input: unknown): string {
 }
 
 const TOOL_PREVIEW_READERS: Record<string, (input: ToolInput) => string> = {
-  bash: (input) => readString(input, "command"),
+  bash: (input) => formatBashCommandPreview(readString(input, "command")),
   read: (input) => readString(input, "path"),
   write: (input) => readString(input, "path"),
   edit: (input) => readString(input, "path"),

@@ -1,4 +1,5 @@
 import { getNonEmptyString, toRecord } from "../shared/common";
+import { formatBashCommandPreview } from "./bash-command-preview";
 import { countTextLines, formatCount } from "./tool-input-preview";
 
 export function getPromptPath(input: Record<string, unknown>): string | null {
@@ -10,7 +11,8 @@ export function getPromptPath(input: Record<string, unknown>): string | null {
  * sub-command that triggered the gate; this is the full command it came from.
  */
 export function formatBashInputForPrompt(input: Record<string, unknown>): string {
-  return getNonEmptyString(input.command) ?? "";
+  const command = getNonEmptyString(input.command);
+  return command ? formatBashCommandPreview(command) : "";
 }
 
 /** The skill name already appears in the prompt title, so add nothing here. */

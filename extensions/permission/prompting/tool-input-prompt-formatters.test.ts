@@ -1,11 +1,20 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  formatBashInputForPrompt,
   formatEditInputForPrompt,
   formatReadInputForPrompt,
   formatWriteInputForPrompt,
   getPromptPath,
 } from "#src/prompting/tool-input-prompt-formatters";
+
+describe("formatBashInputForPrompt", () => {
+  test("formats flags and command chains across lines", () => {
+    expect(formatBashInputForPrompt({ command: "git push --force && git status --short" })).toBe(
+      ["git push \\", "  --force \\", "&&", "git status \\", "  --short"].join("\n"),
+    );
+  });
+});
 
 describe("getPromptPath", () => {
   test("returns path from 'path' key", () => {
