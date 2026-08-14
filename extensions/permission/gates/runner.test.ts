@@ -79,13 +79,34 @@ describe("GateRunner — descriptor path", () => {
       prompt: vi.fn().mockResolvedValue({ approved: true, state: "approved" }),
     });
     const result = await runner.run(makeDescriptor(), null, "tc-1");
-    expect(result).toEqual({ action: "allow" });
+    expect(result).toEqual({ action: "allow", toolCallApproved: true });
     expect(deps.reporter.emitDecision).toHaveBeenCalledWith(
       expect.objectContaining({
         result: "allow",
         resolution: "user_approved",
       }),
     );
+  });
+
+  it("does not prompt for an ask already covered by this tool-call approval", async () => {
+    const { runner, deps } = makeGateRunner({
+      resolveResult: makeCheckResult({ state: "ask", matchedPattern: "*" }),
+    });
+
+    const result = await runner.run(makeDescriptor(), null, "tc-1", true);
+
+    expect(result).toEqual({ action: "allow" });
+    expect(deps.prompt).not.toHaveBeenCalled();
+  });
+
+  it("still blocks an explicit deny after this tool call was approved", async () => {
+    const { runner } = makeGateRunner({
+      resolveResult: makeCheckResult({ state: "deny", matchedPattern: "*" }),
+    });
+
+    const result = await runner.run(makeDescriptor(), null, "tc-1", true);
+
+    expect(result).toMatchObject({ action: "block" });
   });
 
   it("returns allow, emits user_approved_for_session, and records session rule on approved_for_session", async () => {
@@ -97,7 +118,7 @@ describe("GateRunner — descriptor path", () => {
       sessionApproval: SessionApproval.single("read", "*"),
     });
     const result = await runner.run(descriptor, null, "tc-1");
-    expect(result).toEqual({ action: "allow" });
+    expect(result).toEqual({ action: "allow", toolCallApproved: true });
     expect(deps.reporter.emitDecision).toHaveBeenCalledWith(
       expect.objectContaining({
         resolution: "user_approved_for_session",
@@ -114,7 +135,7 @@ describe("GateRunner — descriptor path", () => {
     const approval = SessionApproval.multiple("external_directory", ["/outside/a/*", "/outside/b/*"]);
     const descriptor = makeDescriptor({ sessionApproval: approval });
     const result = await runner.run(descriptor, null, "tc-1");
-    expect(result).toEqual({ action: "allow" });
+    expect(result).toEqual({ action: "allow", toolCallApproved: true });
     expect(deps.recordSessionApproval).toHaveBeenCalledTimes(1);
     expect(deps.recordSessionApproval).toHaveBeenCalledWith(approval);
   });
@@ -159,7 +180,7 @@ describe("GateRunner — descriptor path", () => {
       }),
     });
     const result = await runner.run(makeDescriptor(), null, "tc-1");
-    expect(result).toEqual({ action: "allow" });
+    expect(result).toEqual({ action: "allow", toolCallApproved: true });
     expect(deps.reporter.emitDecision).toHaveBeenCalledWith(
       expect.objectContaining({
         resolution: "auto_approved",

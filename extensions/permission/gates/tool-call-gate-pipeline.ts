@@ -47,6 +47,8 @@ export interface ToolCallGateInputs {
  * - all six gate producers in their prescribed order
  * - the run loop that returns the first block outcome, or allow
  */
+type GateProducer = () => GateResult | Promise<GateResult>;
+
 export interface ToolCallGatePipelineDeps {
   resolver: ScopedPermissionResolver;
   inputs: ToolCallGateInputs;
@@ -77,7 +79,7 @@ export class ToolCallGatePipeline {
 
     const infraDirs = this.inputs.getInfrastructureReadDirs();
 
-    const gateProducers: Array<() => GateResult | Promise<GateResult>> = [
+    const gateProducers: GateProducer[] = [
       () => describeSkillReadGate(tcc, () => this.inputs.getActiveSkillEntries()),
       () => describePathGate(tcc, this.resolver, this.customExtractors),
       () => describeExternalDirectoryGate(tcc, infraDirs, this.customExtractors),
@@ -91,14 +93,7 @@ export class ToolCallGatePipeline {
       },
     ];
 
-    for (const produce of gateProducers) {
-      const outcome = await runner.run(await produce(), tcc.agentName, tcc.toolCallId);
-      if (outcome.action === "block") {
-        return outcome;
-      }
-    }
-
-    return { action: "allow" };
+    return runGateProducers({ gateProducers, tcc, runner });
   }
 
   private resolveToolCheck(
@@ -118,4 +113,18 @@ export class ToolCallGatePipeline {
     }
     return this.resolver.resolve(tcc.toolName, tcc.input, agentName);
   }
+}
+
+async function runGateProducers(args: {
+  gateProducers: GateProducer[];
+  tcc: ToolCallContext;
+  runner: GateRunner;
+}): Promise<GateOutcome> {
+  let toolCallApproved = false;
+  for (const produce of args.gateProducers) {
+    const outcome = await args.runner.run(await produce(), args.tcc.agentName, args.tcc.toolCallId, toolCallApproved);
+    if (outcome.action === "block") return outcome;
+    if (args.tcc.toolName === "bash" && outcome.toolCallApproved) toolCallApproved = true;
+  }
+  return { action: "allow" };
 }

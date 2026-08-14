@@ -8,10 +8,11 @@ describe("formatBashCommandPreview", () => {
     );
   });
 
-  test("keeps conditional operators on the preceding line", () => {
+  test("keeps command separators on the preceding line", () => {
     expect(formatBashCommandPreview("test --file config.json || echo missing")).toBe(
       ["test \\", "  --file config.json ||", "echo missing"].join("\n"),
     );
+    expect(formatBashCommandPreview('printf "hi"; echo "hello"')).toBe('printf "hi";\necho "hello"');
   });
 
   test("keeps a flag value with its flag", () => {

@@ -99,8 +99,9 @@ function handleHorizontalInput<T extends string>(args: {
   return args.state;
 }
 
-const isPreviousKey = (data: string): boolean => matchesKey(data, Key.left) || matchesKey(data, Key.shift("tab"));
-const isNextKey = (data: string): boolean => matchesKey(data, Key.right) || matchesKey(data, Key.tab);
+const isPreviousKey = (data: string): boolean =>
+  matchesKey(data, Key.left) || matchesKey(data, Key.shift("tab")) || data === "h";
+const isNextKey = (data: string): boolean => matchesKey(data, Key.right) || matchesKey(data, Key.tab) || data === "l";
 
 function moveSelection<T extends string>(args: {
   state: PickerState<T>;

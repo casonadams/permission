@@ -148,6 +148,29 @@ describe("ToolCallGatePipeline", () => {
       expect(mockBashProgramParse).toHaveBeenCalledWith("echo hello");
     });
 
+    it("carries one approval across the remaining gates of the same bash call", async () => {
+      const resolver = makeResolver(makeCheckResult({ state: "ask", matchedPattern: "*" }));
+      const inputs = makeGateInputs();
+      const { runner } = makeGateRunner();
+      let callCount = 0;
+      const runSpy = vi.spyOn(runner, "run").mockImplementation(async () => {
+        callCount++;
+        return callCount === 4 ? { action: "allow", toolCallApproved: true } : { action: "allow" };
+      });
+      mockBashProgramParse.mockResolvedValue({
+        ...makeMockBashProgram(),
+        externalPaths: vi.fn(() => ["/outside/file"]),
+      });
+      const pipeline = new ToolCallGatePipeline({ resolver, inputs });
+
+      await pipeline.evaluate(
+        makeTcc({ toolName: "bash", input: { command: "cat /outside/file; echo done" } }),
+        runner,
+      );
+
+      expect(runSpy).toHaveBeenNthCalledWith(6, expect.anything(), null, "tc-1", true);
+    });
+
     it("does not parse BashProgram when the bash command is empty", async () => {
       const resolver = makeResolver(makeCheckResult());
       const inputs = makeGateInputs();

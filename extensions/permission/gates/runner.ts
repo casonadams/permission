@@ -20,6 +20,7 @@ export interface GateRunnerDeps {
 }
 
 type DescriptorRunContext = { descriptor: GateDescriptor; agentName: string | null; toolCallId: string };
+type GateRunArgs = [agentName: string | null, toolCallId: string, toolCallApproved?: boolean];
 type AppliedDescriptorGate = { gateResult: PermissionGateResult; canConfirm: boolean; autoApproved: boolean };
 
 export class GateRunner {
@@ -29,7 +30,9 @@ export class GateRunner {
     return getInstalledGatePrompter() ?? this.deps.defaultPrompter;
   }
 
-  async run(gate: GateResult, agentName: string | null, toolCallId: string): Promise<GateOutcome> {
+  async run(gate: GateResult, ...args: GateRunArgs): Promise<GateOutcome> {
+    const [agentName, toolCallId] = args;
+    const toolCallApproved = args[2] === true;
     if (!gate) {
       return { action: "allow" };
     }
@@ -42,23 +45,19 @@ export class GateRunner {
       }
       return { action: "allow" };
     }
-    return this.runDescriptor(gate, agentName, toolCallId);
+    return this.runDescriptor({ descriptor: gate, agentName, toolCallId }, toolCallApproved);
   }
 
-  private async runDescriptor(
-    descriptor: GateDescriptor,
-    agentName: string | null,
-    toolCallId: string,
-  ): Promise<GateOutcome> {
-    const ctx = { descriptor, agentName, toolCallId };
+  private async runDescriptor(ctx: DescriptorRunContext, toolCallApproved: boolean): Promise<GateOutcome> {
     const check = this.resolveDescriptorCheck(ctx);
+    if (toolCallApproved && check.state === "ask") return { action: "allow" };
     const sessionHit = this.handleSessionHit(ctx, check);
     if (sessionHit) return sessionHit;
 
     const applied = await this.applyDescriptorGate(ctx, check);
     this.emitGateDecision(ctx, check, applied);
     this.recordSessionApproval(ctx.descriptor, applied.gateResult);
-    return toGateOutcome(applied.gateResult);
+    return toGateOutcome(applied.gateResult, check.state === "ask");
   }
 
   private resolveDescriptorCheck(ctx: DescriptorRunContext): PermissionCheckResult {
@@ -156,7 +155,7 @@ function buildGateMessages(descriptor: GateDescriptor) {
 function hasSessionApproval(r: PermissionGateResult): boolean {
   return r.action === "allow" && r.sessionApproval !== undefined;
 }
-function toGateOutcome(gateResult: PermissionGateResult): GateOutcome {
+function toGateOutcome(gateResult: PermissionGateResult, asked: boolean): GateOutcome {
   if (gateResult.action === "block") return { action: "block", reason: gateResult.reason };
-  return { action: "allow" };
+  return asked ? { action: "allow", toolCallApproved: true } : { action: "allow" };
 }

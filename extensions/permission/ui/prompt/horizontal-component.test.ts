@@ -29,8 +29,34 @@ describe("createHorizontalPickerComponent", () => {
     expect(scrolled).not.toContain("line 1 ");
     expect(scrolled).toContain("lines 2-9 of 12");
 
+    component.handleInput("k");
+    expect(component.render(60).join("\n")).toContain("lines 1-8 of 12");
+    component.handleInput("j");
+    expect(component.render(60).join("\n")).toContain("lines 2-9 of 12");
     component.handleInput("\u001b[A");
     expect(component.render(60).join("\n")).toContain("lines 1-8 of 12");
-    expect(tui.requestRender).toHaveBeenCalledTimes(2);
+    expect(tui.requestRender).toHaveBeenCalledTimes(4);
+  });
+
+  test("moves the approval selection with h and l", () => {
+    const component = createHorizontalPickerComponent({
+      tui: { requestRender: vi.fn() },
+      theme,
+      title: "Bash",
+      step: {
+        body: "git status",
+        options: [
+          { label: "Allow", value: "allow" },
+          { label: "Deny", value: "deny" },
+        ],
+      },
+      cancelValue: "deny",
+      done: vi.fn(),
+    });
+
+    component.handleInput("l");
+    expect(component.render(60).join("\n")).toContain("[Allow]   Deny ");
+    component.handleInput("h");
+    expect(component.render(60).join("\n")).toContain(" Allow   [Deny]");
   });
 });

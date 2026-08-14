@@ -16,8 +16,8 @@ export class BodyScroller {
   }
 
   handleInput(data: string): boolean {
-    if (matchesKey(data, Key.up)) return this.move(-1);
-    if (matchesKey(data, Key.down)) return this.move(1);
+    if (matchesKey(data, Key.up) || data === "k") return this.move(-1);
+    if (matchesKey(data, Key.down) || data === "j") return this.move(1);
     return false;
   }
 

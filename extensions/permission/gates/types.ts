@@ -1,5 +1,5 @@
 /** Outcome of a single permission gate evaluation. */
-export type GateOutcome = { action: "allow" } | { action: "block"; reason: string };
+export type GateOutcome = { action: "allow"; toolCallApproved?: true } | { action: "block"; reason: string };
 
 /** Pre-validated context shared across all gates. */
 export interface ToolCallContext {

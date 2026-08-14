@@ -44,15 +44,15 @@ function classifyToken(token: string, wordCount: number): TokenKind {
 
 function pushOperator(parts: PreviewPart[], operator: string): void {
   const previous = parts.at(-1);
-  if (isConditionalOperator(operator) && previous && !previous.operator) {
-    previous.text += ` ${operator}`;
+  if (isTrailingOperator(operator) && previous && !previous.operator) {
+    previous.text += operator === ";" ? operator : ` ${operator}`;
     return;
   }
   parts.push({ text: operator, operator: true, indented: false });
 }
 
-function isConditionalOperator(value: string): boolean {
-  return value === "&&" || value === "||";
+function isTrailingOperator(value: string): boolean {
+  return value === "&&" || value === "||" || value === ";";
 }
 
 function flushWords(words: string[], parts: PreviewPart[]): string[] {
@@ -64,12 +64,12 @@ function flushWords(words: string[], parts: PreviewPart[]): string[] {
 
 function renderPart(part: PreviewPart, continued: boolean): string {
   const prefix = part.indented ? "  " : "";
-  const continuation = !part.operator && continued && !endsWithConditionalOperator(part.text) ? " \\" : "";
+  const continuation = !part.operator && continued && !endsWithTrailingOperator(part.text) ? " \\" : "";
   return `${prefix}${part.text}${continuation}`;
 }
 
-function endsWithConditionalOperator(value: string): boolean {
-  return value.endsWith(" &&") || value.endsWith(" ||");
+function endsWithTrailingOperator(value: string): boolean {
+  return value.endsWith(" &&") || value.endsWith(" ||") || value.endsWith(";");
 }
 
 function isFlag(token: string): boolean {
