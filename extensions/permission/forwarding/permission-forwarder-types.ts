@@ -95,6 +95,8 @@ export interface PermissionForwarderDeps {
   requestPermissionDecisionFromUi: PermissionDecisionRequester;
 }
 
+export type PermissionForwarderState = PermissionForwarderDeps;
+
 export interface ApprovalRequester {
   requestApproval(request: ApprovalRequest): Promise<PermissionPromptDecision>;
 }

@@ -1,6 +1,6 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { PermissionSession } from "#src/app/permission-session";
-import { PERMISSION_SYSTEM_STATUS_KEY } from "#src/app/status";
+import { EXTENSION_ID } from "#src/config/extension-config";
 import type { PermissionNotifier } from "#src/integrations/notifier";
 import type { ServiceLifecycle } from "#src/integrations/service-lifecycle";
 import type { PermissionResolver } from "#src/policy/permission-resolver";
@@ -58,7 +58,7 @@ export class SessionLifecycleHandler {
   handleSessionShutdown(): Promise<void> {
     const ctx = this.session.getRuntimeContext();
     if (ctx) {
-      ctx.ui.setStatus(PERMISSION_SYSTEM_STATUS_KEY, undefined);
+      ctx.ui.setStatus(EXTENSION_ID, undefined);
     }
     this.session.shutdown();
     this.serviceLifecycle.teardown();

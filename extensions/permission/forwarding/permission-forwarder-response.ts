@@ -3,8 +3,7 @@ import { createDeniedPermissionDecision, type PermissionPromptDecision } from "#
 import { buildForwardedUiPrompt } from "#src/prompting/permission-ui-prompt";
 import { writeJsonFileAtomic } from "./io";
 import { notifyPermissionForwardingError } from "./io-log";
-import type { PermissionForwarderState } from "./permission-forwarder-state";
-import type { ForwardedResponseWrite } from "./permission-forwarder-types";
+import type { ForwardedResponseWrite, PermissionForwarderState } from "./permission-forwarder-types";
 
 export function writeForwardedResponse(state: PermissionForwarderState, params: ForwardedResponseWrite): void {
   try {

@@ -1,13 +1,12 @@
 import { vi } from "vitest";
 import type { SkillPromptEntry } from "#src/app/skill-prompt-sanitizer";
 import type { GateDescriptor } from "#src/gates/descriptor";
-import { GateRunner } from "#src/gates/runner";
+import { type DecisionReporter, GateRunner } from "#src/gates/runner";
 import type { SkillInputGateInputs } from "#src/gates/skill-input-gate-pipeline";
 import type { ToolCallGateInputs } from "#src/gates/tool-call-gate-pipeline";
 import type { ToolCallContext } from "#src/gates/types";
-import type { DecisionReporter } from "#src/integrations/decision-reporter";
 import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
-import type { SessionApprovalRecorder } from "#src/policy/session-approval-recorder";
+import type { SessionApprovalRecorder } from "#src/policy/session-rules";
 import type { PermissionCheckResult } from "#src/policy/types";
 import type { DenialContext } from "#src/prompting/denial-messages";
 import type { GatePrompter } from "#src/prompting/gate-prompter";

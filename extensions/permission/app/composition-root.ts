@@ -4,8 +4,8 @@ import { subscribeSubagentLifecycle } from "../forwarding/subagents/subagent-lif
 import { GateRunner } from "../gates/runner";
 import { SkillInputGatePipeline } from "../gates/skill-input-gate-pipeline";
 import { ToolCallGatePipeline } from "../gates/tool-call-gate-pipeline";
-import { GateDecisionReporter } from "../integrations/decision-reporter";
 import { registerPermissionRpcHandlers } from "../integrations/permission-event-rpc";
+import { emitDecisionEvent } from "../integrations/permission-events";
 import { LocalPermissionsService } from "../integrations/permissions-service";
 import { PermissionServiceLifecycle } from "../integrations/service-lifecycle";
 import { PermissionResolver } from "../policy/permission-resolver";
@@ -72,7 +72,9 @@ function createGateHandler(args: {
   toolRegistry: ReturnType<typeof createToolRegistry>;
 }): PermissionGateHandler {
   const { runtime, resolver, pi, toolRegistry } = args;
-  const reporter = new GateDecisionReporter(pi.events);
+  const reporter = {
+    emitDecision: (event: Parameters<typeof emitDecisionEvent>[1]) => emitDecisionEvent(pi.events, event),
+  };
   const runner = new GateRunner({ resolver, recorder: runtime.rules, defaultPrompter: runtime.gateway, reporter });
   return new PermissionGateHandler({
     session: runtime.session,

@@ -11,12 +11,12 @@ import { ensurePermissionForwardingLocation, writeJsonFileAtomic } from "./io";
 import { notifyPermissionForwardingError } from "./io-log";
 import { buildMissingForwardingTargetMessage, getSessionId, requesterAgentName } from "./permission-forwarder-helpers";
 import { pollForForwardedResponse } from "./permission-forwarder-poll";
-import type { PermissionForwarderState } from "./permission-forwarder-state";
 import type {
   ApprovalRequest,
   ForwardedRequestBuild,
   ForwardedRequestWrite,
   ForwarderContext,
+  PermissionForwarderState,
 } from "./permission-forwarder-types";
 
 export function requestApproval(

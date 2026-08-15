@@ -8,8 +8,7 @@ import { cleanupPermissionForwardingLocationIfEmpty, safeDeleteFile } from "./io
 import { sleep } from "./io-list";
 import { notifyPermissionForwardingWarning } from "./io-log";
 import { readForwardedPermissionResponse } from "./io-read";
-import type { PermissionForwarderState } from "./permission-forwarder-state";
-import type { ForwardedResponsePoll } from "./permission-forwarder-types";
+import type { ForwardedResponsePoll, PermissionForwarderState } from "./permission-forwarder-types";
 
 export async function pollForForwardedResponse(
   state: PermissionForwarderState,

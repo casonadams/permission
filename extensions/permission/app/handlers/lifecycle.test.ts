@@ -6,12 +6,6 @@ import type { ServiceLifecycle } from "#src/integrations/service-lifecycle";
 import { makeCtx } from "#test/helpers/handler-fixtures";
 import { makeRealResolver, makeRealSession } from "#test/helpers/session-fixtures";
 
-vi.mock("../status", () => ({
-  PERMISSION_SYSTEM_STATUS_KEY: "permission",
-  syncPermissionSystemStatus: vi.fn(),
-  getPermissionSystemStatus: vi.fn(),
-}));
-
 function makeSetup(opts?: { configIssues?: string[] }) {
   const { session, permissionManager, sessionRules, forwarding, configStore } = makeRealSession();
   const { resolver } = makeRealResolver(permissionManager, sessionRules);

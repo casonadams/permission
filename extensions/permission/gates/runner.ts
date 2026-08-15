@@ -1,7 +1,7 @@
 import { applyPermissionGate, type PermissionGateResult } from "#src/gates/permission-gate";
-import type { DecisionReporter } from "#src/integrations/decision-reporter";
+import type { PermissionDecisionEvent } from "#src/integrations/permission-events";
 import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
-import type { SessionApprovalRecorder } from "#src/policy/session-approval-recorder";
+import type { SessionApprovalRecorder } from "#src/policy/session-rules";
 import type { PermissionCheckResult } from "#src/policy/types";
 import { formatDenyReason, formatUnavailableReason, formatUserDeniedReason } from "#src/prompting/denial-messages";
 import type { GatePrompter } from "#src/prompting/gate-prompter";
@@ -11,6 +11,10 @@ import type { GateDescriptor, GateResult } from "./descriptor";
 import { isGateBypass } from "./descriptor";
 import { buildDecisionEvent, deriveResolution } from "./helpers";
 import type { GateOutcome } from "./types";
+
+export interface DecisionReporter {
+  emitDecision(event: PermissionDecisionEvent): void;
+}
 
 export interface GateRunnerDeps {
   resolver: ScopedPermissionResolver;

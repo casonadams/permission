@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { evaluate } from "#src/policy/rule";
 import { SessionApproval } from "#src/policy/session-approval";
-import type { SessionApprovalRecorder } from "#src/policy/session-approval-recorder";
+import type { SessionApprovalRecorder } from "#src/policy/session-rules";
 import { deriveApprovalPattern, SessionRules } from "#src/policy/session-rules";
 
 describe("SessionRules", () => {

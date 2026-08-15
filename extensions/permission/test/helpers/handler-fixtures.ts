@@ -4,9 +4,8 @@ import { PermissionGateHandler } from "#src/app/handlers/permission-gate-handler
 import { GateRunner } from "#src/gates/runner";
 import { type SkillInputGateInputs, SkillInputGatePipeline } from "#src/gates/skill-input-gate-pipeline";
 import { type ToolCallGateInputs, ToolCallGatePipeline } from "#src/gates/tool-call-gate-pipeline";
-import { GateDecisionReporter } from "#src/integrations/decision-reporter";
 import type { PermissionDecisionEvent } from "#src/integrations/permission-events";
-import { PERMISSIONS_DECISION_CHANNEL } from "#src/integrations/permission-events";
+import { emitDecisionEvent, PERMISSIONS_DECISION_CHANNEL } from "#src/integrations/permission-events";
 import type { ToolRegistry } from "#src/integrations/tool-registry";
 import type { Rule } from "#src/policy/rule";
 import { SessionRules } from "#src/policy/session-rules";
@@ -134,7 +133,7 @@ export function makeHandler(overrides?: {
   const recorder = new SessionRules();
   const pipeline = new ToolCallGatePipeline({ resolver, inputs: session });
   const skillInputPipeline = new SkillInputGatePipeline(resolver);
-  const reporter = new GateDecisionReporter(events);
+  const reporter = { emitDecision: (event: PermissionDecisionEvent) => emitDecisionEvent(events, event) };
   const prompter = makeHandlerPrompter(overrides);
   const runner = new GateRunner({ resolver, recorder, defaultPrompter: prompter, reporter });
   const handler = new PermissionGateHandler({ session, toolRegistry, pipeline, skillInputPipeline, runner });

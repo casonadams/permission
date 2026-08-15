@@ -15,9 +15,9 @@ import {
   buildForwardedPromptEvent,
   writeForwardedResponse,
 } from "./permission-forwarder-response";
-import type { PermissionForwarderState } from "./permission-forwarder-state";
 import type {
   ForwarderContext,
+  PermissionForwarderState,
   ProcessableInbox,
   ProcessForwardedRequestParams,
   RequestLocationPath,

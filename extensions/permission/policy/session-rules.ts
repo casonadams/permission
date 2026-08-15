@@ -2,7 +2,10 @@ import { dirname, sep } from "node:path";
 
 import type { Ruleset } from "./rule";
 import type { SessionApproval } from "./session-approval";
-import type { SessionApprovalRecorder } from "./session-approval-recorder";
+
+export interface SessionApprovalRecorder {
+  recordSessionApproval(approval: SessionApproval): void;
+}
 
 export class SessionRules implements SessionApprovalRecorder {
   private rules: Ruleset = [];
