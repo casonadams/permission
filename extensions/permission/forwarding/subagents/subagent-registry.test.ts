@@ -5,7 +5,7 @@ import {
   SubagentSessionRegistry,
 } from "#src/forwarding/subagents/subagent-registry";
 
-const REGISTRY_KEY = Symbol.for("@gotgenes/pi-permission-system:subagent-registry");
+const REGISTRY_KEY = Symbol.for("@casonadams/permission:subagent-registry");
 
 function makeInfo(overrides: Partial<SubagentSessionInfo> = {}): SubagentSessionInfo {
   return { ...overrides };
@@ -67,8 +67,6 @@ describe("SubagentSessionRegistry", () => {
     expect(registry.get("session-abc")?.parentSessionId).toBe("parent-2");
   });
 
-  // ── #298 regression: concurrent siblings must be independent ──────────────
-
   test("two sibling session ids are registered independently", () => {
     const registry = new SubagentSessionRegistry();
     registry.register("child-session-A", makeInfo({ parentSessionId: "parent-P" }));
@@ -83,7 +81,6 @@ describe("SubagentSessionRegistry", () => {
     registry.register("child-session-A", makeInfo({ parentSessionId: "parent-P" }));
     registry.register("child-session-B", makeInfo({ parentSessionId: "parent-P" }));
 
-    // Sibling A finishes — should not affect B.
     registry.unregister("child-session-A");
 
     expect(registry.has("child-session-A")).toBe(false);
@@ -91,8 +88,6 @@ describe("SubagentSessionRegistry", () => {
     expect(registry.get("child-session-B")?.parentSessionId).toBe("parent-P");
   });
 });
-
-// ── process-global accessor ────────────────────────────────────────────────
 
 describe("getSubagentSessionRegistry (process-global accessor)", () => {
   afterEach(() => {

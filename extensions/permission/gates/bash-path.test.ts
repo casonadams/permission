@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// Mock node:os so tilde-expansion is deterministic across platforms.
 vi.mock("node:os", () => {
   const homedir = vi.fn(() => "/mock/home");
   return {
@@ -27,19 +26,11 @@ import {
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-/**
- * Mirror the handler's parse-once derivation: parse the bash command into a
- * shared `BashProgram` and inject it, exactly as `permission-gate-handler.ts`
- * does, so the gate is exercised through the production wiring.
- */
 async function describeGate(tcc: ToolCallContext, resolver: ScopedPermissionResolver): Promise<GateResult> {
   const command = getNonEmptyString(toRecord(tcc.input).command);
   const bashProgram = tcc.toolName === "bash" && command ? await BashProgram.parse(command) : null;
   return describeBashPathGate(tcc, bashProgram, resolver);
 }
-
-// ── tests ──────────────────────────────────────────────────────────────────
 
 describe("describeBashPathGate", () => {
   it("returns null for non-bash tools", async () => {
@@ -163,7 +154,6 @@ describe("describeBashPathGate", () => {
   it("ignores tokens matching universal default but fires for explicit rule matches", async () => {
     const resolver = makePathDispatchResolver(
       { ".env": makeCheckResult({ state: "deny", matchedPattern: "*.env" }) },
-      // Other tokens match only the universal default (no matchedPattern)
       makeCheckResult({
         state: "ask",
         matchedPattern: undefined,
@@ -193,7 +183,6 @@ describe("describeBashPathGate", () => {
       ["/test/project/nested/src/file.txt", "nested/src/file.txt", "src/file.txt"],
       undefined,
     );
-    // The raw token drives the prompt, denial context, and session approval.
     expect(result.denialContext).toMatchObject({ pathValue: "src/file.txt" });
     expect(result.decision.value).toBe("src/file.txt");
   });
@@ -212,16 +201,8 @@ describe("describeBashPathGate", () => {
   });
 });
 
-// Home-relative path characterization (#350) ──────────────────────────────
-//
-// The parser extracts ~/... tokens from bash commands; the resolver receives
-// the raw token and normalizeInput handles expansion. These tests verify the
-// gate correctly dispatches ~/... tokens through the deny/ask path.
-
 describe("describeBashPathGate — home-relative paths", () => {
   it("extracts ~/... token and builds descriptor on deny", async () => {
-    // node:os is mocked: homedir() returns "/mock/home".
-    // cat ~/.ssh/config → token "~/.ssh/config" extracted.
     const resolver = makePathDispatchResolver(
       {
         "/mock/home/.ssh/config": makeCheckResult({

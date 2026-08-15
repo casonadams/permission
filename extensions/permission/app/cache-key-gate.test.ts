@@ -54,7 +54,6 @@ describe("CacheKeyGate", () => {
 
       expect(() => gate.runIfChanged("key-a", throwing)).toThrow("oops");
 
-      // Same key should run again since the first call threw
       gate.runIfChanged("key-a", fallback);
       expect(fallback).toHaveBeenCalledOnce();
     });

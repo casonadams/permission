@@ -1,15 +1,5 @@
-/**
- * Cross-extension service accessor backed by `Symbol.for()` on `globalThis`.
- *
- * `Symbol.for()` is process-global by spec, so it survives jiti's per-extension
- * module isolation (`moduleCache: false`). A consumer doing
- * `import("permission")` gets a fresh module copy, but
- * `getPermissionsService()` reads from the same `globalThis` slot the provider
- * wrote to — enabling direct, synchronous, type-safe function calls.
- *
- * Best practice: call `getPermissionsService()` per use rather than caching the
- * reference — this ensures resilience across `/reload` and load-order edge cases.
- */
+/** `Symbol.for()` and `globalThis` allow this service to cross jiti module isolation.
+ * Resolve the service per use so reloads cannot leave consumers with a stale reference. */
 
 import type { ToolAccessExtractor } from "./integrations/tool-access-extractor-registry";
 import type { ToolInputFormatter } from "./integrations/tool-input-formatter-registry";
@@ -35,81 +25,23 @@ export {
 export type { GatePrompter } from "./prompting/gate-prompter";
 export type { PermissionCheckResult, PermissionState, ToolInputFormatter };
 
-const SERVICE_KEY = Symbol.for("@gotgenes/pi-permission-system:service");
+const SERVICE_KEY = Symbol.for("@casonadams/permission:service");
 
 export interface PermissionsService {
-  /**
-   * Query the permission policy for a surface and value.
-   *
-   * @param surface   - Permission surface: "bash", "read", "mcp", "skill",
-   *                    "path", etc.
-   * @param value     - The value to evaluate: command string, skill name, path,
-   *                    or MCP target such as `server:tool`/`server`. Omit or
-   *                    pass `undefined` for a surface-level query.
-   * @param agentName - Optional agent name for per-agent policy resolution.
-   * @returns Full check result including state, matched pattern, and origin.
-   */
+  /** Query a surface policy; `value` is its command, path, skill name, or MCP target. */
   checkPermission(surface: string, value?: string, agentName?: string): PermissionCheckResult;
 
-  /**
-   * Register a custom preview formatter for a specific tool name.
-   *
-   * The formatter is consulted first inside `ToolPreviewFormatter.formatToolInputForPrompt`;
-   * returning `undefined` falls through to the built-in switch (and ultimately
-   * the JSON default).
-   *
-   * Only one formatter may be registered per tool name — a second call for the
-   * same name throws.  The returned disposer unregisters the formatter.
-   *
-   * @param toolName  - Exact tool name to register for (e.g. `"mcp"`, `"my-server:run"`).
-   * @param formatter - Receives the raw `input` record; return a string to use
-   *                    as the prompt preview, or `undefined` to decline.
-   */
+  /** Register one formatter per tool; `undefined` delegates to built-ins. The return value unregisters it. */
   registerToolInputFormatter(toolName: string, formatter: ToolInputFormatter): () => void;
 
-  /**
-   * Register a custom access-intent extractor for a specific tool name.
-   *
-   * The extractor declares the filesystem path a tool will access so the
-   * cross-cutting `path` gate can see it. Use it for
-   * tools whose path lives under a non-standard key — built-in file tools and
-   * any tool exposing `input.path` (plus MCP via `input.arguments.path`) are
-   * already covered by convention without registration.
-   *
-   * The extractor receives the raw `input` record and returns the path string,
-   * or `undefined` to decline. Only one extractor may be registered per tool
-   * name — a second call for the same name throws. The returned disposer
-   * unregisters the extractor.
-   *
-   * @param toolName  - Exact tool name to register for (e.g. `"ffgrep"`).
-   * @param extractor - Receives the raw `input` record; return the path string,
-   *                    or `undefined` to decline.
-   */
+  /** Register one non-standard path extractor per tool. The return value unregisters it. */
   registerToolAccessExtractor(toolName: string, extractor: ToolAccessExtractor): () => void;
 
-  /**
-   * Query the tool-level permission state for pre-filtering tools before
-   * creating a child session.
-   *
-   * Returns `"deny"` | `"allow"` | `"ask"` based on the composed policy.
-   * Does not consider command-level rules (e.g. per-bash-command patterns) —
-   * use `checkPermission` for runtime invocation gates.
-   *
-   * @param toolName  - Tool name (e.g. `"bash"`, `"read"`, `"my-extension:tool"`).
-   * @param agentName - Optional agent name for per-agent policy resolution.
-   */
+  /** Query tool-level policy for pre-filtering; command-level rules are not considered. */
   getToolPermission(toolName: string, agentName?: string): PermissionState;
 }
 
-/**
- * Store a `PermissionsService` on `globalThis` so other extensions can
- * retrieve it via `getPermissionsService()`.
- *
- * Called at `session_start` by the top-level (parent) instance only — an
- * in-process subagent child skips publishing so it cannot clobber the parent's
- * service. Overwrites any previously published service, which keeps `/reload`
- * working: a reloaded parent re-publishes its fresh service.
- */
+/** Publish the parent session's service, replacing any stale reload generation. */
 export function publishPermissionsService(service: PermissionsService): void {
   (globalThis as Record<symbol, unknown>)[SERVICE_KEY] = service;
 }
@@ -118,25 +50,12 @@ export function getPermissionsService(): PermissionsService | undefined {
   return (globalThis as Record<symbol, unknown>)[SERVICE_KEY] as PermissionsService | undefined;
 }
 
-/**
- * Remove `service` from `globalThis`, but only when the current slot still
- * holds it (identity compare-and-delete).
- *
- * Called during `session_shutdown` to avoid stale references after the
- * extension is torn down. Scoping the delete to the publishing instance keeps
- * two cases correct:
- *
- * - An in-process subagent child never published the parent's service, so its
- *   shutdown is a no-op and the parent's slot survives.
- * - A superseded `/reload` generation no longer owns the slot, so its late
- *   shutdown cannot wipe the new generation's freshly published service.
- */
+/** Unpublish only when `service` still owns the slot, preserving parent and newer reload instances. */
 export function unpublishPermissionsService(service: PermissionsService): void {
   if (getPermissionsService() !== service) {
     return;
   }
-  // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Symbol-keyed global property; Map.delete() is not applicable
-  delete (globalThis as Record<symbol, unknown>)[SERVICE_KEY];
+  Reflect.deleteProperty(globalThis, SERVICE_KEY);
 }
 
 export { setGatePrompter } from "./prompting/gate-prompter-registry";

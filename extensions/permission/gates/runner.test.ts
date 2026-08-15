@@ -33,10 +33,6 @@ describe("GateRunner — descriptor path", () => {
         resolution: "policy_deny",
       }),
     );
-    expect(deps.reporter.writeReviewLog).toHaveBeenCalledWith(
-      "permission_request.blocked",
-      expect.objectContaining({ resolution: "policy_denied" }),
-    );
   });
 
   it("returns allow and emits session_approved on session hit", async () => {
@@ -56,13 +52,6 @@ describe("GateRunner — descriptor path", () => {
       "tc-1",
     );
     expect(result).toEqual({ action: "allow" });
-    expect(deps.reporter.writeReviewLog).toHaveBeenCalledWith(
-      "permission_request.session_approved",
-      expect.objectContaining({
-        resolution: "session_approved",
-        sessionApprovalPattern: "git *",
-      }),
-    );
     expect(deps.reporter.emitDecision).toHaveBeenCalledWith(
       expect.objectContaining({
         resolution: "session_approved",
@@ -320,7 +309,6 @@ describe("GateRunner.run — null and bypass dispatch", () => {
     const { runner, deps } = makeGateRunner();
     const result = await runner.run(null, null, "tc-1");
     expect(result).toEqual({ action: "allow" });
-    expect(deps.reporter.writeReviewLog).not.toHaveBeenCalled();
     expect(deps.reporter.emitDecision).not.toHaveBeenCalled();
   });
 
@@ -329,20 +317,6 @@ describe("GateRunner.run — null and bypass dispatch", () => {
     const bypass: GateBypass = { action: "allow" };
     const result = await runner.run(bypass, null, "tc-1");
     expect(result).toEqual({ action: "allow" });
-    expect(deps.reporter.writeReviewLog).not.toHaveBeenCalled();
-    expect(deps.reporter.emitDecision).not.toHaveBeenCalled();
-  });
-
-  it("fires writeReviewLog for a bypass with a log entry", async () => {
-    const { runner, deps } = makeGateRunner();
-    const bypass: GateBypass = {
-      action: "allow",
-      log: { event: "infra.bypass", details: { path: "/x" } },
-    };
-    await runner.run(bypass, null, "tc-1");
-    expect(deps.reporter.writeReviewLog).toHaveBeenCalledWith("infra.bypass", {
-      path: "/x",
-    });
     expect(deps.reporter.emitDecision).not.toHaveBeenCalled();
   });
 
@@ -360,7 +334,6 @@ describe("GateRunner.run — null and bypass dispatch", () => {
     const bypass: GateBypass = { action: "allow", decision };
     await runner.run(bypass, null, "tc-1");
     expect(deps.reporter.emitDecision).toHaveBeenCalledWith(decision);
-    expect(deps.reporter.writeReviewLog).not.toHaveBeenCalled();
   });
 
   it("routes a descriptor to the gate check logic and returns allow", async () => {

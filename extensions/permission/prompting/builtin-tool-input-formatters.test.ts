@@ -5,8 +5,6 @@ import {
   registerBuiltinToolInputFormatters,
 } from "#src/prompting/builtin-tool-input-formatters";
 
-// ── formatMcpInputForPrompt ───────────────────────────────────────────────
-
 describe("formatMcpInputForPrompt", () => {
   test("returns undefined when arguments is absent", () => {
     expect(formatMcpInputForPrompt({ tool: "exa:search" })).toBeUndefined();
@@ -68,7 +66,6 @@ describe("formatMcpInputForPrompt", () => {
   });
 
   test("truncates the full summary when it exceeds the limit", () => {
-    // Need multiple long-valued args so the joined summary exceeds 160 chars
     const result = formatMcpInputForPrompt({
       arguments: {
         first: "x".repeat(80),
@@ -85,12 +82,10 @@ describe("formatMcpInputForPrompt", () => {
       arguments: { query: "x".repeat(100) },
     });
     expect(result).toBeDefined();
-    // Should not include the full 100-char string verbatim
+
     expect(result).not.toContain("x".repeat(100));
   });
 });
-
-// ── registerBuiltinToolInputFormatters ────────────────────────────────────
 
 describe("registerBuiltinToolInputFormatters", () => {
   test("registers the mcp formatter in the registry", () => {

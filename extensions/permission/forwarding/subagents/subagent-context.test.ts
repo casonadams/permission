@@ -87,7 +87,6 @@ describe("isSubagentExecutionContext — env hint detection", () => {
     expect(isSubagentExecutionContext(makeCtx(null), "/sessions/subagents")).toBe(true);
   });
 
-  // nicobailon/pi-subagents keys
   test("returns true when PI_SUBAGENT_CHILD is set", () => {
     vi.stubEnv("PI_SUBAGENT_CHILD", "1");
     expect(isSubagentExecutionContext(makeCtx(null), "/sessions/subagents")).toBe(true);
@@ -113,7 +112,6 @@ describe("isSubagentExecutionContext — env hint detection", () => {
     expect(isSubagentExecutionContext(makeCtx(null), "/sessions/subagents")).toBe(true);
   });
 
-  // HazAT/pi-interactive-subagents keys
   test("returns true when PI_SUBAGENT_NAME is set", () => {
     vi.stubEnv("PI_SUBAGENT_NAME", "my-agent");
     expect(isSubagentExecutionContext(makeCtx(null), "/sessions/subagents")).toBe(true);
@@ -135,16 +133,15 @@ describe("isSubagentExecutionContext — env hint detection", () => {
   });
 
   test("covers all declared SUBAGENT_ENV_HINT_KEYS", () => {
-    // Verify the keys we test match what the module declares.
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_IS_SUBAGENT");
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_SUBAGENT_SESSION_ID");
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_AGENT_ROUTER_SUBAGENT");
-    // nicobailon/pi-subagents
+
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_SUBAGENT_CHILD");
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_SUBAGENT_RUN_ID");
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_SUBAGENT_CHILD_AGENT");
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_SUBAGENT_DEPTH");
-    // HazAT/pi-interactive-subagents
+
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_SUBAGENT_NAME");
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_SUBAGENT_ID");
     expect(SUBAGENT_ENV_HINT_KEYS).toContain("PI_SUBAGENT_SESSION");
@@ -180,7 +177,6 @@ describe("isSubagentExecutionContext — session dir detection", () => {
   });
 
   test("returns false when session dir is a sibling with shared prefix", () => {
-    // "/sessions/subagents-extra" should not match root "/sessions/subagents"
     const sessionDir = `${subagentRoot}-extra/session-abc`;
     expect(isSubagentExecutionContext(makeCtx(sessionDir), subagentRoot)).toBe(false);
   });
@@ -222,23 +218,19 @@ describe("isSubagentExecutionContext — registry detection", () => {
   });
 
   test("registry check takes priority over env var detection", () => {
-    // Registry says registered; env var not set — should still return true.
     const registry = new SubagentSessionRegistry();
     registry.register(childSessionId, {});
-    // Confirm no env var is set
     expect(process.env.PI_IS_SUBAGENT).toBeUndefined();
     expect(isSubagentExecutionContext(makeCtx(outsideDir, childSessionId), subagentRoot, registry)).toBe(true);
   });
 
   test("unregistered session falls through to env var detection", () => {
     vi.stubEnv("PI_IS_SUBAGENT", "true");
-    const registry = new SubagentSessionRegistry(); // empty — childSessionId not registered
-    // Env var present → still true even without registry entry
+    const registry = new SubagentSessionRegistry();
     expect(isSubagentExecutionContext(makeCtx(outsideDir, childSessionId), subagentRoot, registry)).toBe(true);
   });
 
   test("no registry passed — existing behaviour unchanged", () => {
-    // Ensure the parameter is truly optional (no registry arg)
     expect(isSubagentExecutionContext(makeCtx(null), subagentRoot)).toBe(false);
   });
 });

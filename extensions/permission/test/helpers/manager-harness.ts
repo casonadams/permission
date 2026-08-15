@@ -1,9 +1,3 @@
-/**
- * Filesystem-backed PermissionManager harness for integration tests.
- *
- * Writes a real config file and agents directory to a temp directory so
- * PermissionManager can load them without mocking the file system.
- */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -27,7 +21,7 @@ export function createManager(
   agentFiles: Record<string, string> = {},
   options: CreateManagerOptions = {},
 ) {
-  const baseDir = mkdtempSync(join(tmpdir(), "pi-permission-system-test-"));
+  const baseDir = mkdtempSync(join(tmpdir(), "permission-test-"));
   const globalConfigPath = join(baseDir, "pi-permissions.jsonc");
   const agentsDir = join(baseDir, "agents");
 
@@ -86,7 +80,7 @@ export function createManagerWithProject(
 }
 
 function createProjectHarnessPaths(): ProjectHarnessPaths {
-  const baseDir = mkdtempSync(join(tmpdir(), "pi-permission-system-proj-test-"));
+  const baseDir = mkdtempSync(join(tmpdir(), "permission-proj-test-"));
   const projectRoot = join(baseDir, "project");
   return {
     baseDir,

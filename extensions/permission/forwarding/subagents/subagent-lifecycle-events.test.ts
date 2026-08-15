@@ -29,11 +29,6 @@ describe("subscribeSubagentLifecycle", () => {
   });
 
   it("populates the registry synchronously — before emit() returns", () => {
-    // Guards the pre-bindExtensions ordering: the core emits session-created
-    // on the same synchronous call stack right before bindExtensions(), so the
-    // handler must complete before emit() returns. A real EventEmitter-backed
-    // bus dispatches synchronously; this fails loudly if the handler ever
-    // becomes async (awaiting before registry.register).
     const bus = createEventBus();
     subscribeSubagentLifecycle(bus, registry);
 
@@ -41,7 +36,6 @@ describe("subscribeSubagentLifecycle", () => {
       sessionId: "child-session-sync",
     });
 
-    // No await between emit and this assertion.
     expect(registry.has("child-session-sync")).toBe(true);
   });
 
@@ -103,13 +97,10 @@ describe("subscribeSubagentLifecycle", () => {
     expect(SUBAGENT_CHILD_DISPOSED).toBe("subagents:child:disposed");
   });
 
-  // ── #298 regression: concurrent siblings must be independent ──────────────
-
   it("disposing one sibling does not evict the other (collision regression)", () => {
     const bus = createEventBus();
     subscribeSubagentLifecycle(bus, registry);
 
-    // Two concurrent children of the same parent register under distinct ids.
     bus.emit(SUBAGENT_CHILD_SESSION_CREATED, {
       sessionId: "child-A",
       parentSessionId: "parent-P",
@@ -119,10 +110,8 @@ describe("subscribeSubagentLifecycle", () => {
       parentSessionId: "parent-P",
     });
 
-    // Sibling A finishes first.
     bus.emit(SUBAGENT_CHILD_DISPOSED, { sessionId: "child-A" });
 
-    // B must still be detected as a registered subagent.
     expect(registry.has("child-A")).toBe(false);
     expect(registry.has("child-B")).toBe(true);
     expect(registry.get("child-B")?.parentSessionId).toBe("parent-P");

@@ -33,7 +33,6 @@ describe("prefix", () => {
   });
 
   it("returns single-element array for a bare known command", () => {
-    // 'git' alone has arity 2 but only 1 token is available — clamp.
     expect(prefix(["git"])).toEqual(["git"]);
   });
 
@@ -74,17 +73,14 @@ describe("prefix", () => {
   });
 
   it("is case-insensitive: 'Git' looks up as 'git'", () => {
-    // Tokens are preserved as-is; only the lookup key is lowercased.
     expect(prefix(["Git", "checkout", "main"])).toEqual(["Git", "checkout"]);
   });
 
   it("clamps arity to available token count when command is shorter than arity", () => {
-    // npm run has arity 3; only ["npm", "run"] provided → return both.
     expect(prefix(["npm", "run"])).toEqual(["npm", "run"]);
   });
 
   it("returns arity-2 prefix for pnpm run (longest match wins over pnpm)", () => {
-    // pnpm run <script> — arity 3 means include the script name.
     expect(prefix(["pnpm", "run", "build"])).toEqual(["pnpm", "run", "build"]);
   });
 

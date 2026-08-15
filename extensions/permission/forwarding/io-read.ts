@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import type { ForwardedPermissionRequest, ForwardedPermissionResponse } from "#src/forwarding/permission-forwarding";
+import type { PermissionNotifier } from "#src/integrations/notifier";
 import type { PermissionUiPromptSource } from "#src/integrations/permission-events";
-import type { ReviewLogger } from "#src/integrations/session-logger";
 import { isPermissionDecisionState } from "#src/prompting/permission-dialog";
-import { logPermissionForwardingWarning } from "./io-log";
+import { notifyPermissionForwardingWarning } from "./io-log";
 
 const UI_PROMPT_SOURCES = [
   "tool_call",
@@ -22,18 +22,21 @@ function asNullableDisplayString(value: unknown): string | null | undefined {
 }
 
 export function readForwardedPermissionRequest(
-  logger: ReviewLogger | null,
+  notifier: PermissionNotifier | null,
   filePath: string,
 ): ForwardedPermissionRequest | null {
   try {
     const parsed = JSON.parse(readFileSync(filePath, "utf-8")) as Partial<ForwardedPermissionRequest>;
     if (!isValidRequest(parsed)) {
-      logPermissionForwardingWarning(logger, `Ignoring invalid forwarded permission request format in '${filePath}'`);
+      notifyPermissionForwardingWarning(
+        notifier,
+        `Ignoring invalid forwarded permission request format in '${filePath}'`,
+      );
       return null;
     }
     return buildRequest(parsed);
   } catch (error) {
-    logPermissionForwardingWarning(logger, `Failed to read forwarded permission request '${filePath}'`, error);
+    notifyPermissionForwardingWarning(notifier, `Failed to read forwarded permission request '${filePath}'`, error);
     return null;
   }
 }
@@ -64,18 +67,21 @@ function buildRequest(parsed: ForwardedPermissionRequest): ForwardedPermissionRe
 }
 
 export function readForwardedPermissionResponse(
-  logger: ReviewLogger | null,
+  notifier: PermissionNotifier | null,
   filePath: string,
 ): ForwardedPermissionResponse | null {
   try {
     const parsed = JSON.parse(readFileSync(filePath, "utf-8")) as Partial<ForwardedPermissionResponse>;
     if (!isValidResponse(parsed)) {
-      logPermissionForwardingWarning(logger, `Ignoring invalid forwarded permission response format in '${filePath}'`);
+      notifyPermissionForwardingWarning(
+        notifier,
+        `Ignoring invalid forwarded permission response format in '${filePath}'`,
+      );
       return null;
     }
     return buildResponse(parsed);
   } catch (error) {
-    logPermissionForwardingWarning(logger, `Failed to read forwarded permission response '${filePath}'`, error);
+    notifyPermissionForwardingWarning(notifier, `Failed to read forwarded permission response '${filePath}'`, error);
     return null;
   }
 }

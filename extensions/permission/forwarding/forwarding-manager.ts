@@ -5,23 +5,11 @@ import { PERMISSION_FORWARDING_POLL_INTERVAL_MS } from "./permission-forwarding"
 import { isSubagentExecutionContext } from "./subagents/subagent-context";
 import type { SubagentSessionRegistry } from "./subagents/subagent-registry";
 
-/**
- * Narrow interface for the forwarding lifecycle used by `PermissionSession`.
- * `ForwardingManager` satisfies it; tests can provide a plain object mock.
- */
 export interface ForwardingController {
   start(ctx: ExtensionContext): void;
   stop(): void;
 }
 
-/**
- * Encapsulates the forwarded-permission polling lifecycle.
- *
- * Owns the timer, current context, and processing-lock state that previously
- * lived as 3 mutable fields on `ExtensionRuntime`. Call `start(ctx)` on each
- * session event that may activate forwarding; call `stop()` on session
- * shutdown.
- */
 export class ForwardingManager {
   private timer: NodeJS.Timeout | null = null;
   private context: ExtensionContext | null = null;
@@ -33,12 +21,6 @@ export class ForwardingManager {
     private readonly registry?: SubagentSessionRegistry,
   ) {}
 
-  /**
-   * Start polling if `ctx` has UI and is not a subagent execution context.
-   * No-op (timer stays running) if already polling — updates the stored
-   * context so the next tick uses the latest session.
-   * Stops any existing poll when the context does not qualify for forwarding.
-   */
   start(ctx: ExtensionContext): void {
     if (!ctx.hasUI || isSubagentExecutionContext(ctx, this.subagentSessionsDir, this.registry)) {
       this.stop();
@@ -59,7 +41,6 @@ export class ForwardingManager {
     }, PERMISSION_FORWARDING_POLL_INTERVAL_MS);
   }
 
-  /** Stop polling and clear all internal state. */
   stop(): void {
     if (this.timer) {
       clearInterval(this.timer);

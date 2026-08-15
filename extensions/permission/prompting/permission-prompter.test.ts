@@ -28,7 +28,6 @@ function makeDetails(overrides?: Partial<PromptPermissionDetails>): PromptPermis
 
 function makeDeps(overrides?: Partial<PermissionPrompterDeps>): PermissionPrompterDeps {
   return {
-    logger: { review: vi.fn() },
     events: { emit: vi.fn(), on: vi.fn().mockReturnValue(() => undefined) },
     forwarder: { requestApproval: mockRequestApproval },
     ...overrides,
@@ -45,23 +44,6 @@ describe("PermissionPrompter", () => {
   });
 
   describe("UI present", () => {
-    it("logs permission_request.waiting before calling confirmPermission", async () => {
-      const logger = { review: vi.fn() };
-      const approved: PermissionPromptDecision = {
-        approved: true,
-        state: "approved",
-      };
-      mockRequestApproval.mockResolvedValue(approved);
-      const deps = makeDeps({ logger });
-      const prompter = new PermissionPrompter(deps);
-
-      await prompter.prompt(makeCtx(true), makeDetails());
-
-      const calls = logger.review.mock.calls.map((c) => c[0] as string);
-      expect(calls.indexOf("permission_request.waiting")).toBeGreaterThanOrEqual(0);
-      expect(calls.indexOf("permission_request.waiting")).toBeLessThan(calls.indexOf("permission_request.approved"));
-    });
-
     it("emits a UI prompt event with normalized surface and value when the session has UI", async () => {
       const events = {
         emit: vi.fn(),
@@ -141,66 +123,6 @@ describe("PermissionPrompter", () => {
       await prompter.prompt(makeCtx(false), makeDetails());
 
       expect(events.emit).not.toHaveBeenCalledWith("permissions:ui_prompt", expect.anything());
-    });
-
-    it("logs permission_request.approved when confirmPermission returns approved", async () => {
-      const logger = { review: vi.fn() };
-      mockRequestApproval.mockResolvedValue({
-        approved: true,
-        state: "approved",
-      });
-      const deps = makeDeps({ logger });
-      const prompter = new PermissionPrompter(deps);
-
-      await prompter.prompt(makeCtx(true), makeDetails());
-
-      expect(logger.review).toHaveBeenCalledWith(
-        "permission_request.approved",
-        expect.objectContaining({
-          requestId: "req-123",
-          resolution: "approved",
-        }),
-      );
-    });
-
-    it("logs permission_request.denied when confirmPermission returns denied", async () => {
-      const logger = { review: vi.fn() };
-      mockRequestApproval.mockResolvedValue({
-        approved: false,
-        state: "denied",
-      });
-      const deps = makeDeps({ logger });
-      const prompter = new PermissionPrompter(deps);
-
-      await prompter.prompt(makeCtx(true), makeDetails());
-
-      expect(logger.review).toHaveBeenCalledWith(
-        "permission_request.denied",
-        expect.objectContaining({
-          requestId: "req-123",
-          resolution: "denied",
-        }),
-      );
-    });
-
-    it("logs permission_request.denied with denialReason when present", async () => {
-      const logger = { review: vi.fn() };
-      mockRequestApproval.mockResolvedValue({
-        approved: false,
-        state: "denied_with_reason",
-        denialReason: "too sensitive",
-      });
-      const deps = makeDeps({ logger });
-      const prompter = new PermissionPrompter(deps);
-
-      await prompter.prompt(makeCtx(true), makeDetails());
-
-      expect(logger.review).toHaveBeenCalledWith(
-        "permission_request.denied",
-        expect.objectContaining({
-          denialReason: "too sensitive",
-        }),
-      );
     });
 
     it("returns the decision from confirmPermission", async () => {
@@ -309,69 +231,6 @@ describe("PermissionPrompter", () => {
     });
   });
 
-  describe("review log fields", () => {
-    it("includes all standard fields in the waiting log entry", async () => {
-      const logger = { review: vi.fn() };
-      mockRequestApproval.mockResolvedValue({
-        approved: true,
-        state: "approved",
-      });
-      const deps = makeDeps({ logger });
-      const prompter = new PermissionPrompter(deps);
-      const details = makeDetails({
-        toolCallId: "tc-1",
-        skillName: "librarian",
-        path: "/src/foo.ts",
-        command: "git status",
-        target: "server:tool",
-        toolInputPreview: "{ path: '...' }",
-      });
-
-      await prompter.prompt(makeCtx(true), details);
-
-      expect(logger.review).toHaveBeenCalledWith(
-        "permission_request.waiting",
-        expect.objectContaining({
-          requestId: "req-123",
-          source: "tool_call",
-          agentName: "test-agent",
-          message: "Allow read?",
-          toolCallId: "tc-1",
-          toolName: "read",
-          skillName: "librarian",
-          path: "/src/foo.ts",
-          command: "git status",
-          target: "server:tool",
-          toolInputPreview: "{ path: '...' }",
-        }),
-      );
-    });
-
-    it("uses null for optional fields not present in details", async () => {
-      const logger = { review: vi.fn() };
-      mockRequestApproval.mockResolvedValue({
-        approved: true,
-        state: "approved",
-      });
-      const deps = makeDeps({ logger });
-      const prompter = new PermissionPrompter(deps);
-
-      await prompter.prompt(makeCtx(true), makeDetails());
-
-      expect(logger.review).toHaveBeenCalledWith(
-        "permission_request.waiting",
-        expect.objectContaining({
-          toolCallId: null,
-          skillName: null,
-          path: null,
-          command: null,
-          target: null,
-          toolInputPreview: null,
-        }),
-      );
-    });
-  });
-
   describe("subagent forwarding path", () => {
     it("calls confirmPermission even when ctx has no UI", async () => {
       const forwarded: PermissionPromptDecision = {
@@ -399,23 +258,6 @@ describe("PermissionPrompter", () => {
       const result = await prompter.prompt(makeCtx(false), makeDetails());
 
       expect(result).toEqual(forwarded);
-    });
-
-    it("logs the outcome when confirmPermission resolves via forwarding", async () => {
-      const logger = { review: vi.fn() };
-      mockRequestApproval.mockResolvedValue({
-        approved: true,
-        state: "approved",
-      });
-      const deps = makeDeps({ logger });
-      const prompter = new PermissionPrompter(deps);
-
-      await prompter.prompt(makeCtx(false), makeDetails());
-
-      expect(logger.review).toHaveBeenCalledWith(
-        "permission_request.approved",
-        expect.objectContaining({ requestId: "req-123" }),
-      );
     });
   });
 });

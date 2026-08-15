@@ -5,8 +5,6 @@ import type { PermissionsService } from "#src/service";
 
 import { makeCtx } from "#test/helpers/handler-fixtures";
 
-// ── module stubs ───────────────────────────────────────────────────────────
-
 const mockIsRegisteredSubagentChild = vi.hoisted(() =>
   vi.fn<(ctx: unknown, registry: unknown) => boolean>().mockReturnValue(false),
 );
@@ -24,8 +22,6 @@ vi.mock("#src/service", () => ({
 vi.mock("#src/integrations/permission-events", () => ({
   emitReadyEvent: mockEmitReadyEvent,
 }));
-
-// ── helpers ────────────────────────────────────────────────────────────────
 
 function makeService(): PermissionsService {
   return {
@@ -59,15 +55,11 @@ beforeEach(() => {
   mockEmitReadyEvent.mockReset();
 });
 
-// ── ServiceLifecycle interface shape ──────────────────────────────────────
-
 it("PermissionServiceLifecycle satisfies ServiceLifecycle", () => {
   const { lifecycle } = makeLifecycle();
   const _: ServiceLifecycle = lifecycle;
   expect(_).toBeDefined();
 });
-
-// ── activate ──────────────────────────────────────────────────────────────
 
 describe("activate", () => {
   it("publishes the service for a non-child session", () => {
@@ -111,8 +103,6 @@ describe("activate", () => {
     expect(mockIsRegisteredSubagentChild).toHaveBeenCalledWith(ctx, registry);
   });
 });
-
-// ── teardown ──────────────────────────────────────────────────────────────
 
 describe("teardown", () => {
   it("calls each subscription unsubscribe function", () => {

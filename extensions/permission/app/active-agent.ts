@@ -1,27 +1,14 @@
-/**
- * Minimal session-entry view: the only fields {@link getActiveAgentName}
- * reads off each entry. Narrowing to this structural slice (rather than the
- * SDK `SessionEntry` discriminated union) keeps callers and test fixtures free
- * of the union's nine unrelated variants.
- */
 export interface SessionEntryView {
   type: string;
   customType?: string;
   data?: unknown;
 }
 
-/**
- * Narrow context for {@link getActiveAgentName} — it reads only the session
- * entries. A full `ExtensionContext` satisfies this structurally.
- */
 export interface ActiveAgentContext {
   sessionManager: { getEntries(): readonly SessionEntryView[] };
 }
 
-/**
- * Matches the `<active_agent name="...">` tag injected by pi-agent-router
- * into the system prompt to identify which agent definition is active.
- */
+/** Matches the active-agent tag injected by pi-agent-router. */
 export const ACTIVE_AGENT_TAG_REGEX = /<active_agent\s+name=["']([^"']+)["'][^>]*>/i;
 
 export function normalizeAgentName(value: unknown): string | null {
@@ -42,7 +29,6 @@ export function getActiveAgentName(ctx: ActiveAgentContext): string | null {
   return null;
 }
 
-/** Resolve a single entry to a name, `null` (explicit), or `undefined` to keep scanning. */
 function agentNameFromEntry(entry: SessionEntryView): string | null | undefined {
   if (!isAgentEntry(entry)) return undefined;
   const data = entry.data as { name?: unknown } | undefined;

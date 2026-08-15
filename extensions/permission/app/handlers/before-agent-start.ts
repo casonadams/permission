@@ -7,16 +7,10 @@ import { getToolNameFromValue, type ToolRegistry } from "#src/integrations/tool-
 import type { PermissionResolver } from "#src/policy/permission-resolver";
 import type { PermissionState } from "#src/policy/types";
 
-/** Minimal subset of BeforeAgentStartEvent used by this handler. */
 interface BeforeAgentStartPayload {
   systemPrompt: string;
 }
 
-/**
- * Pure helper: returns true when the tool should be exposed to the agent.
- * Checks the tool-level permission (not command-level) so that a blanket
- * `bash: deny` hides the tool entirely before any invocation is attempted.
- */
 export function shouldExposeTool(
   toolName: string,
   agentName: string | null,
@@ -26,14 +20,6 @@ export function shouldExposeTool(
   return toolPermission !== "deny";
 }
 
-/**
- * Handles the `before_agent_start` event: tool filtering + prompt sanitization.
- *
- * Constructor deps:
- * - `session` — encapsulates all mutable session state and lifecycle operations
- * - `resolver` — owns permission-query surface: `getToolPermission`, `getPolicyCacheStamp`, skill check
- * - `toolRegistry` — Pi tool API subset (getActive + setActive)
- */
 export class AgentPrepHandler {
   constructor(
     private readonly session: PermissionSession,

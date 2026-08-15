@@ -1,10 +1,8 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { ApprovalRequester } from "../forwarding/permission-forwarder";
 import { emitUiPromptEvent, type PermissionEventBus } from "../integrations/permission-events";
-import type { ReviewLogger } from "../integrations/session-logger";
 import type { PermissionPromptDecision } from "./permission-dialog";
 import { buildDirectUiPrompt } from "./permission-ui-prompt";
-import { recordPromptDecision, recordPromptWaiting } from "./prompt-audit";
 
 export type PermissionReviewSource = "tool_call" | "skill_input" | "skill_read";
 
@@ -31,7 +29,6 @@ export interface PermissionPrompterApi {
 }
 
 export interface PermissionPrompterDeps {
-  logger: ReviewLogger;
   events: PermissionEventBus;
   forwarder: ApprovalRequester;
 }
@@ -40,8 +37,6 @@ export class PermissionPrompter implements PermissionPrompterApi {
   constructor(private readonly deps: PermissionPrompterDeps) {}
 
   async prompt(ctx: ExtensionContext, details: PromptPermissionDetails): Promise<PermissionPromptDecision> {
-    recordPromptWaiting(details, { logger: this.deps.logger });
-
     const uiPrompt = buildDirectUiPrompt(details);
     if (ctx.hasUI) {
       emitUiPromptEvent(this.deps.events, uiPrompt);
@@ -58,7 +53,6 @@ export class PermissionPrompter implements PermissionPrompterApi {
       },
     });
 
-    recordPromptDecision(details, decision, this.deps.logger);
     return decision;
   }
 }

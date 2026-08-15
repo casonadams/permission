@@ -119,8 +119,6 @@ describe("checkRequestedToolRegistration", () => {
   });
 
   test("resolves alias: registered canonical is found via reverse alias lookup", () => {
-    // "bash" is registered; alias maps "Execute" → "bash"
-    // requesting "bash" directly should still resolve via the alias table
     const aliases = { Execute: "bash" };
     const result = checkRequestedToolRegistration("bash", ["bash"], aliases);
     expect(result.status).toBe("registered");
@@ -139,10 +137,6 @@ describe("checkRequestedToolRegistration", () => {
     expect(result.status).toBe("registered");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Moved from permission-system.test.ts catch-all (#342)
-// ---------------------------------------------------------------------------
 
 test("Tool registry resolves event tool names from string and object payloads", () => {
   expect(getToolNameFromValue("  read  ")).toBe("read");

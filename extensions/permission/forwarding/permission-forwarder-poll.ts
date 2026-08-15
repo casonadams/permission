@@ -6,9 +6,8 @@ import {
 import { createDeniedPermissionDecision, type PermissionPromptDecision } from "#src/prompting/permission-dialog";
 import { cleanupPermissionForwardingLocationIfEmpty, safeDeleteFile } from "./io";
 import { sleep } from "./io-list";
-import { logPermissionForwardingWarning } from "./io-log";
+import { notifyPermissionForwardingWarning } from "./io-log";
 import { readForwardedPermissionResponse } from "./io-read";
-import { buildForwardedResponseLog } from "./permission-forwarder-helpers";
 import type { PermissionForwarderState } from "./permission-forwarder-state";
 import type { ForwardedResponsePoll } from "./permission-forwarder-types";
 
@@ -30,33 +29,26 @@ function readForwardedResponseIfAvailable(
   params: ForwardedResponsePoll,
 ): PermissionPromptDecision | null {
   if (!existsSync(params.responsePath)) return null;
-  const response = readForwardedPermissionResponse(state.logger, params.responsePath);
-  state.logger.review("forwarded_permission.response_received", buildForwardedResponseLog(params, response));
+  const response = readForwardedPermissionResponse(state.notifier, params.responsePath);
   cleanupForwardedResponseFiles(state, params);
   return response ?? createDeniedPermissionDecision();
 }
 
 function cleanupForwardedResponseFiles(state: PermissionForwarderState, params: ForwardedResponsePoll): void {
-  safeDeleteFile(state.logger, params.responsePath, "forwarded permission response");
-  safeDeleteFile(state.logger, params.requestPath, "forwarded permission request");
-  cleanupPermissionForwardingLocationIfEmpty(state.logger, params.location);
+  safeDeleteFile(state.notifier, params.responsePath, "forwarded permission response");
+  safeDeleteFile(state.notifier, params.requestPath, "forwarded permission request");
+  cleanupPermissionForwardingLocationIfEmpty(state.notifier, params.location);
 }
 
 function handleForwardedResponseTimeout(
   state: PermissionForwarderState,
   params: ForwardedResponsePoll,
 ): PermissionPromptDecision {
-  logPermissionForwardingWarning(
-    state.logger,
+  notifyPermissionForwardingWarning(
+    state.notifier,
     `Timed out waiting for forwarded permission response '${params.responsePath}'`,
   );
-  state.logger.review("forwarded_permission.response_timed_out", {
-    requestId: params.request.id,
-    requesterAgentName: params.request.requesterAgentName,
-    targetSessionId: params.request.targetSessionId,
-    responsePath: params.responsePath,
-  });
-  safeDeleteFile(state.logger, params.requestPath, "forwarded permission request");
-  cleanupPermissionForwardingLocationIfEmpty(state.logger, params.location);
+  safeDeleteFile(state.notifier, params.requestPath, "forwarded permission request");
+  cleanupPermissionForwardingLocationIfEmpty(state.notifier, params.location);
   return createDeniedPermissionDecision();
 }

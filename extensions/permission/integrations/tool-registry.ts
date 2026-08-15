@@ -1,10 +1,7 @@
 import { getNonEmptyString, toRecord } from "../shared/common";
 
-/** Narrow interface for the Pi tool API subset used by handler classes. */
 export interface ToolRegistry {
-  /** All registered tools (`pi.getAllTools()` — `ToolInfo[]`); kept defensively wide. */
   getAll(): unknown[];
-  /** Currently active tool names (`pi.getActiveTools()`). */
   getActive(): string[];
   setActive(names: string[]): void;
 }

@@ -17,8 +17,8 @@ import { makeFakePi } from "#test/helpers/make-fake-pi";
 import { getGlobalConfigPath } from "../config/config-paths";
 import { DEFAULT_EXTENSION_CONFIG } from "../config/extension-config";
 
-const SERVICE_KEY = Symbol.for("@gotgenes/pi-permission-system:service");
-const SUBAGENT_REGISTRY_KEY = Symbol.for("@gotgenes/pi-permission-system:subagent-registry");
+const SERVICE_KEY = Symbol.for("@casonadams/permission:service");
+const SUBAGENT_REGISTRY_KEY = Symbol.for("@casonadams/permission:subagent-registry");
 
 const EXPECTED_HANDLERS = [
   "before_agent_start",

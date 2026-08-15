@@ -1,7 +1,6 @@
-import { EXTENSION_ID } from "../config/extension-config";
 import type { BashCommandContext, PermissionCheckResult } from "../policy/types";
 
-export const EXTENSION_TAG = `[${EXTENSION_ID}]`;
+export const EXTENSION_TAG = "[permission]";
 
 type AgentNamed = { agentName?: string };
 type ToolDenialContext = AgentNamed & { kind: "tool"; check: PermissionCheckResult; input?: unknown };
@@ -45,7 +44,9 @@ function subject(agentName?: string): string {
 }
 
 function reasonSuffix(denialReason?: string): string {
-  return denialReason ? ` Reason: ${denialReason}.` : "";
+  const reason = denialReason?.trim();
+  if (!reason) return "";
+  return ` Reason: ${reason}${/[.!?]$/.test(reason) ? "" : "."}`;
 }
 
 type DenialBodyBuilders = {

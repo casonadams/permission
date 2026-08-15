@@ -6,13 +6,6 @@ import { toRecord } from "#src/shared/common";
 import type { GateDescriptor } from "./descriptor";
 import type { ToolCallContext } from "./types";
 
-/**
- * Build a pure descriptor for the skill-read permission gate.
- *
- * Returns `null` when the gate does not apply (tool is not `read`, no active
- * skill entries, or the read path does not match any skill).
- * Returns a GateDescriptor with preResolved state from the matched skill entry.
- */
 export function describeSkillReadGate(
   tcc: ToolCallContext,
   getActiveSkillEntries: () => SkillPromptEntry[],
@@ -62,13 +55,6 @@ function buildSkillReadDescriptor(tcc: ToolCallContext, matchedSkill: SkillPromp
       toolName: tcc.toolName,
       skillName: matchedSkill.name,
       path,
-    },
-    logContext: {
-      source: "skill_read",
-      skillName: matchedSkill.name,
-      agentName: tcc.agentName,
-      path,
-      message,
     },
     decision: {
       surface: "skill",

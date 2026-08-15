@@ -4,22 +4,11 @@ import type { SubagentSessionRegistry } from "../forwarding/subagents/subagent-r
 import { type PermissionsService, publishPermissionsService, unpublishPermissionsService } from "../service";
 import { emitReadyEvent, type PermissionEventBus } from "./permission-events";
 
-/** The session-scoped service lifecycle that the lifecycle handler drives. */
 export interface ServiceLifecycle {
   activate(ctx: ExtensionContext): void;
   teardown(): void;
 }
 
-/**
- * Owns the process-global service publication lifecycle for one extension
- * instance.
- *
- * - `activate` publishes the service (skipped for registered subagent children
- *   so they never clobber the parent's slot — see #302), then emits the ready
- *   event.
- * - `teardown` runs all session-scoped subscription cleanups in order, then
- *   unpublishes the service.
- */
 export interface PermissionServiceLifecycleDeps {
   service: PermissionsService;
   registry: SubagentSessionRegistry;

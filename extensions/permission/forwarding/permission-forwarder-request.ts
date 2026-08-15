@@ -8,7 +8,7 @@ import { isSubagentExecutionContext } from "#src/forwarding/subagents/subagent-c
 import { createPermissionRequestId } from "#src/integrations/request-id";
 import { createDeniedPermissionDecision, type PermissionPromptDecision } from "#src/prompting/permission-dialog";
 import { ensurePermissionForwardingLocation, writeJsonFileAtomic } from "./io";
-import { logPermissionForwardingError } from "./io-log";
+import { notifyPermissionForwardingError } from "./io-log";
 import { buildMissingForwardingTargetMessage, getSessionId, requesterAgentName } from "./permission-forwarder-helpers";
 import { pollForForwardedResponse } from "./permission-forwarder-poll";
 import type { PermissionForwarderState } from "./permission-forwarder-state";
@@ -69,7 +69,7 @@ function resolveForwardingTarget(
     registry: state.registry,
   });
   if (targetSessionId) return targetSessionId;
-  logPermissionForwardingError(state.logger, buildMissingForwardingTargetMessage());
+  notifyPermissionForwardingError(state.notifier, buildMissingForwardingTargetMessage());
   return null;
 }
 
@@ -77,10 +77,10 @@ function prepareForwardingLocation(
   state: PermissionForwarderState,
   targetSessionId: string,
 ): PermissionForwardingLocation | null {
-  const location = ensurePermissionForwardingLocation(state.logger, state.forwardingDir, targetSessionId);
+  const location = ensurePermissionForwardingLocation(state.notifier, state.forwardingDir, targetSessionId);
   if (location) return location;
-  logPermissionForwardingError(
-    state.logger,
+  notifyPermissionForwardingError(
+    state.notifier,
     `Permission forwarding is unavailable because session-scoped directories could not be prepared for '${targetSessionId}'`,
   );
   return null;
@@ -96,7 +96,6 @@ function writeAndPollForwardedRequest(
     requestPath: join(location.requestsDir, `${request.id}.json`),
     responsePath: join(location.responsesDir, `${request.id}.json`),
   };
-  logRequestCreated({ state, request, ...paths });
   if (!writeForwardedRequest(state, { requestPath: paths.requestPath, request }))
     return Promise.resolve(createDeniedPermissionDecision());
   return pollForForwardedResponse(state, { location, request, ...paths });
@@ -116,29 +115,13 @@ function buildForwardedRequest(params: ForwardedRequestBuild): ForwardedPermissi
   };
 }
 
-function logRequestCreated(params: {
-  state: PermissionForwarderState;
-  request: ForwardedPermissionRequest;
-  requestPath: string;
-  responsePath: string;
-}): void {
-  params.state.logger.review("forwarded_permission.request_created", {
-    requestId: params.request.id,
-    requesterAgentName: params.request.requesterAgentName,
-    requesterSessionId: params.request.requesterSessionId,
-    targetSessionId: params.request.targetSessionId,
-    requestPath: params.requestPath,
-    responsePath: params.responsePath,
-  });
-}
-
 function writeForwardedRequest(state: PermissionForwarderState, params: ForwardedRequestWrite): boolean {
   try {
-    writeJsonFileAtomic(state.logger, params.requestPath, params.request);
+    writeJsonFileAtomic(state.notifier, params.requestPath, params.request);
     return true;
   } catch (error) {
-    logPermissionForwardingError(
-      state.logger,
+    notifyPermissionForwardingError(
+      state.notifier,
       `Failed to write forwarded permission request '${params.requestPath}'`,
       error,
     );

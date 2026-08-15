@@ -4,10 +4,10 @@ import { SessionLifecycleHandler } from "#src/app/handlers/lifecycle";
 import type { ServiceLifecycle } from "#src/integrations/service-lifecycle";
 
 import { makeCtx } from "#test/helpers/handler-fixtures";
-import { makeLogger, makeRealResolver, makeRealSession } from "#test/helpers/session-fixtures";
+import { makeRealResolver, makeRealSession } from "#test/helpers/session-fixtures";
 
 vi.mock("../status", () => ({
-  PERMISSION_SYSTEM_STATUS_KEY: "permission-system",
+  PERMISSION_SYSTEM_STATUS_KEY: "permission",
   syncPermissionSystemStatus: vi.fn(),
   getPermissionSystemStatus: vi.fn(),
 }));
@@ -22,14 +22,14 @@ function makeSetup(opts?: { configIssues?: string[] }) {
     activate: vi.fn<ServiceLifecycle["activate"]>(),
     teardown: vi.fn<ServiceLifecycle["teardown"]>(),
   };
-  const logger = makeLogger();
-  const handler = new SessionLifecycleHandler({ session, resolver, serviceLifecycle, logger });
+  const notifier = { warn: vi.fn() };
+  const handler = new SessionLifecycleHandler({ session, resolver, serviceLifecycle, notifier });
   return {
     handler,
     session,
     resolver,
     permissionManager,
-    logger,
+    notifier,
     forwarding,
     configStore,
     serviceLifecycle,
@@ -52,12 +52,6 @@ describe("handleSessionStart", () => {
     expect(spy).toHaveBeenCalledWith(ctx);
   });
 
-  it("logs resolved config paths", async () => {
-    const { handler, configStore } = makeSetup();
-    await handler.handleSessionStart({ reason: "startup" }, makeCtx());
-    expect(configStore.logResolvedPaths).toHaveBeenCalledOnce();
-  });
-
   it("resolves agent name from ctx", async () => {
     const ctx = makeCtx();
     const { handler, session } = makeSetup();
@@ -67,35 +61,18 @@ describe("handleSessionStart", () => {
   });
 
   it("notifies each policy issue", async () => {
-    const { handler, logger } = makeSetup({
+    const { handler, notifier } = makeSetup({
       configIssues: ["issue A", "issue B"],
     });
     await handler.handleSessionStart({ reason: "startup" }, makeCtx());
-    expect(logger.warn).toHaveBeenCalledWith("issue A");
-    expect(logger.warn).toHaveBeenCalledWith("issue B");
+    expect(notifier.warn).toHaveBeenCalledWith("issue A");
+    expect(notifier.warn).toHaveBeenCalledWith("issue B");
   });
 
   it("does not warn when there are no policy issues", async () => {
-    const { handler, logger } = makeSetup();
+    const { handler, notifier } = makeSetup();
     await handler.handleSessionStart({ reason: "startup" }, makeCtx());
-    expect(logger.warn).not.toHaveBeenCalled();
-  });
-
-  it("writes lifecycle.reload review log when reason is reload", async () => {
-    const ctx = makeCtx({ cwd: "/proj" });
-    const { handler, logger } = makeSetup();
-    await handler.handleSessionStart({ reason: "reload" }, ctx);
-    expect(logger.review).toHaveBeenCalledWith("lifecycle.reload", {
-      triggeredBy: "session_start",
-      reason: "reload",
-      cwd: "/proj",
-    });
-  });
-
-  it("does not write lifecycle.reload review log for non-reload reasons", async () => {
-    const { handler, logger } = makeSetup();
-    await handler.handleSessionStart({ reason: "startup" }, makeCtx());
-    expect(logger.review).not.toHaveBeenCalled();
+    expect(notifier.warn).not.toHaveBeenCalled();
   });
 
   it("activates the service for the session with ctx", async () => {
@@ -133,28 +110,6 @@ describe("handleResourcesDiscover", () => {
     await handler.handleResourcesDiscover({ reason: "reload" });
     expect(spy).toHaveBeenCalledOnce();
   });
-
-  it("writes lifecycle.reload review log on reload", async () => {
-    const ctx = makeCtx({ cwd: "/proj" });
-    const { handler, session, logger } = makeSetup();
-    session.activate(ctx);
-    await handler.handleResourcesDiscover({ reason: "reload" });
-    expect(logger.review).toHaveBeenCalledWith("lifecycle.reload", {
-      triggeredBy: "resources_discover",
-      reason: "reload",
-      cwd: "/proj",
-    });
-  });
-
-  it("logs cwd as null when runtimeContext is null on reload", async () => {
-    const { handler, logger } = makeSetup();
-    await handler.handleResourcesDiscover({ reason: "reload" });
-    expect(logger.review).toHaveBeenCalledWith("lifecycle.reload", {
-      triggeredBy: "resources_discover",
-      reason: "reload",
-      cwd: null,
-    });
-  });
 });
 
 describe("handleSessionShutdown", () => {
@@ -163,7 +118,7 @@ describe("handleSessionShutdown", () => {
     const { handler, session } = makeSetup();
     session.activate(ctx);
     await handler.handleSessionShutdown();
-    expect(ctx.ui.setStatus).toHaveBeenCalledWith("permission-system", undefined);
+    expect(ctx.ui.setStatus).toHaveBeenCalledWith("permission", undefined);
   });
 
   it("does not throw when runtime context is null", async () => {

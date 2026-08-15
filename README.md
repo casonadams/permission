@@ -111,15 +111,7 @@ should cover both MCP call styles.
 
 ## Inspect
 
-Use `/permission-system show` to display the effective policy summary,
-`/permission-system path` to show the global config path, or
-`/permission-system help` for usage.
-
-Permission decisions are recorded at:
-
-```text
-~/.pi/agent/extensions/pi-permission-system/logs/pi-permission-system-permission-review.jsonl
-```
+Use `/permission show` to display the effective policy summary, `/permission path` to show the global config path, or `/permission help` for usage.
 
 ## Develop
 

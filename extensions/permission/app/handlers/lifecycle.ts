@@ -1,8 +1,8 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { PermissionSession } from "#src/app/permission-session";
 import { PERMISSION_SYSTEM_STATUS_KEY } from "#src/app/status";
+import type { PermissionNotifier } from "#src/integrations/notifier";
 import type { ServiceLifecycle } from "#src/integrations/service-lifecycle";
-import type { SessionLogger } from "#src/integrations/session-logger";
 import type { PermissionResolver } from "#src/policy/permission-resolver";
 
 interface SessionStartPayload {
@@ -17,39 +17,29 @@ export interface SessionLifecycleHandlerDeps {
   session: PermissionSession;
   resolver: PermissionResolver;
   serviceLifecycle: ServiceLifecycle;
-  logger: SessionLogger;
+  notifier: PermissionNotifier;
 }
 
 export class SessionLifecycleHandler {
   private readonly session: PermissionSession;
   private readonly resolver: PermissionResolver;
   private readonly serviceLifecycle: ServiceLifecycle;
-  private readonly logger: SessionLogger;
+  private readonly notifier: PermissionNotifier;
 
   constructor(deps: SessionLifecycleHandlerDeps) {
     this.session = deps.session;
     this.resolver = deps.resolver;
     this.serviceLifecycle = deps.serviceLifecycle;
-    this.logger = deps.logger;
+    this.notifier = deps.notifier;
   }
 
-  handleSessionStart(event: SessionStartPayload, ctx: ExtensionContext): Promise<void> {
+  handleSessionStart(_event: SessionStartPayload, ctx: ExtensionContext): Promise<void> {
     this.session.resetForNewSession(ctx);
     this.session.refreshConfig(ctx);
-    this.session.logResolvedConfigPaths();
-
     const agentName = this.session.resolveAgentName(ctx);
     const policyIssues = this.resolver.getConfigIssues(agentName ?? undefined);
     for (const issue of policyIssues) {
-      this.logger.warn(issue);
-    }
-
-    if (event.reason === "reload") {
-      this.logger.review("lifecycle.reload", {
-        triggeredBy: "session_start",
-        reason: event.reason,
-        cwd: ctx.cwd,
-      });
+      this.notifier.warn(issue);
     }
 
     this.serviceLifecycle.activate(ctx);
@@ -62,11 +52,6 @@ export class SessionLifecycleHandler {
     }
 
     this.session.reload();
-    this.logger.review("lifecycle.reload", {
-      triggeredBy: "resources_discover",
-      reason: event.reason,
-      cwd: this.session.getRuntimeContext()?.cwd ?? null,
-    });
     return Promise.resolve();
   }
 

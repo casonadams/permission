@@ -62,7 +62,7 @@ describe("session_start handler consolidation", () => {
     expect(sessionStartHandlers).toHaveLength(2);
   });
 
-  test("session_start handler writes lifecycle.reload review log", async () => {
+  test("session_start handler accepts reload events", async () => {
     const registrations: Array<{ name: string; handler: MockHandler }> = [];
 
     piPermissionSystemExtension({

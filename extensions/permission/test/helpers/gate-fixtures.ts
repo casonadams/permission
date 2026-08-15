@@ -39,11 +39,6 @@ export function makeDescriptor(overrides: Partial<GateDescriptor> = {}): GateDes
       toolCallId: "tc-1",
       toolName: "read",
     },
-    logContext: {
-      source: "tool_call",
-      toolCallId: "tc-1",
-      toolName: "read",
-    },
     decision: {
       surface: "read",
       value: "read",
@@ -54,7 +49,6 @@ export function makeDescriptor(overrides: Partial<GateDescriptor> = {}): GateDes
 
 export function makeReporter(overrides: Partial<DecisionReporter> = {}): DecisionReporter {
   return {
-    writeReviewLog: vi.fn(),
     emitDecision: vi.fn(),
     ...overrides,
   };
@@ -137,11 +131,6 @@ export function makeDenialDescriptor(
       source: "tool_call",
       agentName: null,
       message: "Allow tool 'write'?",
-      toolCallId: "tc-1",
-      toolName: "write",
-    },
-    logContext: {
-      source: "tool_call",
       toolCallId: "tc-1",
       toolName: "write",
     },

@@ -2,15 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { type RequestedToolValidation, validateRequestedTool } from "#src/app/handlers/permission-gate-handler";
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
 function makeTools(names: string[]): { name: string }[] {
   return names.map((name) => ({ name }));
 }
 
 const TOOLS = makeTools(["read", "bash", "edit"]);
-
-// ── validateRequestedTool ──────────────────────────────────────────────────
 
 describe("validateRequestedTool", () => {
   describe("missing / unresolvable tool name", () => {
@@ -64,18 +60,11 @@ describe("validateRequestedTool", () => {
     });
 
     it("returns the raw name as it appeared in the event (not normalised)", () => {
-      // If an alias mechanism were to normalise "Read" → "read",
-      // validateRequestedTool still returns the raw value from the event.
-      // Without aliases the raw name and registered name are the same; this
-      // asserts the contract that toolName comes from the event, not from the
-      // registration lookup's normalizedToolName field.
       const result = validateRequestedTool({ name: "bash" }, TOOLS);
       expect(result).toEqual({ status: "ok", toolName: "bash" });
     });
 
     it("resolves tool name via the `arguments` field naming convention", () => {
-      // getToolNameFromValue reads `.name` then falls back to other fields;
-      // a plain `{ name: "edit" }` event is sufficient here.
       const result = validateRequestedTool({ name: "edit" }, TOOLS);
       expect(result).toEqual({ status: "ok", toolName: "edit" });
     });

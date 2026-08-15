@@ -2,32 +2,21 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  getGlobalConfigDir,
   getGlobalConfigPath,
-  getGlobalLogsDir,
   getLegacyExtensionConfigPath,
   getLegacyGlobalPolicyPath,
   getLegacyProjectPolicyPath,
   getProjectConfigPath,
-  REVIEW_LOG_FILENAME,
 } from "./config-paths";
 
 describe("config-paths", () => {
   const agentDir = "/home/user/.pi/agent";
   const cwd = "/projects/my-app";
-  const extensionRoot = "/opt/extensions/pi-permission-system";
+  const extensionRoot = "/opt/extensions/permission";
 
   describe("new layout paths", () => {
-    it("getGlobalConfigDir returns extensions/pi-permission-system under agentDir", () => {
-      expect(getGlobalConfigDir(agentDir)).toBe(join(agentDir, "extensions", "pi-permission-system"));
-    });
-
     it("getGlobalConfigPath returns permission.json at the agent root (flat layout)", () => {
       expect(getGlobalConfigPath(agentDir)).toBe(join(agentDir, "permission.json"));
-    });
-
-    it("getGlobalLogsDir returns logs under the global config dir", () => {
-      expect(getGlobalLogsDir(agentDir)).toBe(join(agentDir, "extensions", "pi-permission-system", "logs"));
     });
 
     it("getProjectConfigPath returns .pi/agent/permission.json under cwd (flat layout)", () => {
@@ -46,12 +35,6 @@ describe("config-paths", () => {
 
     it("getLegacyExtensionConfigPath returns config.json under extensionRoot", () => {
       expect(getLegacyExtensionConfigPath(extensionRoot)).toBe(join(extensionRoot, "config.json"));
-    });
-  });
-
-  describe("log filenames", () => {
-    it("REVIEW_LOG_FILENAME is a .jsonl file", () => {
-      expect(REVIEW_LOG_FILENAME).toBe("pi-permission-system-permission-review.jsonl");
     });
   });
 });

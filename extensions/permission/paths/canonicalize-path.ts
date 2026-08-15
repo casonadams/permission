@@ -7,15 +7,6 @@ type PathParts = {
   join: (...parts: string[]) => string;
 };
 
-/**
- * Resolve symlinks in an absolute path, best-effort.
- *
- * Splits the path into components and tries `realpathSync` from the full path
- * down to the filesystem root, re-appending the non-existent tail to the first
- * ancestor that resolves. Returns the input unchanged when no ancestor resolves
- * or when a non-ENOENT/ENOTDIR error is encountered (e.g. `EACCES`, `ELOOP`),
- * so callers fall back to lexical containment for paths that cannot be resolved.
- */
 export function canonicalizePath(absolutePath: string): string {
   if (!absolutePath) return absolutePath;
 
@@ -43,7 +34,6 @@ function splitWindowsPath(absolutePath: string): PathParts {
   return { root: parsed.root, parts: tail.split(/[\\/]+/).filter(Boolean), join: win32.join };
 }
 
-/** Resolve `parts[0..i]`; return the real path, `"bail"` to stop, or `null` to keep trying. */
 function tryResolveCandidate(path: PathParts, i: number): string | "bail" | null {
   const candidate = buildCandidate(path, i);
   try {
@@ -62,7 +52,6 @@ function buildCandidate(path: PathParts, i: number): string {
     : path.join(path.root, ...path.parts.slice(0, i));
 }
 
-/** True for a filesystem error that is not a missing-path (ENOENT/ENOTDIR). */
 function isFatalFsError(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException).code;
   return code !== "ENOENT" && code !== "ENOTDIR";

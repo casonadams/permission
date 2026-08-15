@@ -13,7 +13,7 @@ function makeDeps(overrides: Partial<PermissionForwarderDeps> = {}): PermissionF
   return {
     forwardingDir: "/tmp/forwarding",
     subagentSessionsDir: "/tmp/subagents",
-    logger: { review: vi.fn() },
+    notifier: { warn: vi.fn() },
     requestPermissionDecisionFromUi: vi.fn().mockResolvedValue({ approved: true, state: "approved" as const }),
     ...overrides,
   };
@@ -228,13 +228,13 @@ describe("processInbox", () => {
         "utf-8",
       );
 
-      const logger = { review: vi.fn(), debug: vi.fn() };
+      const notifier = { warn: vi.fn() };
       const requestPermissionDecisionFromUi = vi.fn().mockResolvedValue({ approved: true, state: "approved" as const });
 
       const forwarder = new PermissionForwarder(
         makeDeps({
           forwardingDir,
-          logger,
+          notifier,
           requestPermissionDecisionFromUi,
         }),
       );
@@ -248,7 +248,7 @@ describe("processInbox", () => {
         }),
       );
 
-      expect(logger.review).not.toHaveBeenCalledWith("permission_forwarding.error", expect.anything());
+      expect(notifier.warn).not.toHaveBeenCalled();
       expect(requestPermissionDecisionFromUi).toHaveBeenCalled();
     } finally {
       rmSync(root, { recursive: true, force: true });

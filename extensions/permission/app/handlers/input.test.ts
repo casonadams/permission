@@ -4,13 +4,9 @@ import type { GatePrompter } from "#src/prompting/gate-prompter";
 
 import { makeCtx, makeHandler } from "#test/helpers/handler-fixtures";
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
 function makeInputEvent(text: string) {
   return { text };
 }
-
-// ── extractSkillNameFromInput ──────────────────────────────────────────────
 
 describe("extractSkillNameFromInput", () => {
   it("returns null for plain text", () => {
@@ -42,14 +38,12 @@ describe("extractSkillNameFromInput", () => {
   });
 });
 
-// ── handleInput ───────────────────────────────────────────────────────────
-
 describe("handleInput", () => {
   it("activates session with ctx", async () => {
     const ctx = makeCtx();
     const { handler, forwarding } = makeHandler();
     await handler.handleInput(makeInputEvent("hello"), ctx);
-    // session.activate(ctx) calls forwarding.start(ctx) on the real session
+
     expect(forwarding.start).toHaveBeenCalledWith(ctx);
   });
 

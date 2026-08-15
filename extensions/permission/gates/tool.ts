@@ -1,4 +1,4 @@
-import { getPathBearingToolPath, PATH_BEARING_TOOLS } from "#src/paths/path-utils";
+import { getPathBearingToolPath } from "#src/paths/path-utils";
 import { SessionApproval } from "#src/policy/session-approval";
 import type { PermissionCheckResult } from "#src/policy/types";
 import { suggestSessionPattern } from "#src/prompting/pattern-suggest";
@@ -8,12 +8,6 @@ import type { GateDescriptor } from "./descriptor";
 import { deriveDecisionValue } from "./helpers";
 import type { ToolCallContext } from "./types";
 
-/**
- * Derive the value used for session-approval pattern suggestions.
- *
- * Bash → command string; MCP → qualified target;
- * path-bearing tools → file path; others → catch-all wildcard.
- */
 function deriveSuggestionValue(tcc: ToolCallContext, check: PermissionCheckResult): string {
   if (tcc.toolName === "bash") return check.command ?? "";
   if (tcc.toolName === "mcp") return check.target ?? "mcp";
@@ -24,20 +18,11 @@ function pathBearingOrDefault(tcc: ToolCallContext): string {
   return getPathBearingToolPath(tcc.toolName, tcc.input) ?? "*";
 }
 
-/**
- * Build a pure descriptor for the normal tool permission gate.
- *
- * Takes a pre-computed PermissionCheckResult (from checkPermission) and
- * returns a GateDescriptor that the runner can execute. No side effects.
- */
 export function describeToolGate(
   tcc: ToolCallContext,
   check: PermissionCheckResult,
   formatter: ToolPreviewFormatter,
 ): GateDescriptor {
-  const permissionLogContext = formatter.getPermissionLogContext(check, tcc.input, PATH_BEARING_TOOLS);
-
-  // Compute session approval suggestion for the "for this session" option.
   const suggestion = suggestSessionPattern(tcc.toolName, deriveSuggestionValue(tcc, check));
 
   const askMessage = formatAskPrompt({
@@ -66,19 +51,9 @@ export function describeToolGate(
       toolName: tcc.toolName,
       sessionLabel: suggestion.label,
       sessionPattern: suggestion.pattern,
-      ...permissionLogContext,
-      // Local fork: the picker renders details.toolInputPreview in the ask
-      // prompt body (previewToolCall as fallback). Setting it from the
-      // formatter registry so service-registered formatters show up in the
-      // prompt — the picker's hardcoded previewToolCall ignores customFormatters.
+      command: check.command,
+      target: check.target,
       toolInputPreview: formatter.formatToolInputForPrompt(tcc.toolName, tcc.input),
-    },
-    logContext: {
-      source: "tool_call",
-      toolCallId: tcc.toolCallId,
-      toolName: tcc.toolName,
-      message: askMessage,
-      ...permissionLogContext,
     },
     decision: {
       surface: tcc.toolName,

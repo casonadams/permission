@@ -2,14 +2,10 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-// Hoisted stub so the vi.mock factory can reference it.
 const { mockSpawnSync } = vi.hoisted(() => ({
   mockSpawnSync: vi.fn(),
 }));
 
-// Mock node:child_process so tests that exercise the subprocess fallback path
-// don't actually invoke npm.  Default: subprocess fails (non-zero exit), so
-// tests focused on the walk-up strategy continue to expect null.
 vi.mock("node:child_process", () => ({
   spawnSync: mockSpawnSync,
   default: { spawnSync: mockSpawnSync },
@@ -18,43 +14,34 @@ vi.mock("node:child_process", () => ({
 import { discoverGlobalNodeModulesRoot } from "#src/paths/node-modules-discovery";
 import { isPiInfrastructureRead } from "#src/paths/path-utils";
 
-// ── discoverGlobalNodeModulesRoot ──────────────────────────────────────────
-
 describe("discoverGlobalNodeModulesRoot", () => {
   beforeEach(() => {
-    // Default: subprocess fails, so walk-up-focused tests see null for URLs
-    // with no node_modules ancestor.
     mockSpawnSync.mockReset();
     mockSpawnSync.mockReturnValue({ status: 1, stdout: "" });
   });
 
   test("returns the node_modules dir when the file is inside one", () => {
-    const url = "file:///opt/homebrew/lib/node_modules/pi-permission-system/dist/external-directory.js";
+    const url = "file:///opt/homebrew/lib/node_modules/permission/dist/external-directory.js";
     expect(discoverGlobalNodeModulesRoot(url)).toBe("/opt/homebrew/lib/node_modules");
   });
 
   test("returns node_modules for a deeply nested file", () => {
-    const url =
-      "file:///home/user/.nvm/versions/node/v20/lib/node_modules/pi-permission-system/src/external-directory.js";
+    const url = "file:///home/user/.nvm/versions/node/v20/lib/node_modules/permission/src/external-directory.js";
     expect(discoverGlobalNodeModulesRoot(url)).toBe("/home/user/.nvm/versions/node/v20/lib/node_modules");
   });
 
   test("returns node_modules for a bun global install path", () => {
-    const url = "file:///home/user/.bun/install/global/node_modules/pi-permission-system/dist/external-directory.js";
+    const url = "file:///home/user/.bun/install/global/node_modules/permission/dist/external-directory.js";
     expect(discoverGlobalNodeModulesRoot(url)).toBe("/home/user/.bun/install/global/node_modules");
   });
 
   test("returns the innermost (closest-to-file) node_modules ancestor", () => {
-    // The walk-up algorithm stops at the first node_modules dir it encounters,
-    // which is the innermost one when the file is inside a nested install.
-    // In practice this never happens for a real global install — the extension
-    // is always directly at <global_root>/node_modules/pi-permission-system/…
-    const url = "file:///opt/lib/node_modules/some-pkg/node_modules/pi-permission-system/dist/index.js";
+    const url = "file:///opt/lib/node_modules/some-pkg/node_modules/permission/dist/index.js";
     expect(discoverGlobalNodeModulesRoot(url)).toBe("/opt/lib/node_modules/some-pkg/node_modules");
   });
 
   test("returns null when the file is not inside any node_modules directory", () => {
-    const url = "file:///home/user/development/pi-permission-system/dist/external-directory.js";
+    const url = "file:///home/user/development/permission/dist/external-directory.js";
     expect(discoverGlobalNodeModulesRoot(url)).toBeNull();
   });
 
@@ -68,37 +55,25 @@ describe("discoverGlobalNodeModulesRoot", () => {
   });
 
   test("works with the real import.meta.url of this extension (smoke test)", () => {
-    // The extension IS installed inside a node_modules tree when running in CI
-    // or global install. In a local dev checkout the result may be null — that's
-    // the documented graceful-degradation path.
     const result = discoverGlobalNodeModulesRoot();
     expect(result === null || result.endsWith("node_modules")).toBe(true);
   });
 
-  test("the discovered path includes the pi-permission-system package directory", () => {
-    const url = "file:///opt/homebrew/lib/node_modules/pi-permission-system/dist/external-directory.js";
+  test("the discovered path includes the permission package directory", () => {
+    const url = "file:///opt/homebrew/lib/node_modules/permission/dist/external-directory.js";
     const root = discoverGlobalNodeModulesRoot(url);
     expect(root).not.toBeNull();
-    expect(join(root!, "pi-permission-system")).toBe("/opt/homebrew/lib/node_modules/pi-permission-system");
+    expect(join(root!, "permission")).toBe("/opt/homebrew/lib/node_modules/permission");
   });
 });
-
-// ── isPiInfrastructureRead ─────────────────────────────────────────────────
 
 const INFRA_DIRS = ["/home/user/.pi/agent", "/home/user/.pi/agent/git", "/opt/homebrew/lib/node_modules"];
 const CWD = "/home/user/project";
 
 describe("isPiInfrastructureRead", () => {
-  // ── read tools allowed for infra paths ──────────────────────────────────
-
   test("allows 'read' tool for a file inside agentDir", () => {
     expect(
-      isPiInfrastructureRead(
-        "read",
-        "/home/user/.pi/agent/extensions/pi-permission-system/config.json",
-        INFRA_DIRS,
-        CWD,
-      ),
+      isPiInfrastructureRead("read", "/home/user/.pi/agent/extensions/permission/config.json", INFRA_DIRS, CWD),
     ).toBe(true);
   });
 
@@ -115,21 +90,12 @@ describe("isPiInfrastructureRead", () => {
   });
 
   test("allows 'ls' tool for a path inside node_modules infra dir", () => {
-    expect(isPiInfrastructureRead("ls", "/opt/homebrew/lib/node_modules/pi-permission-system", INFRA_DIRS, CWD)).toBe(
-      true,
-    );
+    expect(isPiInfrastructureRead("ls", "/opt/homebrew/lib/node_modules/permission", INFRA_DIRS, CWD)).toBe(true);
   });
-
-  // ── write tools never allowed even for infra paths ───────────────────────
 
   test("blocks 'write' tool for a file inside agentDir", () => {
     expect(
-      isPiInfrastructureRead(
-        "write",
-        "/home/user/.pi/agent/extensions/pi-permission-system/config.json",
-        INFRA_DIRS,
-        CWD,
-      ),
+      isPiInfrastructureRead("write", "/home/user/.pi/agent/extensions/permission/config.json", INFRA_DIRS, CWD),
     ).toBe(false);
   });
 
@@ -150,18 +116,13 @@ describe("isPiInfrastructureRead", () => {
     );
   });
 
-  // ── non-infra paths not allowed ──────────────────────────────────────────
-
   test("does not allow 'read' for a path outside all infra dirs", () => {
     expect(isPiInfrastructureRead("read", "/etc/passwd", INFRA_DIRS, CWD)).toBe(false);
   });
 
   test("does not allow 'read' for a path only partially matching an infra dir prefix", () => {
-    // /home/user/.pi/agent-other should not match /home/user/.pi/agent
     expect(isPiInfrastructureRead("read", "/home/user/.pi/agent-other/config.json", INFRA_DIRS, CWD)).toBe(false);
   });
-
-  // ── project-local Pi packages (.pi/npm, .pi/git) ─────────────────────────
 
   test("allows 'read' for a path inside project-local .pi/npm/", () => {
     expect(isPiInfrastructureRead("read", `${CWD}/.pi/npm/node_modules/some-skill/SKILL.md`, INFRA_DIRS, CWD)).toBe(
@@ -181,19 +142,14 @@ describe("isPiInfrastructureRead", () => {
     );
   });
 
-  // ── empty / edge cases ───────────────────────────────────────────────────
-
   test("returns false when infrastructureDirs is empty and path is not project-local", () => {
     expect(isPiInfrastructureRead("read", "/etc/passwd", [], CWD)).toBe(false);
   });
 
   test("returns false when infrastructureDirs is empty but path IS project-local .pi/npm", () => {
-    // Project-local paths are checked separately from the dirs array.
     expect(isPiInfrastructureRead("read", `${CWD}/.pi/npm/node_modules/x/SKILL.md`, [], CWD)).toBe(true);
   });
 });
-
-// ── isPiInfrastructureRead — glob patterns ─────────────────────────────────
 
 describe("isPiInfrastructureRead with glob patterns", () => {
   test("glob entry matches a versioned nested path", () => {

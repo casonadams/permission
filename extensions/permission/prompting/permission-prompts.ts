@@ -4,10 +4,6 @@ import { getNonEmptyString, toRecord } from "../shared/common";
 import { matchQualifier } from "./denial-messages";
 import type { ToolPreviewFormatter } from "./tool-preview-formatter";
 
-// NOTE: formatDenyReason, formatUserDeniedReason, and
-// formatPermissionHardStopHint have been moved to denial-messages.ts.
-// This module retains only pre-check messages and user-facing ask prompts.
-
 export function formatMissingToolNameReason(): string {
   return "Tool call was blocked because no tool name was provided. Use a registered tool name from pi.getAllTools().";
 }
@@ -86,5 +82,3 @@ export function formatSkillPathAskPrompt(skill: SkillPromptEntry, readPath: stri
   const subject = agentName ? `Agent '${agentName}'` : "Current agent";
   return `${subject} requested access to skill '${skill.name}' via '${readPath}'. Allow this read?`;
 }
-
-// formatSkillPathDenyReason has been moved to denial-messages.ts.

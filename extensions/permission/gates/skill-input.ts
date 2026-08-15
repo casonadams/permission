@@ -2,13 +2,6 @@ import type { PermissionCheckResult } from "#src/policy/types";
 import { formatSkillAskPrompt } from "#src/prompting/permission-prompts";
 import type { GateDescriptor } from "./descriptor";
 
-/**
- * Build a pure descriptor for the skill-input permission gate.
- *
- * Takes the pre-computed check result so the gate can reuse the result the
- * caller already obtained (e.g. to conditionally emit a deny warning) without
- * re-running the check inside the runner.
- */
 export function describeSkillInputGate(
   skillName: string,
   agentName: string | null,
@@ -29,12 +22,6 @@ export function describeSkillInputGate(
       agentName,
       message,
       skillName,
-    },
-    logContext: {
-      source: "skill_input",
-      skillName,
-      agentName,
-      message,
     },
     decision: {
       surface: "skill",

@@ -184,7 +184,7 @@ describe("resolvePermissionForwardingTargetSessionId — registry resolution", (
 
   test("falls through to env vars when registry entry has no parentSessionId", () => {
     const registry = new SubagentSessionRegistry();
-    registry.register(childSessionId, {}); // no parentSessionId
+    registry.register(childSessionId, {});
 
     expect(
       resolvePermissionForwardingTargetSessionId({
@@ -198,7 +198,7 @@ describe("resolvePermissionForwardingTargetSessionId — registry resolution", (
   });
 
   test("falls through to env vars when sessionId is not in registry", () => {
-    const registry = new SubagentSessionRegistry(); // empty
+    const registry = new SubagentSessionRegistry();
 
     expect(
       resolvePermissionForwardingTargetSessionId({
@@ -213,7 +213,7 @@ describe("resolvePermissionForwardingTargetSessionId — registry resolution", (
 
   test("returns null when registry entry has no parentSessionId and no env vars set", () => {
     const registry = new SubagentSessionRegistry();
-    registry.register(childSessionId, {}); // no parentSessionId
+    registry.register(childSessionId, {});
 
     expect(
       resolvePermissionForwardingTargetSessionId({
@@ -237,10 +237,6 @@ describe("resolvePermissionForwardingTargetSessionId — registry resolution", (
     ).toBe("parent-from-env");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Moved from permission-system.test.ts catch-all (#342)
-// ---------------------------------------------------------------------------
 
 test("Permission forwarding resolves the parent interactive session from subagent runtime env", () => {
   const targetSessionId = resolvePermissionForwardingTargetSessionId({
@@ -267,7 +263,7 @@ test("Permission forwarding does not guess a target session when subagent runtim
 });
 
 test("Permission forwarding uses session-scoped directories per interactive session", () => {
-  const forwardingRoot = join(tmpdir(), "pi-permission-system-forwarding-root");
+  const forwardingRoot = join(tmpdir(), "permission-forwarding-root");
   const sessionA = createPermissionForwardingLocation(forwardingRoot, "session-a");
   const sessionB = createPermissionForwardingLocation(forwardingRoot, "session-b");
 

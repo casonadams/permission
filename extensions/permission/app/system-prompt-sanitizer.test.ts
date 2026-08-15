@@ -6,7 +6,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// Helpers for building prompt sections.
 function availableToolsSection(tools: string[]): string {
   return ["Available tools:", ...tools.map((t) => `- ${t}`)].join("\n");
 }
@@ -27,8 +26,6 @@ describe("sanitizeAvailableToolsSection — Available tools section", () => {
     expect(result.prompt).not.toContain("Available tools:");
   });
 
-  // Bug #33: findSection extends to lines.length when no subsequent recognised
-  // header follows, so content after the last section is silently deleted.
   test("preserves content that follows the Available tools section (bug #33)", () => {
     const input = prompt(availableToolsSection(["bash", "read"]), "Other content");
     const result = sanitizeAvailableToolsSection(input, ["bash", "read"]);
@@ -156,7 +153,6 @@ describe("sanitizeAvailableToolsSection — multi-section prompt", () => {
       "Closing",
     );
     const result = sanitizeAvailableToolsSection(input, []);
-    // No run of 3+ consecutive newlines
     expect(result.prompt).not.toMatch(/\n{3,}/);
   });
 });
@@ -199,10 +195,6 @@ describe("sanitizeAvailableToolsSection — findSection boundary edge cases", ()
     expect(result.prompt).not.toContain("Available tools:");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Moved from permission-system.test.ts catch-all (#342)
-// ---------------------------------------------------------------------------
 
 test("System prompt sanitizer removes the Available tools section and surrounding boilerplate", () => {
   const prompt = [

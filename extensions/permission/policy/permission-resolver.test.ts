@@ -38,9 +38,7 @@ function makeResolver(pm?: ScopedPermissionManager, sessionRules?: Pick<SessionR
   };
 }
 
-beforeEach(() => {
-  // no module-level vi.fn() stubs to reset
-});
+beforeEach(() => {});
 
 describe("PermissionResolver", () => {
   describe("resolve", () => {
@@ -65,7 +63,6 @@ describe("PermissionResolver", () => {
       const sessionRules = new SessionRules();
       const { resolver } = makeResolver(pm, sessionRules);
 
-      // Record an approval directly into the shared SessionRules instance.
       sessionRules.recordSessionApproval(SessionApproval.single("bash", "git *"));
       resolver.resolve("bash", { command: "git status" });
 

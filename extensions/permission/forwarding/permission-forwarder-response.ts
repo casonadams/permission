@@ -2,13 +2,13 @@ import type { ForwardedPermissionRequest } from "#src/forwarding/permission-forw
 import { createDeniedPermissionDecision, type PermissionPromptDecision } from "#src/prompting/permission-dialog";
 import { buildForwardedUiPrompt } from "#src/prompting/permission-ui-prompt";
 import { writeJsonFileAtomic } from "./io";
-import { logPermissionForwardingError } from "./io-log";
+import { notifyPermissionForwardingError } from "./io-log";
 import type { PermissionForwarderState } from "./permission-forwarder-state";
 import type { ForwardedResponseWrite } from "./permission-forwarder-types";
 
 export function writeForwardedResponse(state: PermissionForwarderState, params: ForwardedResponseWrite): void {
   try {
-    writeJsonFileAtomic(state.logger, params.responsePath, {
+    writeJsonFileAtomic(state.notifier, params.responsePath, {
       approved: params.decision.approved,
       state: params.decision.state,
       denialReason: params.decision.denialReason,
@@ -16,8 +16,8 @@ export function writeForwardedResponse(state: PermissionForwarderState, params: 
       respondedAt: Date.now(),
     });
   } catch (error) {
-    logPermissionForwardingError(
-      state.logger,
+    notifyPermissionForwardingError(
+      state.notifier,
       `Failed to write forwarded permission response '${params.responsePath}'`,
       error,
     );

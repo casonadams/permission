@@ -1538,7 +1538,7 @@ test("MCP proxy tool infers server-prefixed aliases from configured server names
 });
 
 test("MCP server names in settings.json are not used — only mcp.json is consulted", () => {
-  const baseDir = mkdtempSync(join(tmpdir(), "pi-permission-system-test-"));
+  const baseDir = mkdtempSync(join(tmpdir(), "permission-test-"));
   const globalConfigPath = join(baseDir, "pi-permissions.jsonc");
   const mcpConfigPath = join(baseDir, "mcp.json");
   const settingsJsonPath = join(baseDir, "settings.json");
@@ -1943,7 +1943,7 @@ permission:
 });
 
 test("PermissionManager reads config from PI_CODING_AGENT_DIR when set", () => {
-  const baseDir = mkdtempSync(join(tmpdir(), "pi-permission-system-envdir-"));
+  const baseDir = mkdtempSync(join(tmpdir(), "permission-envdir-"));
   const agentsDir = join(baseDir, "agents");
   const newConfigPath = getGlobalConfigPath(baseDir);
   mkdirSync(agentsDir, { recursive: true });

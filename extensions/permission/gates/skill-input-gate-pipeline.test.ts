@@ -9,15 +9,11 @@ import {
 import { makeGateRunner, makeNotifier, makeSkillInputInputs } from "#test/helpers/gate-fixtures";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 
-// ── createSkillInputRequestId ─────────────────────────────────────────────
-
 describe("createSkillInputRequestId", () => {
   it("starts with 'skill-input-'", () => {
     expect(createSkillInputRequestId().startsWith("skill-input-")).toBe(true);
   });
 });
-
-// ── formatSkillDenyNotice ─────────────────────────────────────────────────
 
 describe("formatSkillDenyNotice", () => {
   it("includes the skill name in the message (no agent)", () => {
@@ -32,11 +28,7 @@ describe("formatSkillDenyNotice", () => {
   });
 });
 
-// ── SkillInputGatePipeline.evaluate ───────────────────────────────────────
-
 describe("SkillInputGatePipeline.evaluate", () => {
-  // ── notifier behaviour ──────────────────────────────────────────────────
-
   it("calls notifier.warn when the skill is denied", async () => {
     const inputs = makeSkillInputInputs({
       checkPermission: () => makeCheckResult({ state: "deny" }),
@@ -90,8 +82,6 @@ describe("SkillInputGatePipeline.evaluate", () => {
     expect(notifier.warn).toHaveBeenCalledWith(expect.stringContaining("code-agent"));
   });
 
-  // ── outcome mapping ─────────────────────────────────────────────────────
-
   it("returns allow when the gate passes", async () => {
     const inputs = makeSkillInputInputs({
       checkPermission: () => makeCheckResult({ state: "allow" }),
@@ -128,8 +118,6 @@ describe("SkillInputGatePipeline.evaluate", () => {
       reason: expect.stringContaining("librarian"),
     });
   });
-
-  // ── checkPermission call ────────────────────────────────────────────────
 
   it("calls checkPermission with the skill surface, skill name, and agent name", async () => {
     const inputs = makeSkillInputInputs();

@@ -6,7 +6,6 @@ import type { PermissionCheckResult } from "#src/policy/types";
 import { makeResolver } from "#test/helpers/gate-fixtures";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 
-/** Build a bash-surface check result for a single command unit. */
 function bashResult(
   state: PermissionCheckResult["state"],
   command: string,

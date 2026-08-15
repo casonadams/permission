@@ -1,18 +1,5 @@
-/**
- * Centralized construction for `permissions:ui_prompt` payloads.
- *
- * Every emit site builds its event through one of these functions, so the
- * public contract's shape — including the normalized `surface`/`value`
- * projection — lives in exactly one place and cannot drift by source.
- *
- * This module is a leaf: it owns narrow input types that each call site's
- * domain object satisfies structurally, so it imports nothing from the
- * prompter, RPC, or forwarding modules (no import cycles, correct layering).
- */
-
 import type { PermissionUiPromptEvent, PermissionUiPromptSource } from "../integrations/permission-events";
 
-/** Input for a direct (non-forwarded) tool or skill prompt. */
 export interface DirectPromptInput {
   requestId: string;
   source: "tool_call" | "skill_input" | "skill_read";
@@ -27,7 +14,6 @@ export interface DirectPromptInput {
   promptValue?: string;
 }
 
-/** Input for a `permissions:rpc:prompt` forwarded UI prompt. */
 export interface RpcPromptInput {
   requestId: string;
   surface?: string | null;
@@ -36,21 +22,16 @@ export interface RpcPromptInput {
   message: string;
 }
 
-/** Input for a file-forwarded subagent prompt shown by the parent UI. */
 export interface ForwardedPromptInput {
   requestId: string;
   message: string;
   requesterAgentName: string | null;
   requesterSessionId: string | null;
-  /** Original prompt origin, when the forwarded request carries it. */
   source?: PermissionUiPromptSource | null;
-  /** Original normalized surface, when the forwarded request carries it. */
   surface?: string | null;
-  /** Original normalized value, when the forwarded request carries it. */
   value?: string | null;
 }
 
-/** Normalized display surface for a direct prompt. */
 function directSurface(input: DirectPromptInput): string | null {
   if (input.promptSurface !== undefined) return input.promptSurface;
   if (input.source === "skill_input" || input.source === "skill_read") {
@@ -59,13 +40,11 @@ function directSurface(input: DirectPromptInput): string | null {
   return input.toolName ?? null;
 }
 
-/** Return the first defined, non-null value, or null. */
 function firstNonNullValue(values: readonly (string | undefined | null)[]): string | null {
   for (const value of values) if (value != null) return value;
   return null;
 }
 
-/** Normalized display value for a direct prompt. */
 function directValue(input: DirectPromptInput): string | null {
   return firstNonNullValue([
     input.promptValue,
@@ -77,7 +56,6 @@ function directValue(input: DirectPromptInput): string | null {
   ]);
 }
 
-/** Build the UI prompt event for a direct tool/skill prompt. */
 export function buildDirectUiPrompt(input: DirectPromptInput): PermissionUiPromptEvent {
   return {
     requestId: input.requestId,
@@ -90,7 +68,6 @@ export function buildDirectUiPrompt(input: DirectPromptInput): PermissionUiPromp
   };
 }
 
-/** Build the UI prompt event for an RPC-forwarded prompt. */
 export function buildRpcUiPrompt(input: RpcPromptInput): PermissionUiPromptEvent {
   return {
     requestId: input.requestId,
@@ -103,14 +80,6 @@ export function buildRpcUiPrompt(input: RpcPromptInput): PermissionUiPromptEvent
   };
 }
 
-/**
- * Build the UI prompt event for a file-forwarded subagent prompt.
- *
- * `source` defaults to `"tool_call"` (the dominant forwarded origin) when the
- * persisted request predates carrying it — a parent on a newer version may read
- * a request written by an older child during an upgrade. The consumer still
- * receives the notify-now signal, message, and forwarding context.
- */
 export function buildForwardedUiPrompt(input: ForwardedPromptInput): PermissionUiPromptEvent {
   return {
     requestId: input.requestId,

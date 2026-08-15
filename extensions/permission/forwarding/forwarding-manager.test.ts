@@ -2,16 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ForwardingManager } from "#src/forwarding/forwarding-manager";
 
-// ── Mocks ─────────────────────────────────────────────────────────────────
-
 const mockProcessInbox = vi.hoisted(() => vi.fn((): Promise<void> => Promise.resolve()));
 const mockIsSubagentExecutionContext = vi.hoisted(() => vi.fn());
 
 vi.mock("./subagents/subagent-context", () => ({
   isSubagentExecutionContext: mockIsSubagentExecutionContext,
 }));
-
-// ── Helpers ───────────────────────────────────────────────────────────────
 
 function makeCtx(overrides: { hasUI?: boolean; sessionId?: string } = {}) {
   return {
@@ -30,8 +26,6 @@ function makeForwarder() {
 function makeManager() {
   return new ForwardingManager("/agent/subagent-sessions", makeForwarder());
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────
 
 describe("ForwardingManager", () => {
   beforeEach(() => {
@@ -58,7 +52,6 @@ describe("ForwardingManager", () => {
       manager.start(ctx);
       manager.stop();
 
-      // After stop, the timer fires no more callbacks.
       mockProcessInbox.mockClear();
       await vi.advanceTimersByTimeAsync(500);
       expect(mockProcessInbox).not.toHaveBeenCalled();
@@ -81,7 +74,7 @@ describe("ForwardingManager", () => {
       const noUiCtx = makeCtx({ hasUI: false });
 
       manager.start(uiCtx);
-      // Now stop the polling by calling start() with no-UI ctx.
+
       manager.start(noUiCtx);
 
       mockProcessInbox.mockClear();
@@ -105,7 +98,6 @@ describe("ForwardingManager", () => {
       const ctx1 = makeCtx();
       manager.start(ctx1);
 
-      // Second call with a subagent context.
       mockIsSubagentExecutionContext.mockReturnValue(true);
       const ctx2 = makeCtx();
       manager.start(ctx2);
@@ -131,7 +123,7 @@ describe("ForwardingManager", () => {
       manager.start(ctx);
 
       await vi.advanceTimersByTimeAsync(250);
-      // Only one tick should fire per interval, not two.
+
       expect(mockProcessInbox).toHaveBeenCalledTimes(1);
     });
 
@@ -143,12 +135,11 @@ describe("ForwardingManager", () => {
       manager.start(ctx2);
 
       await vi.advanceTimersByTimeAsync(250);
-      // The process call should use the newer context.
+
       expect(mockProcessInbox).toHaveBeenCalledWith(ctx2);
     });
 
     it("skips a tick while processing is in progress", async () => {
-      // Make processInbox hang so processing=true persists.
       let resolveProcess: () => void;
       mockProcessInbox.mockReturnValue(
         new Promise<void>((resolve) => {
@@ -160,15 +151,12 @@ describe("ForwardingManager", () => {
       const ctx = makeCtx();
       manager.start(ctx);
 
-      // First tick starts processing.
       await vi.advanceTimersByTimeAsync(250);
       expect(mockProcessInbox).toHaveBeenCalledTimes(1);
 
-      // Second tick is skipped because processing flag is still true.
       await vi.advanceTimersByTimeAsync(250);
       expect(mockProcessInbox).toHaveBeenCalledTimes(1);
 
-      // Resolve and a third tick should fire.
       resolveProcess!();
       await vi.advanceTimersByTimeAsync(250);
       expect(mockProcessInbox).toHaveBeenCalledTimes(2);

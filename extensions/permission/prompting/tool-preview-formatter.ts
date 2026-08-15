@@ -1,11 +1,9 @@
 import type { ToolInputFormatterLookup } from "../integrations/tool-input-formatter-registry";
 import { SEARCH_PATH_TOOLS } from "../policy/permission-surfaces";
-import type { PermissionCheckResult } from "../policy/types";
 import { getNonEmptyString, toRecord } from "../shared/common";
 import { formatArgsSummary } from "./arg-summary";
 import {
   serializeToolInputPreview,
-  TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
   TOOL_INPUT_PREVIEW_MAX_LENGTH,
   TOOL_TEXT_SUMMARY_MAX_LENGTH,
   truncateInlineText,
@@ -22,18 +20,12 @@ import {
 export interface ToolPreviewFormatterOptions {
   toolInputPreviewMaxLength: number;
   toolTextSummaryMaxLength: number;
-  toolInputLogPreviewMaxLength: number;
 }
 
 export const DEFAULT_TOOL_PREVIEW_OPTIONS: ToolPreviewFormatterOptions = {
   toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
   toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
-  toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
 };
-
-function isOmittedFromToolInputLog(result: PermissionCheckResult): boolean {
-  return result.toolName === "bash" || result.toolName === "mcp" || result.source === "mcp";
-}
 
 const TOOL_INPUT_FORMATTERS: Record<string, (input: Record<string, unknown>) => string> = {
   edit: formatEditInputForPrompt,
@@ -108,43 +100,5 @@ export class ToolPreviewFormatter {
     if (isSearchTool(toolName)) return this.formatSearchInputForPrompt(toolName, inputRecord);
     if (toolName === "mcp") return "";
     return this.formatArgsInputForPrompt(input);
-  }
-
-  formatGenericToolInputForLog(input: unknown): string | undefined {
-    const inline = serializeToolInputPreview(input);
-    return inline ? `input ${truncateInlineText(inline, this.options.toolInputLogPreviewMaxLength)}` : undefined;
-  }
-
-  getToolInputPreviewForLog(
-    result: PermissionCheckResult,
-    input: unknown,
-    pathBearingTools: ReadonlySet<string>,
-  ): string | undefined {
-    if (isOmittedFromToolInputLog(result)) return undefined;
-
-    if (pathBearingTools.has(result.toolName)) {
-      const inputPreview = this.formatToolInputForPrompt(result.toolName, input);
-      return inputPreview ? truncateInlineText(inputPreview, this.options.toolInputLogPreviewMaxLength) : undefined;
-    }
-
-    return this.formatGenericToolInputForLog(input);
-  }
-
-  getPermissionLogContext(
-    result: PermissionCheckResult,
-    input: unknown,
-    pathBearingTools: ReadonlySet<string>,
-  ): {
-    command?: string;
-    target?: string;
-    toolInputPreview?: string;
-    origin?: string;
-  } {
-    return {
-      command: result.command,
-      target: result.target,
-      toolInputPreview: this.getToolInputPreviewForLog(result, input, pathBearingTools),
-      origin: result.origin,
-    };
   }
 }

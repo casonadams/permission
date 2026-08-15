@@ -1,9 +1,3 @@
-/**
- * Parse a qualified MCP tool name of the form `server:tool`.
- *
- * Returns `{ server, tool }` when the string contains exactly one colon with
- * non-empty text on both sides; otherwise returns `null`.
- */
 export function parseQualifiedMcpToolName(value: string): { server: string; tool: string } | null {
   const trimmed = value.trim();
   if (!trimmed) return null;

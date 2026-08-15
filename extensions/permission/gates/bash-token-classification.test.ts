@@ -2,12 +2,6 @@ import { describe, expect, test } from "vitest";
 
 import { classifyTokenAsPathCandidate, classifyTokenAsRuleCandidate } from "#src/gates/bash-token-classification";
 
-// ── Shared rejection behaviour ─────────────────────────────────────────────
-//
-// Both classifiers delegate to the private `rejectNonPathToken` predicate for
-// the seven shared rejection cases tested below.  Testing via both exports
-// pins that predicate through each caller.
-
 describe("classifyTokenAsPathCandidate", () => {
   describe("shared rejection: rejectNonPathToken", () => {
     test("empty string → null", () => {
@@ -25,8 +19,6 @@ describe("classifyTokenAsPathCandidate", () => {
     });
 
     test("env-like token where = comes after / is NOT rejected as assignment", () => {
-      // /foo=bar: slashIndex (0) < eqIndex (4) → not an assignment → continues
-      // Starts with /, so path candidate accepts it.
       expect(classifyTokenAsPathCandidate("/foo=bar")).toBe("/foo=bar");
     });
 
@@ -43,11 +35,6 @@ describe("classifyTokenAsPathCandidate", () => {
     });
 
     test("@/ prefix is NOT rejected (it looks like an absolute-rooted scoped path)", () => {
-      // @/ passes the @ guard; then for path candidate it doesn't start with /
-      // or ~/, and doesn't contain .., so it returns null anyway from the
-      // acceptance gate — but the rejection is not due to the @ guard.
-      // This test documents that @/ is not rejected by the shared rejection.
-      // The path classifier then rejects it for not matching any acceptance shape.
       expect(classifyTokenAsPathCandidate("@/foo/bar")).toBeNull();
     });
 
@@ -58,7 +45,6 @@ describe("classifyTokenAsPathCandidate", () => {
     });
 
     test("regex metacharacters → null", () => {
-      // REGEX_METACHAR_PATTERN: .*, .+, \|, \(, \), [...], ^/
       expect(classifyTokenAsPathCandidate("foo.*")).toBeNull();
       expect(classifyTokenAsPathCandidate("bar.+")).toBeNull();
       expect(classifyTokenAsPathCandidate("a\\|b")).toBeNull();
@@ -92,13 +78,11 @@ describe("classifyTokenAsPathCandidate", () => {
     });
 
     test("dot-file (starts with .) → null (strict path gate)", () => {
-      // Path candidate does NOT accept dot-files; rule candidate does.
       expect(classifyTokenAsPathCandidate(".env")).toBeNull();
       expect(classifyTokenAsPathCandidate(".gitignore")).toBeNull();
     });
 
     test("relative path with / but no leading / or ~/ → null (strict path gate)", () => {
-      // Path candidate does NOT accept bare relative paths; rule candidate does.
       expect(classifyTokenAsPathCandidate("src/foo.ts")).toBeNull();
       expect(classifyTokenAsPathCandidate("./build")).toBeNull();
     });
@@ -122,8 +106,6 @@ describe("classifyTokenAsRuleCandidate", () => {
     });
 
     test("env-like token where = comes after / is NOT rejected as assignment", () => {
-      // /foo=bar: slashIndex (0) < eqIndex (4) → not an assignment → continues.
-      // Contains /, so rule candidate accepts it.
       expect(classifyTokenAsRuleCandidate("/foo=bar")).toBe("/foo=bar");
     });
 
@@ -167,7 +149,6 @@ describe("classifyTokenAsRuleCandidate", () => {
     });
 
     test("dot-file (starts with .) → returned as-is", () => {
-      // Rule candidate accepts dot-files; path candidate does not.
       expect(classifyTokenAsRuleCandidate(".env")).toBe(".env");
       expect(classifyTokenAsRuleCandidate(".gitignore")).toBe(".gitignore");
     });
@@ -178,7 +159,6 @@ describe("classifyTokenAsRuleCandidate", () => {
     });
 
     test("relative path containing / → returned as-is", () => {
-      // Rule candidate accepts any token with / (not already rejected).
       expect(classifyTokenAsRuleCandidate("src/foo.ts")).toBe("src/foo.ts");
       expect(classifyTokenAsRuleCandidate("packages/pi-foo/index.ts")).toBe("packages/pi-foo/index.ts");
     });

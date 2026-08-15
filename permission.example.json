@@ -8,6 +8,7 @@
     "grep": "allow",
     "find": "allow",
     "ls": "allow",
+    "skill": "allow",
     "path": {
       "/tmp/*": "allow",
       "*.env*": "deny",

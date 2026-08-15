@@ -117,7 +117,7 @@ describe("evaluate", () => {
   test("specific surface rule does not match a different surface", () => {
     const ruleset: Ruleset = [allowBashGit];
     const result = evaluate("mcp", "git status", ruleset);
-    expect(result.action).toBe("ask"); // falls back to default
+    expect(result.action).toBe("ask");
   });
 
   test("merged rulesets: rules from later scope take priority", () => {
@@ -125,7 +125,7 @@ describe("evaluate", () => {
     const agentRules: Ruleset = [{ surface: "bash", pattern: "git *", action: "allow", origin: "agent" }];
     const merged = [...globalRules, ...agentRules];
     const result = evaluate("bash", "git status", merged);
-    expect(result.action).toBe("allow"); // agent rule wins
+    expect(result.action).toBe("allow");
   });
 
   test("merged rulesets: earlier scope used when later scope has no match", () => {
@@ -133,7 +133,7 @@ describe("evaluate", () => {
     const agentRules: Ruleset = [{ surface: "bash", pattern: "npm *", action: "deny", origin: "agent" }];
     const merged = [...globalRules, ...agentRules];
     const result = evaluate("bash", "git status", merged);
-    expect(result.action).toBe("allow"); // global rule is the last match for this pattern
+    expect(result.action).toBe("allow");
   });
 
   test("empty ruleset returns synthetic default", () => {

@@ -71,8 +71,7 @@ describe("createMcpPermissionTargets", () => {
 
     it("derives server targets from configured server names when tool name ends with _<server>", () => {
       const targets = createMcpPermissionTargets({ tool: "exa_search" }, ["exa"]);
-      // exa_search ends with _exa? No — it ends with _search. This tool name
-      // does NOT trigger server derivation because it does not end with _exa.
+
       expect(targets).toContain("exa_search");
     });
 
@@ -191,7 +190,7 @@ describe("McpTargetList", () => {
       list.add("exa_search");
       list.add("exa:search");
       list.add("exa");
-      list.add("exa_search"); // duplicate — must not change order
+      list.add("exa_search");
       list.add("mcp_call");
       expect(list.toArray()).toEqual(["exa_search", "exa:search", "exa", "mcp_call"]);
     });

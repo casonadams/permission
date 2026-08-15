@@ -34,34 +34,32 @@ function toolCtx(check: PermissionCheckResult, agentName?: string): Extract<Deni
 }
 
 describe("EXTENSION_TAG", () => {
-  test("is [pi-permission-system]", () => {
-    expect(EXTENSION_TAG).toBe("[pi-permission-system]");
+  test("is [permission]", () => {
+    expect(EXTENSION_TAG).toBe("[permission]");
   });
 });
 
 describe("formatDenyReason", () => {
   describe("tool context", () => {
     test("generic tool without agent", () => {
-      expect(formatDenyReason(toolCtx(toolCheck("write")))).toBe(
-        "[pi-permission-system] is not permitted to run 'write'.",
-      );
+      expect(formatDenyReason(toolCtx(toolCheck("write")))).toBe("[permission] is not permitted to run 'write'.");
     });
 
     test("generic tool with agent", () => {
       expect(formatDenyReason(toolCtx(toolCheck("write"), "my-agent"))).toBe(
-        "[pi-permission-system] Agent 'my-agent' is not permitted to run 'write'.",
+        "[permission] Agent 'my-agent' is not permitted to run 'write'.",
       );
     });
 
     test("MCP target", () => {
       expect(formatDenyReason(toolCtx(mcpCheck("server:do-thing")))).toBe(
-        "[pi-permission-system] is not permitted to run MCP target 'server:do-thing'.",
+        "[permission] is not permitted to run MCP target 'server:do-thing'.",
       );
     });
 
     test("bash with command", () => {
       expect(formatDenyReason(toolCtx(toolCheck("bash", { command: "rm -rf /" })))).toBe(
-        "[pi-permission-system] is not permitted to run 'bash' command 'rm -rf /'.",
+        "[permission] is not permitted to run 'bash' command 'rm -rf /'.",
       );
     });
 
@@ -75,7 +73,7 @@ describe("formatDenyReason", () => {
             }),
           ),
         ),
-      ).toBe("[pi-permission-system] is not permitted to run 'bash' command 'rm -rf /' (matched 'rm *').");
+      ).toBe("[permission] is not permitted to run 'bash' command 'rm -rf /' (matched 'rm *').");
     });
 
     test("bash with nested execution context", () => {
@@ -90,23 +88,23 @@ describe("formatDenyReason", () => {
           ),
         ),
       ).toBe(
-        "[pi-permission-system] is not permitted to run 'bash' command 'rm -rf foo' (matched 'rm *', inside command substitution).",
+        "[permission] is not permitted to run 'bash' command 'rm -rf foo' (matched 'rm *', inside command substitution).",
       );
     });
 
-    test("bash with a custom reason appended after the period", () => {
+    test("does not duplicate punctuation in a custom reason", () => {
       expect(
         formatDenyReason(
           toolCtx(
             toolCheck("bash", {
               command: "npm install",
               matchedPattern: "npm *",
-              reason: "Use pnpm instead",
+              reason: "Use pnpm instead.",
             }),
           ),
         ),
       ).toBe(
-        "[pi-permission-system] is not permitted to run 'bash' command 'npm install' (matched 'npm *'). Reason: Use pnpm instead.",
+        "[permission] is not permitted to run 'bash' command 'npm install' (matched 'npm *'). Reason: Use pnpm instead.",
       );
     });
 
@@ -119,7 +117,7 @@ describe("formatDenyReason", () => {
             }),
           ),
         ),
-      ).toBe("[pi-permission-system] is not permitted to run 'write'. Reason: Write access is disabled for security.");
+      ).toBe("[permission] is not permitted to run 'write'. Reason: Write access is disabled for security.");
     });
 
     test("custom reason is included alongside the agent name", () => {
@@ -135,7 +133,7 @@ describe("formatDenyReason", () => {
           ),
         ),
       ).toBe(
-        "[pi-permission-system] Agent 'dev-agent' is not permitted to run 'bash' command 'yarn build' (matched 'yarn *'). Reason: Use pnpm instead.",
+        "[permission] Agent 'dev-agent' is not permitted to run 'bash' command 'yarn build' (matched 'yarn *'). Reason: Use pnpm instead.",
       );
     });
 
@@ -149,13 +147,13 @@ describe("formatDenyReason", () => {
           ),
         ),
       ).toBe(
-        "[pi-permission-system] is not permitted to run MCP target 'server:deploy'. Reason: Deploy requires approval from a senior engineer.",
+        "[permission] is not permitted to run MCP target 'server:deploy'. Reason: Deploy requires approval from a senior engineer.",
       );
     });
 
     test("MCP source with target on non-mcp toolName", () => {
       expect(formatDenyReason(toolCtx(toolCheck("anything", { source: "mcp", target: "server:tool" })))).toBe(
-        "[pi-permission-system] is not permitted to run MCP target 'server:tool'.",
+        "[permission] is not permitted to run MCP target 'server:tool'.",
       );
     });
   });
@@ -168,7 +166,7 @@ describe("formatDenyReason", () => {
           toolName: "read",
           pathValue: "/etc/passwd",
         }),
-      ).toBe("[pi-permission-system] Current agent is not permitted to access path '/etc/passwd' via tool 'read'.");
+      ).toBe("[permission] Current agent is not permitted to access path '/etc/passwd' via tool 'read'.");
     });
 
     test("with agent", () => {
@@ -179,7 +177,7 @@ describe("formatDenyReason", () => {
           pathValue: "/etc/passwd",
           agentName: "sec-agent",
         }),
-      ).toBe("[pi-permission-system] Agent 'sec-agent' is not permitted to access path '/etc/passwd' via tool 'read'.");
+      ).toBe("[permission] Agent 'sec-agent' is not permitted to access path '/etc/passwd' via tool 'read'.");
     });
   });
 
@@ -191,7 +189,7 @@ describe("formatDenyReason", () => {
           command: "cat /etc/passwd",
           pathValue: "/etc/passwd",
         }),
-      ).toBe("[pi-permission-system] Current agent is not permitted to access path '/etc/passwd' via tool 'bash'.");
+      ).toBe("[permission] Current agent is not permitted to access path '/etc/passwd' via tool 'bash'.");
     });
 
     test("with agent", () => {
@@ -202,7 +200,7 @@ describe("formatDenyReason", () => {
           pathValue: "/etc/passwd",
           agentName: "my-agent",
         }),
-      ).toBe("[pi-permission-system] Agent 'my-agent' is not permitted to access path '/etc/passwd' via tool 'bash'.");
+      ).toBe("[permission] Agent 'my-agent' is not permitted to access path '/etc/passwd' via tool 'bash'.");
     });
   });
 
@@ -215,7 +213,7 @@ describe("formatDenyReason", () => {
           readPath: "/skills/librarian/SKILL.md",
         }),
       ).toBe(
-        "[pi-permission-system] Current agent is not permitted to access skill 'librarian' via '/skills/librarian/SKILL.md'.",
+        "[permission] Current agent is not permitted to access skill 'librarian' via '/skills/librarian/SKILL.md'.",
       );
     });
 
@@ -228,7 +226,7 @@ describe("formatDenyReason", () => {
           agentName: "my-agent",
         }),
       ).toBe(
-        "[pi-permission-system] Agent 'my-agent' is not permitted to access skill 'librarian' via '/skills/librarian/SKILL.md'.",
+        "[permission] Agent 'my-agent' is not permitted to access skill 'librarian' via '/skills/librarian/SKILL.md'.",
       );
     });
   });
@@ -240,7 +238,7 @@ describe("formatDenyReason", () => {
           kind: "skill_input",
           skillName: "librarian",
         }),
-      ).toBe("[pi-permission-system] Current agent is not permitted to access skill 'librarian'.");
+      ).toBe("[permission] Current agent is not permitted to access skill 'librarian'.");
     });
 
     test("with agent", () => {
@@ -250,7 +248,7 @@ describe("formatDenyReason", () => {
           skillName: "librarian",
           agentName: "my-agent",
         }),
-      ).toBe("[pi-permission-system] Agent 'my-agent' is not permitted to access skill 'librarian'.");
+      ).toBe("[permission] Agent 'my-agent' is not permitted to access skill 'librarian'.");
     });
   });
 });
@@ -258,19 +256,19 @@ describe("formatDenyReason", () => {
 describe("formatUnavailableReason", () => {
   test("generic tool", () => {
     expect(formatUnavailableReason(toolCtx(toolCheck("write")))).toBe(
-      "[pi-permission-system] Using tool 'write' requires approval, but no interactive UI is available.",
+      "[permission] Using tool 'write' requires approval, but no interactive UI is available.",
     );
   });
 
   test("bash with command", () => {
     expect(formatUnavailableReason(toolCtx(toolCheck("bash", { command: "git push" })))).toBe(
-      "[pi-permission-system] Running bash command 'git push' requires approval, but no interactive UI is available.",
+      "[permission] Running bash command 'git push' requires approval, but no interactive UI is available.",
     );
   });
 
   test("mcp", () => {
     expect(formatUnavailableReason(toolCtx(mcpCheck("server:tool")))).toBe(
-      "[pi-permission-system] Using tool 'mcp' requires approval, but no interactive UI is available.",
+      "[permission] Using tool 'mcp' requires approval, but no interactive UI is available.",
     );
   });
 
@@ -281,7 +279,7 @@ describe("formatUnavailableReason", () => {
         toolName: "read",
         pathValue: "/etc/passwd",
       }),
-    ).toBe("[pi-permission-system] Accessing '/etc/passwd' requires approval, but no interactive UI is available.");
+    ).toBe("[permission] Accessing '/etc/passwd' requires approval, but no interactive UI is available.");
   });
 
   test("bash_path", () => {
@@ -292,7 +290,7 @@ describe("formatUnavailableReason", () => {
         pathValue: "/etc/passwd",
       }),
     ).toBe(
-      "[pi-permission-system] Bash command 'cat /etc/passwd' accesses path '/etc/passwd' which requires approval, but no interactive UI is available.",
+      "[permission] Bash command 'cat /etc/passwd' accesses path '/etc/passwd' which requires approval, but no interactive UI is available.",
     );
   });
 
@@ -303,7 +301,7 @@ describe("formatUnavailableReason", () => {
         skillName: "librarian",
         readPath: "/skills/librarian/SKILL.md",
       }),
-    ).toBe("[pi-permission-system] Accessing skill 'librarian' requires approval, but no interactive UI is available.");
+    ).toBe("[permission] Accessing skill 'librarian' requires approval, but no interactive UI is available.");
   });
 
   test("skill_input", () => {
@@ -312,33 +310,31 @@ describe("formatUnavailableReason", () => {
         kind: "skill_input",
         skillName: "librarian",
       }),
-    ).toBe("[pi-permission-system] Accessing skill 'librarian' requires approval, but no interactive UI is available.");
+    ).toBe("[permission] Accessing skill 'librarian' requires approval, but no interactive UI is available.");
   });
 });
 
 describe("formatUserDeniedReason", () => {
   describe("tool context", () => {
     test("generic tool without reason", () => {
-      expect(formatUserDeniedReason(toolCtx(toolCheck("write")))).toBe(
-        "[pi-permission-system] User denied tool 'write'.",
-      );
+      expect(formatUserDeniedReason(toolCtx(toolCheck("write")))).toBe("[permission] User denied tool 'write'.");
     });
 
     test("generic tool with reason", () => {
       expect(formatUserDeniedReason(toolCtx(toolCheck("write")), "too risky")).toBe(
-        "[pi-permission-system] User denied tool 'write'. Reason: too risky.",
+        "[permission] User denied tool 'write'. Reason: too risky.",
       );
     });
 
     test("bash with command", () => {
       expect(formatUserDeniedReason(toolCtx(toolCheck("bash", { command: "ls -la" })))).toBe(
-        "[pi-permission-system] User denied bash command 'ls -la'.",
+        "[permission] User denied bash command 'ls -la'.",
       );
     });
 
     test("MCP target", () => {
       expect(formatUserDeniedReason(toolCtx(mcpCheck("server:query")))).toBe(
-        "[pi-permission-system] User denied MCP target 'server:query'.",
+        "[permission] User denied MCP target 'server:query'.",
       );
     });
   });
@@ -351,12 +347,12 @@ describe("formatUserDeniedReason", () => {
           toolName: "read",
           pathValue: "/etc/passwd",
         }),
-      ).toBe("[pi-permission-system] User denied access to path '/etc/passwd'.");
+      ).toBe("[permission] User denied access to path '/etc/passwd'.");
     });
 
     test("with reason", () => {
       expect(formatUserDeniedReason({ kind: "path", toolName: "read", pathValue: "/etc/passwd" }, "sensitive")).toBe(
-        "[pi-permission-system] User denied access to path '/etc/passwd'. Reason: sensitive.",
+        "[permission] User denied access to path '/etc/passwd'. Reason: sensitive.",
       );
     });
   });
@@ -369,7 +365,7 @@ describe("formatUserDeniedReason", () => {
           command: "cat /etc/passwd",
           pathValue: "/etc/passwd",
         }),
-      ).toBe("[pi-permission-system] User denied path access for bash command 'cat /etc/passwd' (path '/etc/passwd').");
+      ).toBe("[permission] User denied path access for bash command 'cat /etc/passwd' (path '/etc/passwd').");
     });
 
     test("with reason", () => {
@@ -383,7 +379,7 @@ describe("formatUserDeniedReason", () => {
           "sensitive",
         ),
       ).toBe(
-        "[pi-permission-system] User denied path access for bash command 'cat /etc/passwd' (path '/etc/passwd'). Reason: sensitive.",
+        "[permission] User denied path access for bash command 'cat /etc/passwd' (path '/etc/passwd'). Reason: sensitive.",
       );
     });
   });
@@ -396,7 +392,7 @@ describe("formatUserDeniedReason", () => {
           skillName: "librarian",
           readPath: "/skills/librarian/SKILL.md",
         }),
-      ).toBe("[pi-permission-system] User denied access to skill 'librarian'.");
+      ).toBe("[permission] User denied access to skill 'librarian'.");
     });
 
     test("with reason", () => {
@@ -409,7 +405,7 @@ describe("formatUserDeniedReason", () => {
           },
           "not needed",
         ),
-      ).toBe("[pi-permission-system] User denied access to skill 'librarian'. Reason: not needed.");
+      ).toBe("[permission] User denied access to skill 'librarian'. Reason: not needed.");
     });
   });
 
@@ -420,7 +416,7 @@ describe("formatUserDeniedReason", () => {
           kind: "skill_input",
           skillName: "librarian",
         }),
-      ).toBe("[pi-permission-system] User denied access to skill 'librarian'.");
+      ).toBe("[permission] User denied access to skill 'librarian'.");
     });
 
     test("with agent and with reason", () => {
@@ -433,7 +429,7 @@ describe("formatUserDeniedReason", () => {
           },
           "not permitted",
         ),
-      ).toBe("[pi-permission-system] User denied access to skill 'librarian'. Reason: not permitted.");
+      ).toBe("[permission] User denied access to skill 'librarian'. Reason: not permitted.");
     });
   });
 });

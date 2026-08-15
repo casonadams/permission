@@ -37,9 +37,6 @@ export class GateRunner {
       return { action: "allow" };
     }
     if (isGateBypass(gate)) {
-      if (gate.log) {
-        this.deps.reporter.writeReviewLog(gate.log.event, gate.log.details);
-      }
       if (gate.decision) {
         this.deps.reporter.emitDecision(gate.decision);
       }
@@ -75,12 +72,6 @@ export class GateRunner {
 
   private handleSessionHit(ctx: DescriptorRunContext, check: PermissionCheckResult): GateOutcome | null {
     if (check.source !== "session") return null;
-    this.deps.reporter.writeReviewLog("permission_request.session_approved", {
-      ...ctx.descriptor.logContext,
-      agentName: ctx.agentName,
-      resolution: "session_approved",
-      sessionApprovalPattern: check.matchedPattern,
-    });
     this.deps.reporter.emitDecision(
       buildDecisionEvent({
         decision: ctx.descriptor.decision,
@@ -104,8 +95,6 @@ export class GateRunner {
       canConfirm,
       sessionApproval: ctx.descriptor.sessionApproval?.toGateApproval(),
       promptForApproval: () => prompter.prompt({ requestId: ctx.toolCallId, ...ctx.descriptor.promptDetails }),
-      writeLog: (event, details) => this.deps.reporter.writeReviewLog(event, details),
-      logContext: { ...ctx.descriptor.logContext, agentName: ctx.agentName },
       messages: buildGateMessages(ctx.descriptor),
     });
     return { gateResult, canConfirm };

@@ -37,9 +37,9 @@ describe("mergeScopesWithOrigins", () => {
       expect(result.mergedPermission).toEqual({
         bash: { "ls *": "allow", "git *": "deny" },
       });
-      // "ls *" was not touched by project — retains global attribution
+
       expect(result.origins.get("bash")?.get("ls *")).toBe("global");
-      // "git *" was overridden by project — switches to project attribution
+
       expect(result.origins.get("bash")?.get("git *")).toBe("project");
     },
   );
@@ -50,9 +50,9 @@ describe("mergeScopesWithOrigins", () => {
       ["project", { permission: { bash: "deny" } }],
     ]);
     expect(result.mergedPermission).toEqual({ bash: "deny" });
-    // The string value produces a single "*" pattern for the replacing scope
+
     expect(result.origins.get("bash")?.get("*")).toBe("project");
-    // The former "ls *" pattern from global is gone — origins are replaced, not merged
+
     expect(result.origins.get("bash")?.has("ls *")).toBe(false);
   });
 
@@ -62,9 +62,9 @@ describe("mergeScopesWithOrigins", () => {
       ["project", { permission: { bash: { "git *": "deny" } } }],
     ]);
     expect(result.mergedPermission).toEqual({ bash: { "git *": "deny" } });
-    // The object value attributes each pattern to the replacing scope
+
     expect(result.origins.get("bash")?.get("git *")).toBe("project");
-    // The former "*" attribution from global is gone
+
     expect(result.origins.get("bash")?.has("*")).toBe(false);
   });
 
@@ -102,7 +102,7 @@ describe("mergeScopesWithOrigins", () => {
       ["project", { permission: { "*": "allow" } }],
     ]);
     expect(result.mergedPermission).toEqual({ "*": "allow" });
-    // Both scopes write a string — each is a full replacement; project wins last
+
     expect(result.origins.get("*")?.get("*")).toBe("project");
   });
 });

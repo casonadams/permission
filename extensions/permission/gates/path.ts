@@ -46,16 +46,6 @@ export function describePathGate(
   ) {
     return {
       action: "allow",
-      log: {
-        event: "permission_request.infrastructure_auto_allowed",
-        details: {
-          source: "tool_call",
-          toolCallId: tcc.toolCallId,
-          toolName: tcc.toolName,
-          agentName: tcc.agentName,
-          path: filePath,
-        },
-      },
       decision: {
         surface: tcc.toolName,
         value: filePath,
@@ -94,15 +84,6 @@ export function describePathGate(
       path: filePath,
       promptSurface: "path",
       promptValue: filePath,
-    },
-    logContext: {
-      source: "tool_call",
-      toolCallId: tcc.toolCallId,
-      toolName: tcc.toolName,
-      agentName: tcc.agentName,
-      path: filePath,
-      message,
-      outsideWorkingDirectory: pathIsExternal,
     },
     decision: {
       surface: "path",

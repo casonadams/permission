@@ -123,7 +123,7 @@ export function makeHandler(overrides?: {
   toolRegistry?: Partial<ToolRegistry>;
   tools?: string[];
 }) {
-  const { session, permissionManager, sessionRules, forwarding, logger } = makeRealSession();
+  const { session, permissionManager, sessionRules, forwarding } = makeRealSession();
   const { resolver } = makeRealResolver(permissionManager, sessionRules);
 
   applySessionOverrides(session, permissionManager, overrides?.session);
@@ -134,7 +134,7 @@ export function makeHandler(overrides?: {
   const recorder = new SessionRules();
   const pipeline = new ToolCallGatePipeline({ resolver, inputs: session });
   const skillInputPipeline = new SkillInputGatePipeline(resolver);
-  const reporter = new GateDecisionReporter(logger, events);
+  const reporter = new GateDecisionReporter(events);
   const prompter = makeHandlerPrompter(overrides);
   const runner = new GateRunner({ resolver, recorder, defaultPrompter: prompter, reporter });
   const handler = new PermissionGateHandler({ session, toolRegistry, pipeline, skillInputPipeline, runner });
@@ -142,7 +142,6 @@ export function makeHandler(overrides?: {
     handler,
     events,
     session,
-    logger,
     toolRegistry,
     prompter,
     recorder,

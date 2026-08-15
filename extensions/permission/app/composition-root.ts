@@ -31,7 +31,7 @@ function registerHandlers(pi: ExtensionAPI, runtime: Runtime): void {
     session: runtime.session,
     resolver,
     serviceLifecycle: createServiceLifecycle(pi, runtime),
-    logger: runtime.logger,
+    notifier: runtime.notifier,
   });
   const gates = createGateHandler({ runtime, resolver, pi, toolRegistry });
   const agentPrep = new AgentPrepHandler(runtime.session, resolver, toolRegistry);
@@ -49,7 +49,6 @@ function createServiceLifecycle(pi: ExtensionAPI, runtime: Runtime): PermissionS
     sessionRules: runtime.rules,
     session: runtime.session,
     requestPermissionDecisionFromUi,
-    logger: runtime.logger,
   });
   const service = new LocalPermissionsService({
     permissionManager: runtime.manager,
@@ -73,7 +72,7 @@ function createGateHandler(args: {
   toolRegistry: ReturnType<typeof createToolRegistry>;
 }): PermissionGateHandler {
   const { runtime, resolver, pi, toolRegistry } = args;
-  const reporter = new GateDecisionReporter(runtime.logger, pi.events);
+  const reporter = new GateDecisionReporter(pi.events);
   const runner = new GateRunner({ resolver, recorder: runtime.rules, defaultPrompter: runtime.gateway, reporter });
   return new PermissionGateHandler({
     session: runtime.session,
@@ -101,7 +100,6 @@ function installPromptDispatcher(pi: ExtensionAPI, runtime: Runtime): void {
   installLocalPrompter(pi, {
     prompter: runtime.prompter,
     canResolve: (ctx) => canResolvePrompt(ctx, runtime),
-    logger: runtime.logger,
   });
 }
 

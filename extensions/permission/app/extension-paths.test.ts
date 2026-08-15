@@ -10,7 +10,6 @@ vi.mock("../paths/node-modules-discovery", () => ({
 }));
 
 import { computeExtensionPaths } from "#src/app/extension-paths";
-import { getGlobalLogsDir } from "../config/config-paths";
 
 describe("computeExtensionPaths", () => {
   beforeEach(() => {
@@ -36,11 +35,6 @@ describe("computeExtensionPaths", () => {
   it("derives forwardingDir as sessionsDir/permission-forwarding", () => {
     const paths = computeExtensionPaths("/test/agent");
     expect(paths.forwardingDir).toBe(join("/test/agent/sessions", "permission-forwarding"));
-  });
-
-  it("derives globalLogsDir via getGlobalLogsDir(agentDir)", () => {
-    const paths = computeExtensionPaths("/test/agent");
-    expect(paths.globalLogsDir).toBe(getGlobalLogsDir("/test/agent"));
   });
 
   it("includes agentDir in piInfrastructureDirs", () => {

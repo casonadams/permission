@@ -1,7 +1,6 @@
 import { join } from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-// Mock node:os so tilde-expansion is deterministic across platforms.
 vi.mock("node:os", () => {
   const homedir = vi.fn(() => "/mock/home");
   return {
@@ -10,8 +9,6 @@ vi.mock("node:os", () => {
   };
 });
 
-// Mock node:fs so realpathSync (used by canonicalizePath) is controllable.
-// Default implementation is identity — existing lexical tests are unaffected.
 const realpathSync = vi.hoisted(() => vi.fn<(path: string) => string>((p) => p));
 vi.mock("node:fs", () => ({
   realpathSync,
@@ -105,8 +102,6 @@ describe("isPathWithinDirectory", () => {
   test("returns false for empty directory", () => {
     expect(isPathWithinDirectory("/a/b", "")).toBe(false);
   });
-
-  // ── platform-aware containment (Windows is case-insensitive) ────────────
 
   test("win32: folds case for a case-different descendant", () => {
     expect(isPathWithinDirectory("c:\\users\\foo\\dir\\sub\\x.md", "C:\\Users\\Foo\\dir", "win32")).toBe(true);
@@ -265,7 +260,6 @@ describe("isPathOutsideWorkingDirectory", () => {
   const cwd = "/projects/my-app";
 
   beforeEach(() => {
-    // Reset then restore the identity default so symlink tests don't bleed.
     realpathSync.mockReset();
     realpathSync.mockImplementation((p: string) => p);
   });
@@ -315,7 +309,6 @@ describe("isPathOutsideWorkingDirectory", () => {
   });
 
   test("returns true for in-cwd symlink that resolves to external path", () => {
-    // ./link -> /etc: realpathSync resolves the full token in one call.
     realpathSync.mockImplementation((p: string) => {
       if (p === "/projects/my-app/link/hosts") return "/etc/hosts";
       return p;
@@ -324,7 +317,6 @@ describe("isPathOutsideWorkingDirectory", () => {
   });
 
   test("returns false for path inside a symlinked cwd", () => {
-    // /tmp -> /private/tmp on macOS; cwd reported as /private/tmp.
     const symlinkCwd = "/private/tmp";
     realpathSync.mockImplementation((p: string) => {
       if (p.startsWith("/tmp/")) return `/private/tmp${p.slice(4)}`;
@@ -386,8 +378,6 @@ describe("isPiInfrastructureRead", () => {
     expect(isPiInfrastructureRead("read", "/etc/passwd", infraDirs, cwd)).toBe(false);
   });
 
-  // ── glob patterns ─────────────────────────────────────────────────
-
   test("glob entry matches a versioned path", () => {
     expect(
       isPiInfrastructureRead(
@@ -406,11 +396,8 @@ describe("isPiInfrastructureRead", () => {
   });
 
   test("plain entry with ~ expands to home dir for matching", () => {
-    // node:os is mocked: homedir() returns "/mock/home"
     expect(isPiInfrastructureRead("read", "/mock/home/.pi/agent/config.json", ["~/.pi/agent"], cwd)).toBe(true);
   });
-
-  // ── Windows: case-insensitive infra-read matching ─────────────────────
 
   test("win32: plain infra dir matches a case-different path", () => {
     expect(

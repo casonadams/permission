@@ -10,7 +10,6 @@ export interface GateDescriptor {
   denialContext: DenialContext;
   sessionApproval?: SessionApproval;
   promptDetails: Omit<PromptPermissionDetails, "requestId">;
-  logContext: Record<string, unknown>;
   decision: {
     surface: string;
     value: string;
@@ -23,7 +22,6 @@ export interface GateDescriptor {
 
 export interface GateBypass {
   action: "allow";
-  log?: { event: string; details: Record<string, unknown> };
   decision?: PermissionDecisionEvent;
 }
 

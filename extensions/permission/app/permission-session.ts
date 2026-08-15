@@ -103,10 +103,6 @@ export class PermissionSession implements ToolCallGateInputs {
     this.deps.configStore.refresh(ctx);
   }
 
-  logResolvedConfigPaths(): void {
-    this.deps.configStore.logResolvedPaths(this.context?.cwd);
-  }
-
   getInfrastructureReadDirs(): readonly string[] {
     return this.deps.paths.piInfrastructureDirs;
   }

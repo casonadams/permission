@@ -9,11 +9,7 @@ import {
 } from "./io";
 import { listRequestFiles } from "./io-list";
 import { readForwardedPermissionRequest } from "./io-read";
-import {
-  buildForwardedPermissionLogDetails,
-  formatForwardedPermissionPrompt,
-  getSessionId,
-} from "./permission-forwarder-helpers";
+import { formatForwardedPermissionPrompt, getSessionId } from "./permission-forwarder-helpers";
 import {
   buildDeniedDecision,
   buildForwardedPromptEvent,
@@ -35,7 +31,7 @@ export async function processInbox(state: PermissionForwarderState, ctx: Forward
   for (const fileName of inbox.requestFiles) {
     await processRequestFile({ state, ctx, inbox, fileName });
   }
-  cleanupPermissionForwardingLocationIfEmpty(state.logger, inbox.location);
+  cleanupPermissionForwardingLocationIfEmpty(state.notifier, inbox.location);
 }
 
 function getProcessableInbox(state: PermissionForwarderState, ctx: ForwarderContext): ProcessableInbox | null {
@@ -43,9 +39,9 @@ function getProcessableInbox(state: PermissionForwarderState, ctx: ForwarderCont
   const currentSessionId = getSessionId(ctx);
   const location = getExistingPermissionForwardingLocation(state.forwardingDir, currentSessionId);
   if (!location) return null;
-  const requestFiles = listRequestFiles(state.logger, location.requestsDir);
+  const requestFiles = listRequestFiles(state.notifier, location.requestsDir);
   if (requestFiles.length === 0) return null;
-  if (!ensureDirectoryExists(state.logger, location.responsesDir, "permission forwarding responses")) return null;
+  if (!ensureDirectoryExists(state.notifier, location.responsesDir, "permission forwarding responses")) return null;
   return { currentSessionId, location, requestFiles };
 }
 
@@ -56,9 +52,9 @@ async function processRequestFile(params: {
   fileName: string;
 }): Promise<void> {
   const requestPath = join(params.inbox.location.requestsDir, params.fileName);
-  const request = readForwardedPermissionRequest(params.state.logger, requestPath);
+  const request = readForwardedPermissionRequest(params.state.notifier, requestPath);
   if (!request) {
-    safeDeleteFile(params.state.logger, requestPath, `${params.inbox.location.label} forwarded permission request`);
+    safeDeleteFile(params.state.notifier, requestPath, `${params.inbox.location.label} forwarded permission request`);
     return;
   }
   await processSingleForwardedRequest(params.state, {
@@ -76,7 +72,7 @@ async function processSingleForwardedRequest(
 ): Promise<void> {
   const target = { request: params.request, location: params.location, path: params.requestPath };
   if (!isForwardedPermissionRequestForSession(params.request, params.currentSessionId)) {
-    deleteMisdirectedRequest(state, target, params.currentSessionId);
+    deleteMisdirectedRequest(state, target);
     return;
   }
   if (Date.now() - params.request.createdAt > 10 * 60 * 1000) {
@@ -86,22 +82,14 @@ async function processSingleForwardedRequest(
       decision: buildDeniedDecision(),
       currentSessionId: params.currentSessionId,
     });
-    safeDeleteFile(state.logger, target.path, `${target.location.label} expired forwarded permission request`);
+    safeDeleteFile(state.notifier, target.path, `${target.location.label} expired forwarded permission request`);
     return;
   }
   await respondToForwardedRequest(state, params);
 }
 
-function deleteMisdirectedRequest(
-  state: PermissionForwarderState,
-  target: RequestLocationPath,
-  currentSessionId: string,
-): void {
-  state.logger.review("forwarded_permission.request_ignored", {
-    ...buildForwardedPermissionLogDetails(target.request, target.path, target.location.label),
-    currentSessionId,
-  });
-  safeDeleteFile(state.logger, target.path, `${target.location.label} misdirected forwarded permission request`);
+function deleteMisdirectedRequest(state: PermissionForwarderState, target: RequestLocationPath): void {
+  safeDeleteFile(state.notifier, target.path, `${target.location.label} misdirected forwarded permission request`);
 }
 
 async function respondToForwardedRequest(
@@ -116,7 +104,7 @@ async function respondToForwardedRequest(
     decision,
     currentSessionId: params.currentSessionId,
   });
-  safeDeleteFile(state.logger, params.requestPath, `${params.location.label} forwarded permission request`);
+  safeDeleteFile(state.notifier, params.requestPath, `${params.location.label} forwarded permission request`);
 }
 
 async function promptForForwardedDecision(

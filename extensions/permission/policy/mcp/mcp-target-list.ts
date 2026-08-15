@@ -1,9 +1,3 @@
-/**
- * An ordered accumulator that owns the uniqueness invariant.
- *
- * `add` ignores null/empty values and silently skips duplicates (first-insertion
- * wins). `toArray` returns the ordered result as an independent copy.
- */
 export class McpTargetList {
   private readonly targets: string[] = [];
 

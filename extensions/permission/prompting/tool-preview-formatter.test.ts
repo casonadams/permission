@@ -2,18 +2,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ToolInputFormatterLookup } from "#src/integrations/tool-input-formatter-registry";
 
-vi.mock("../integrations/logging.js", () => ({
+vi.mock("../shared/json.js", () => ({
   safeJsonStringify: vi.fn((value: unknown) => JSON.stringify(value)),
 }));
 
-import { safeJsonStringify } from "#src/integrations/logging";
-import type { PermissionCheckResult } from "#src/policy/types";
-import {
-  TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
-  TOOL_INPUT_PREVIEW_MAX_LENGTH,
-  TOOL_TEXT_SUMMARY_MAX_LENGTH,
-} from "#src/prompting/tool-input-preview";
+import { TOOL_INPUT_PREVIEW_MAX_LENGTH, TOOL_TEXT_SUMMARY_MAX_LENGTH } from "#src/prompting/tool-input-preview";
 import { ToolPreviewFormatter, type ToolPreviewFormatterOptions } from "#src/prompting/tool-preview-formatter";
+import { safeJsonStringify } from "#src/shared/json";
 
 const mockedStringify = vi.mocked(safeJsonStringify);
 
@@ -21,19 +16,8 @@ function makeFormatter(overrides: Partial<ToolPreviewFormatterOptions> = {}): To
   return new ToolPreviewFormatter({
     toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
     toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
-    toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
     ...overrides,
   });
-}
-
-function makeResult(toolName: string, overrides: Partial<PermissionCheckResult> = {}): PermissionCheckResult {
-  return {
-    toolName,
-    state: "allow",
-    source: "tool",
-    origin: "builtin",
-    ...overrides,
-  };
 }
 
 beforeEach(() => {
@@ -88,7 +72,7 @@ describe("ToolPreviewFormatter.formatJsonInputForPrompt", () => {
     const f = makeFormatter({ toolInputPreviewMaxLength: 10 });
     const result = f.formatJsonInputForPrompt({});
     const preview = result.slice("with input ".length);
-    expect(preview.length).toBe(11); // 10 + 1 for "…"
+    expect(preview.length).toBe(11);
     expect(preview.endsWith("…")).toBe(true);
   });
 
@@ -184,7 +168,7 @@ describe("ToolPreviewFormatter.formatToolInputForPrompt", () => {
     const result = f.formatToolInputForPrompt("custom", {});
     const preview = result.slice("with input ".length);
     expect(preview.endsWith("…")).toBe(true);
-    expect(preview.length).toBe(11); // 10 + "…"
+    expect(preview.length).toBe(11);
   });
 });
 
@@ -201,7 +185,6 @@ describe("ToolPreviewFormatter.formatToolInputForPrompt — custom formatter sea
       {
         toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
         toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
-        toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
       },
       lookup,
     );
@@ -215,7 +198,6 @@ describe("ToolPreviewFormatter.formatToolInputForPrompt — custom formatter sea
       {
         toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
         toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
-        toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
       },
       lookup,
     );
@@ -228,7 +210,6 @@ describe("ToolPreviewFormatter.formatToolInputForPrompt — custom formatter sea
       {
         toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
         toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
-        toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
       },
       lookup,
     );
@@ -239,109 +220,7 @@ describe("ToolPreviewFormatter.formatToolInputForPrompt — custom formatter sea
     const f = new ToolPreviewFormatter({
       toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
       toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
-      toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
     });
     expect(f.formatToolInputForPrompt("read", { path: "/foo.ts" })).toContain("/foo.ts");
-  });
-});
-
-describe("ToolPreviewFormatter.formatGenericToolInputForLog", () => {
-  test("returns undefined when serialization yields empty string", () => {
-    mockedStringify.mockReturnValue(undefined);
-    const f = makeFormatter();
-    expect(f.formatGenericToolInputForLog({})).toBeUndefined();
-  });
-
-  test("returns prefixed input preview", () => {
-    mockedStringify.mockReturnValue('{"k":"v"}');
-    const f = makeFormatter();
-    expect(f.formatGenericToolInputForLog({ k: "v" })).toBe('input {"k":"v"}');
-  });
-
-  test("truncates at constructor toolInputLogPreviewMaxLength", () => {
-    const longJson = `{"k":"${"x".repeat(50)}"}`;
-    mockedStringify.mockReturnValue(longJson);
-    const f = makeFormatter({ toolInputLogPreviewMaxLength: 10 });
-    const result = f.formatGenericToolInputForLog({});
-    expect(result).toBeDefined();
-    const preview = result!.slice("input ".length);
-    expect(preview.length).toBe(11); // 10 + "…"
-    expect(preview.endsWith("…")).toBe(true);
-  });
-});
-
-describe("ToolPreviewFormatter.getToolInputPreviewForLog", () => {
-  const pathBearingTools = new Set(["read", "write", "edit"]);
-
-  test("returns undefined for bash tool", () => {
-    const f = makeFormatter();
-    expect(f.getToolInputPreviewForLog(makeResult("bash"), { command: "ls" }, pathBearingTools)).toBeUndefined();
-  });
-
-  test("returns undefined for mcp tool", () => {
-    const f = makeFormatter();
-    expect(f.getToolInputPreviewForLog(makeResult("mcp"), {}, pathBearingTools)).toBeUndefined();
-  });
-
-  test("returns undefined for mcp source", () => {
-    const f = makeFormatter();
-    const result = makeResult("some-server:some-tool", { source: "mcp" });
-    expect(f.getToolInputPreviewForLog(result, {}, pathBearingTools)).toBeUndefined();
-  });
-
-  test("returns path-based preview for path-bearing tools", () => {
-    const f = makeFormatter();
-    const preview = f.getToolInputPreviewForLog(makeResult("read"), { path: "/src/foo.ts" }, pathBearingTools);
-    expect(preview).toContain("/src/foo.ts");
-  });
-
-  test("truncates path preview at toolInputLogPreviewMaxLength", () => {
-    const f = makeFormatter({ toolInputLogPreviewMaxLength: 15 });
-    const longPath = `/src/${"a".repeat(50)}.ts`;
-    const preview = f.getToolInputPreviewForLog(makeResult("read"), { path: longPath }, pathBearingTools);
-    expect(preview).toBeDefined();
-    expect(preview!.length).toBeLessThanOrEqual(16); // 15 + "…"
-  });
-
-  test("returns generic JSON preview for non-path-bearing tools", () => {
-    mockedStringify.mockReturnValue('{"n":1}');
-    const f = makeFormatter();
-    const preview = f.getToolInputPreviewForLog(makeResult("task"), { n: 1 }, pathBearingTools);
-    expect(preview).toContain('{"n":1}');
-  });
-});
-
-describe("ToolPreviewFormatter.getPermissionLogContext", () => {
-  const pathBearingTools = new Set(["read", "write", "edit"]);
-
-  test("returns command, target, toolInputPreview, and origin fields", () => {
-    const f = makeFormatter();
-    const result = makeResult("bash", { command: "ls -la" });
-    const ctx = f.getPermissionLogContext(result, {}, pathBearingTools);
-    expect(ctx.command).toBe("ls -la");
-    expect(ctx.target).toBeUndefined();
-    expect(ctx.toolInputPreview).toBeUndefined();
-  });
-
-  test("includes toolInputPreview for non-bash path-bearing tools", () => {
-    const f = makeFormatter();
-    const result = makeResult("read");
-    const ctx = f.getPermissionLogContext(result, { path: "/foo.ts" }, pathBearingTools);
-    expect(ctx.toolInputPreview).toContain("/foo.ts");
-  });
-
-  test("includes origin from check result", () => {
-    const f = makeFormatter();
-    const result = makeResult("read", { origin: "project" });
-    const ctx = f.getPermissionLogContext(result, {}, pathBearingTools);
-    expect(ctx.origin).toBe("project");
-  });
-
-  test("toolInputPreview respects toolInputLogPreviewMaxLength", () => {
-    const f = makeFormatter({ toolInputLogPreviewMaxLength: 15 });
-    const longPath = `/src/${"a".repeat(50)}.ts`;
-    const ctx = f.getPermissionLogContext(makeResult("read"), { path: longPath }, pathBearingTools);
-    expect(ctx.toolInputPreview).toBeDefined();
-    expect(ctx.toolInputPreview!.length).toBeLessThanOrEqual(16);
   });
 });

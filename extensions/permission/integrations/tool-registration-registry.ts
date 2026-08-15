@@ -1,4 +1,3 @@
-/** Shared one-registration-per-tool registry with identity-guarded disposers. */
 export class ToolRegistrationRegistry<TRegistration> {
   private readonly registrations = new Map<string, TRegistration>();
 

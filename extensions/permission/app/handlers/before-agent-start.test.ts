@@ -6,7 +6,6 @@ import type { ToolRegistry } from "#src/integrations/tool-registry";
 import { makeCheckResult, makeCtx } from "#test/helpers/handler-fixtures";
 import { makeRealResolver, makeRealSession } from "#test/helpers/session-fixtures";
 
-// ── SDK stubs ──────────────────────────────────────────────────────────────
 vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
   const original = await importOriginal<typeof import("@earendil-works/pi-coding-agent")>();
   return {
@@ -14,8 +13,6 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
     isToolCallEventType: vi.fn().mockReturnValue(false),
   };
 });
-
-// ── helpers ────────────────────────────────────────────────────────────────
 
 function makeEvent(systemPrompt = "You are an assistant.") {
   return { systemPrompt };
@@ -36,7 +33,7 @@ function makeSetup(opts?: { toolPermission?: "allow" | "deny" | "ask"; toolRegis
   if (opts?.toolPermission !== undefined) {
     vi.mocked(permissionManager.getToolPermission).mockReturnValue(opts.toolPermission);
   }
-  // Default checkPermission returns allow (for skill-prompt sanitizer)
+
   vi.mocked(permissionManager.checkPermission).mockReturnValue(makeCheckResult());
   const toolRegistry = makeToolRegistry(opts?.toolRegistry);
   const handler = new AgentPrepHandler(session, resolver, toolRegistry);
@@ -50,8 +47,6 @@ function makeSetup(opts?: { toolPermission?: "allow" | "deny" | "ask"; toolRegis
     toolRegistry,
   };
 }
-
-// ── shouldExposeTool (pure helper) ─────────────────────────────────────────
 
 describe("shouldExposeTool", () => {
   it("returns true when tool permission is allow", () => {
@@ -82,14 +77,12 @@ describe("shouldExposeTool", () => {
   });
 });
 
-// ── AgentPrepHandler.handle ────────────────────────────────────────────────
-
 describe("AgentPrepHandler.handle", () => {
   it("activates the session with ctx", async () => {
     const ctx = makeCtx();
     const { handler, forwarding } = makeSetup();
     await handler.handle(makeEvent(), ctx);
-    // Real session.activate calls forwarding.start
+
     expect(forwarding.start).toHaveBeenCalledWith(ctx);
   });
 
@@ -130,7 +123,6 @@ describe("AgentPrepHandler.handle", () => {
   });
 
   it("does not activate registered tools pi left inactive (find/grep/ls)", async () => {
-    // Regression for #385: the active set is the base, not the full registry.
     const { handler, toolRegistry } = makeSetup({
       toolRegistry: {
         getActive: vi.fn().mockReturnValue(["read", "bash", "edit", "write"]),

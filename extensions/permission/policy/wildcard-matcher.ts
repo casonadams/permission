@@ -12,14 +12,6 @@ export type WildcardPatternMatch<TState> = {
   matchedName: string;
 };
 
-/**
- * Optional folding applied when matching path-surface patterns on Windows.
- *
- * - `caseInsensitive` compiles the pattern with the `i` flag so a mixed-case
- *   pattern matches a lowercased (canonicalized) path value.
- * - `windowsSeparators` rewrites `/` to `\` in the expanded pattern so a
- *   forward-slash pattern matches a backslash-separated path value.
- */
 export interface WildcardMatchOptions {
   caseInsensitive?: boolean;
   windowsSeparators?: boolean;
@@ -29,7 +21,6 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Make a trailing " *" optional so e.g. "git *" matches both "git status" and bare "git". */
 function applyTrailingWildcardOptional(escaped: string): string {
   return escaped.endsWith(" .*") ? `${escaped.slice(0, -3)}( .*)?` : escaped;
 }
@@ -76,12 +67,6 @@ export function findCompiledWildcardMatch<TState>(
   };
 }
 
-/**
- * Test whether `value` matches `pattern` using wildcard rules.
- * `*` matches any sequence of characters (including empty).
- * `?` matches exactly one character.
- * Used by evaluate() for rule matching.
- */
 export function wildcardMatch(pattern: string, value: string, options?: WildcardMatchOptions): boolean {
   return compileWildcardPattern(pattern, null, options).regex.test(value);
 }

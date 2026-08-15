@@ -3,20 +3,13 @@ import { describe, expect, it } from "vitest";
 import { describeToolGate } from "#src/gates/tool";
 import type { ToolCallContext } from "#src/gates/types";
 import type { PermissionCheckResult } from "#src/policy/types";
-import {
-  TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
-  TOOL_INPUT_PREVIEW_MAX_LENGTH,
-  TOOL_TEXT_SUMMARY_MAX_LENGTH,
-} from "#src/prompting/tool-input-preview";
+import { TOOL_INPUT_PREVIEW_MAX_LENGTH, TOOL_TEXT_SUMMARY_MAX_LENGTH } from "#src/prompting/tool-input-preview";
 import { ToolPreviewFormatter } from "#src/prompting/tool-preview-formatter";
-
-// ── helpers ────────────────────────────────────────────────────────────────
 
 function makeFormatter(): ToolPreviewFormatter {
   return new ToolPreviewFormatter({
     toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
     toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
-    toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
   });
 }
 
@@ -44,8 +37,6 @@ function makeCheckResult(
     ...overrides,
   };
 }
-
-// ── tests ──────────────────────────────────────────────────────────────────
 
 describe("describeToolGate", () => {
   it("returns a prechecked descriptor for standard tools", () => {
@@ -143,16 +134,6 @@ describe("describeToolGate", () => {
     });
     expect(desc.promptDetails.message).toBeDefined();
     expect(desc.promptDetails.sessionLabel).toBeDefined();
-  });
-
-  it("populates logContext with tool input preview fields", () => {
-    const check = makeCheckResult("ask", { toolName: "bash", command: "ls" });
-    const desc = describeToolGate(makeTcc({ toolName: "bash", input: { command: "ls" } }), check, makeFormatter());
-    expect(desc.logContext).toMatchObject({
-      source: "tool_call",
-      toolName: "bash",
-    });
-    expect(desc.logContext.command).toBe("ls");
   });
 
   it("uses toolName as input for checkPermission surface", () => {

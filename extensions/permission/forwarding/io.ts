@@ -4,23 +4,27 @@ import {
   createPermissionForwardingLocation,
   type PermissionForwardingLocation,
 } from "#src/forwarding/permission-forwarding";
-import type { ReviewLogger } from "#src/integrations/session-logger";
-import { logPermissionForwardingError, logPermissionForwardingWarning } from "./io-log";
+import type { PermissionNotifier } from "#src/integrations/notifier";
+import { notifyPermissionForwardingError, notifyPermissionForwardingWarning } from "./io-log";
 
 export { listRequestFiles, sleep } from "./io-list";
-export { formatUnknownErrorMessage, logPermissionForwardingError, logPermissionForwardingWarning } from "./io-log";
+export {
+  formatUnknownErrorMessage,
+  notifyPermissionForwardingError,
+  notifyPermissionForwardingWarning,
+} from "./io-log";
 export { readForwardedPermissionRequest, readForwardedPermissionResponse } from "./io-read";
 
 export function isErrnoCode(error: unknown, code: string): boolean {
   return Boolean(error && typeof error === "object" && "code" in error && (error as { code?: string }).code === code);
 }
 
-export function ensureDirectoryExists(logger: ReviewLogger | null, path: string, description: string): boolean {
+export function ensureDirectoryExists(notifier: PermissionNotifier | null, path: string, description: string): boolean {
   try {
     mkdirSync(path, { recursive: true });
     return true;
   } catch (error) {
-    logPermissionForwardingError(logger, `Failed to create ${description} directory '${path}'`, error);
+    notifyPermissionForwardingError(notifier, `Failed to create ${description} directory '${path}'`, error);
     return false;
   }
 }
@@ -33,7 +37,7 @@ export function getPermissionForwardingLocationForSession(
 }
 
 export function ensurePermissionForwardingLocation(
-  logger: ReviewLogger | null,
+  notifier: PermissionNotifier | null,
   forwardingDir: string,
   sessionId: string,
 ): PermissionForwardingLocation | null {
@@ -41,13 +45,17 @@ export function ensurePermissionForwardingLocation(
   try {
     location = getPermissionForwardingLocationForSession(forwardingDir, sessionId);
   } catch (error) {
-    logPermissionForwardingError(logger, "Failed to resolve permission forwarding location", error);
+    notifyPermissionForwardingError(notifier, "Failed to resolve permission forwarding location", error);
     return null;
   }
 
-  const sessionRootReady = ensureDirectoryExists(logger, location.sessionRootDir, "permission forwarding session root");
-  const requestsReady = ensureDirectoryExists(logger, location.requestsDir, "permission forwarding requests");
-  const responsesReady = ensureDirectoryExists(logger, location.responsesDir, "permission forwarding responses");
+  const sessionRootReady = ensureDirectoryExists(
+    notifier,
+    location.sessionRootDir,
+    "permission forwarding session root",
+  );
+  const requestsReady = ensureDirectoryExists(notifier, location.requestsDir, "permission forwarding requests");
+  const responsesReady = ensureDirectoryExists(notifier, location.responsesDir, "permission forwarding responses");
 
   return sessionRootReady && requestsReady && responsesReady ? location : null;
 }
@@ -66,7 +74,11 @@ export function getExistingPermissionForwardingLocation(
   return existsSync(location.requestsDir) ? location : null;
 }
 
-export function tryRemoveDirectoryIfEmpty(logger: ReviewLogger | null, path: string, description: string): boolean {
+export function tryRemoveDirectoryIfEmpty(
+  notifier: PermissionNotifier | null,
+  path: string,
+  description: string,
+): boolean {
   if (!existsSync(path)) {
     return true;
   }
@@ -75,7 +87,7 @@ export function tryRemoveDirectoryIfEmpty(logger: ReviewLogger | null, path: str
   try {
     entries = readdirSync(path);
   } catch (error) {
-    logPermissionForwardingWarning(logger, `Failed to inspect ${description} directory '${path}'`, error);
+    notifyPermissionForwardingWarning(notifier, `Failed to inspect ${description} directory '${path}'`, error);
     return false;
   }
 
@@ -87,12 +99,12 @@ export function tryRemoveDirectoryIfEmpty(logger: ReviewLogger | null, path: str
     rmdirSync(path);
     return true;
   } catch (error) {
-    return handleRemoveEmptyDirectoryError({ logger, path, description, error });
+    return handleRemoveEmptyDirectoryError({ notifier, path, description, error });
   }
 }
 
 function handleRemoveEmptyDirectoryError(params: {
-  logger: ReviewLogger | null;
+  notifier: PermissionNotifier | null;
   path: string;
   description: string;
   error: unknown;
@@ -100,8 +112,8 @@ function handleRemoveEmptyDirectoryError(params: {
   if (isErrnoCode(params.error, "ENOENT")) return true;
   if (isErrnoCode(params.error, "ENOTEMPTY")) return false;
 
-  logPermissionForwardingWarning(
-    params.logger,
+  notifyPermissionForwardingWarning(
+    params.notifier,
     `Failed to remove empty ${params.description} directory '${params.path}'`,
     params.error,
   );
@@ -109,22 +121,22 @@ function handleRemoveEmptyDirectoryError(params: {
 }
 
 export function cleanupPermissionForwardingLocationIfEmpty(
-  logger: ReviewLogger | null,
+  notifier: PermissionNotifier | null,
   location: PermissionForwardingLocation,
 ): void {
   // Requests must be gone first; concurrent response writes otherwise hit the ENOENT loop tracked in #398.
   const requestsGone = tryRemoveDirectoryIfEmpty(
-    logger,
+    notifier,
     location.requestsDir,
     `${location.label} permission forwarding requests`,
   );
   if (requestsGone) {
-    tryRemoveDirectoryIfEmpty(logger, location.responsesDir, `${location.label} permission forwarding responses`);
+    tryRemoveDirectoryIfEmpty(notifier, location.responsesDir, `${location.label} permission forwarding responses`);
   }
-  tryRemoveDirectoryIfEmpty(logger, location.sessionRootDir, `${location.label} permission forwarding session root`);
+  tryRemoveDirectoryIfEmpty(notifier, location.sessionRootDir, `${location.label} permission forwarding session root`);
 }
 
-export function safeDeleteFile(logger: ReviewLogger | null, filePath: string, description: string): void {
+export function safeDeleteFile(notifier: PermissionNotifier | null, filePath: string, description: string): void {
   try {
     unlinkSync(filePath);
   } catch (error) {
@@ -132,18 +144,18 @@ export function safeDeleteFile(logger: ReviewLogger | null, filePath: string, de
       return;
     }
 
-    logPermissionForwardingWarning(logger, `Failed to delete ${description} file '${filePath}'`, error);
+    notifyPermissionForwardingWarning(notifier, `Failed to delete ${description} file '${filePath}'`, error);
   }
 }
 
-export function writeJsonFileAtomic(logger: ReviewLogger | null, filePath: string, value: unknown): void {
+export function writeJsonFileAtomic(notifier: PermissionNotifier | null, filePath: string, value: unknown): void {
   const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
 
   try {
     writeFileSync(tempPath, JSON.stringify(value), "utf-8");
     renameSync(tempPath, filePath);
   } catch (error) {
-    safeDeleteFile(logger, tempPath, "temporary permission-forwarding");
+    safeDeleteFile(notifier, tempPath, "temporary permission-forwarding");
     throw error;
   }
 }

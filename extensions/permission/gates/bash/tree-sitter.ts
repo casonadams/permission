@@ -1,19 +1,11 @@
 import { createRequire } from "node:module";
-
-/**
- * Minimal subset of web-tree-sitter's SyntaxNode used by the AST walker.
- * Defined locally so callers do not need to import web-tree-sitter types.
- */
 export interface TSNode {
   readonly type: string;
   readonly text: string;
   readonly childCount: number;
-  /** False for anonymous tokens (operators, delimiters); true for named nodes. */
   readonly isNamed: boolean;
   child(index: number): TSNode | null;
 }
-
-/** Minimal subset of web-tree-sitter's Parser used by this module. */
 export interface TSParser {
   parse(input: string): { rootNode: TSNode; delete(): void } | null;
   delete(): void;
@@ -34,8 +26,6 @@ async function initParser(): Promise<TSParser> {
   parser.setLanguage(bash);
   return parser;
 }
-
-/** Lazily create and cache the shared tree-sitter-bash parser. */
 export function getParser(): Promise<TSParser> {
   parserPromise ??= initParser();
   return parserPromise;

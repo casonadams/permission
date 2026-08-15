@@ -6,16 +6,11 @@ export function getPromptPath(input: Record<string, unknown>): string | null {
   return getNonEmptyString(input.path) ?? getNonEmptyString(input.file_path);
 }
 
-/**
- * Show the command itself rather than its JSON envelope. The title names the
- * sub-command that triggered the gate; this is the full command it came from.
- */
 export function formatBashInputForPrompt(input: Record<string, unknown>): string {
   const command = getNonEmptyString(input.command);
   return command ? formatBashCommandPreview(command) : "";
 }
 
-/** The skill name already appears in the prompt title, so add nothing here. */
 export function formatSkillInputForPrompt(): string {
   return "";
 }

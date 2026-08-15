@@ -9,11 +9,7 @@ import {
   formatSkillPathAskPrompt,
   formatUnknownToolReason,
 } from "#src/prompting/permission-prompts";
-import {
-  TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
-  TOOL_INPUT_PREVIEW_MAX_LENGTH,
-  TOOL_TEXT_SUMMARY_MAX_LENGTH,
-} from "#src/prompting/tool-input-preview";
+import { TOOL_INPUT_PREVIEW_MAX_LENGTH, TOOL_TEXT_SUMMARY_MAX_LENGTH } from "#src/prompting/tool-input-preview";
 import { ToolPreviewFormatter } from "#src/prompting/tool-preview-formatter";
 
 type FormatAskPromptTuple = [PermissionCheckResult, string?, unknown?, ToolPreviewFormatter?];
@@ -28,7 +24,6 @@ function makeFormatter(lookup?: ToolInputFormatterLookup): ToolPreviewFormatter 
     {
       toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
       toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
-      toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
     },
     lookup,
   );
@@ -316,6 +311,3 @@ describe("formatSkillPathAskPrompt", () => {
     expect(result).toContain("Current agent");
   });
 });
-
-// formatSkillPathDenyReason has moved to denial-messages.ts.
-// Its behavior is tested in denial-messages.test.ts.

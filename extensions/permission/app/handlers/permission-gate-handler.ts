@@ -12,21 +12,10 @@ import type { GateNotifier, SkillInputGatePipeline } from "../../gates/skill-inp
 import type { ToolCallGatePipeline } from "../../gates/tool-call-gate-pipeline";
 import type { ToolCallContext } from "../../gates/types";
 
-/** Minimal subset of InputEvent used by handleInput. */
 interface InputPayload {
   text: string;
 }
 
-/**
- * Handles permission gate events: tool_call and input.
- *
- * Constructor deps:
- * - `session` — state/lifecycle owner: bind per-event context, resolve agent name
- * - `toolRegistry` — Pi tool API subset (getAll + setActive)
- * - `pipeline` — owns tool-call gate-producer assembly and the run loop
- * - `skillInputPipeline` — owns skill-input gate assembly (pre-check, notify, run)
- * - `runner` — pre-built gate runner (constructed in the composition root)
- */
 export interface PermissionGateHandlerDeps {
   session: PermissionSession;
   toolRegistry: ToolRegistry;
@@ -105,21 +94,8 @@ export class PermissionGateHandler {
   }
 }
 
-// ── Pure helpers ─────────────────────────────────────────────────────────
-
-/** Discriminated result of validating a tool-call event's name and registration. */
 export type RequestedToolValidation = { status: "ok"; toolName: string } | { status: "block"; reason: string };
 
-/**
- * Validate the tool name from a raw event against the registered tool list.
- *
- * Composes `getToolNameFromValue` + `checkRequestedToolRegistration` + the
- * two reason formatters and returns a discriminated result so `handleToolCall`
- * reads as a straight validate → proceed path without nested early-returns.
- *
- * Returns the **raw** tool name (not the normalised form) so that
- * `ToolCallContext.toolName` stays identical to the pre-extraction behaviour.
- */
 export function validateRequestedTool(event: unknown, availableTools: readonly unknown[]): RequestedToolValidation {
   const toolName = getToolNameFromValue(event);
   if (!toolName) {
@@ -138,10 +114,7 @@ export function validateRequestedTool(event: unknown, availableTools: readonly u
   return { status: "ok", toolName };
 }
 
-/**
- * Extract the tool input from an event, checking both `input` and `arguments`
- * fields (different Pi SDK versions use different names).
- */
+/** Pi SDK versions expose tool input as either `input` or `arguments`. */
 export function getEventInput(event: unknown): unknown {
   const record = toRecord(event);
 
@@ -156,10 +129,6 @@ export function getEventInput(event: unknown): unknown {
   return {};
 }
 
-/**
- * Parse a `/skill:<name>` prefix from user input.
- * Returns the skill name, or null if the text is not a skill invocation.
- */
 export function extractSkillNameFromInput(text: string): string | null {
   const trimmed = text.trim();
   if (!trimmed.startsWith("/skill:")) {

@@ -3,8 +3,6 @@ import { describe, expect, it } from "vitest";
 import { describeSkillInputGate } from "#src/gates/skill-input";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
 function makeSkillCheck(state: "allow" | "deny" | "ask") {
   return makeCheckResult({
     state,
@@ -14,8 +12,6 @@ function makeSkillCheck(state: "allow" | "deny" | "ask") {
     matchedPattern: "*",
   });
 }
-
-// ── describeSkillInputGate ─────────────────────────────────────────────────
 
 describe("describeSkillInputGate", () => {
   it("sets surface to 'skill'", () => {
@@ -65,15 +61,6 @@ describe("describeSkillInputGate", () => {
     const descriptor = describeSkillInputGate("librarian", null, makeSkillCheck("ask"));
     expect(typeof descriptor.promptDetails.message).toBe("string");
     expect(descriptor.promptDetails.message.length).toBeGreaterThan(0);
-  });
-
-  it("sets logContext source to 'skill_input' with skill name and agent", () => {
-    const descriptor = describeSkillInputGate("librarian", "code-agent", makeSkillCheck("allow"));
-    expect(descriptor.logContext).toMatchObject({
-      source: "skill_input",
-      skillName: "librarian",
-      agentName: "code-agent",
-    });
   });
 
   it("sets decision surface to 'skill' and value to the skill name", () => {

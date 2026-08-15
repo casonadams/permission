@@ -3,13 +3,10 @@ import type { SkillPromptEntry } from "#src/app/skill-prompt-sanitizer";
 import { describeSkillReadGate } from "#src/gates/skill-read";
 import type { ToolCallContext } from "#src/gates/types";
 
-// ── SDK stubs ──────────────────────────────────────────────────────────────
 vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
   const original = await importOriginal<typeof import("@earendil-works/pi-coding-agent")>();
   return { ...original };
 });
-
-// ── helpers ────────────────────────────────────────────────────────────────
 
 function makeSkillEntry(overrides: Partial<SkillPromptEntry> = {}): SkillPromptEntry {
   return {
@@ -33,8 +30,6 @@ function makeTcc(overrides: Partial<ToolCallContext> = {}): ToolCallContext {
     ...overrides,
   };
 }
-
-// ── tests ──────────────────────────────────────────────────────────────────
 
 describe("describeSkillReadGate", () => {
   it("returns null when tool is not read", () => {
@@ -108,17 +103,6 @@ describe("describeSkillReadGate", () => {
       skillName: "my-skill",
     });
     expect(result.promptDetails.message).toBeDefined();
-  });
-
-  it("logContext includes skill_read source and skillName", () => {
-    const result = describeSkillReadGate(makeTcc({ agentName: "agent-1" }), () => [
-      makeSkillEntry({ name: "librarian" }),
-    ])!;
-    expect(result.logContext).toMatchObject({
-      source: "skill_read",
-      skillName: "librarian",
-      agentName: "agent-1",
-    });
   });
 
   it("surface is 'skill' on the descriptor", () => {

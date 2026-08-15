@@ -122,7 +122,6 @@ async function resolvePromptRequest(args: {
     message,
     promptOptions(args.req),
   );
-  args.deps.logger.review("permission_request.rpc_prompt", buildPromptReview(args.req, message, decision));
   return buildPromptReplyData(decision);
 }
 
@@ -133,23 +132,6 @@ function buildPromptTitle(req: Partial<PermissionsPromptRequest>): string {
 
 function promptOptions(req: Partial<PermissionsPromptRequest>): { sessionLabel: string } | undefined {
   return req.sessionLabel ? { sessionLabel: req.sessionLabel } : undefined;
-}
-
-function buildPromptReview(
-  req: Partial<PermissionsPromptRequest> & { requestId: string },
-  message: string,
-  decision: PermissionPromptDecision,
-) {
-  return {
-    requestId: req.requestId,
-    surface: req.surface ?? null,
-    value: req.value ?? null,
-    agentName: req.agentName ?? null,
-    message,
-    approved: decision.approved,
-    resolution: decision.state,
-    denialReason: decision.denialReason ?? null,
-  };
 }
 
 function buildPromptReplyData(decision: PermissionPromptDecision): PermissionsPromptReplyData {

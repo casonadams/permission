@@ -20,7 +20,7 @@ export function describeBashPathGate(
   if (!input) return null;
 
   const analysis = analyzePathCandidates(input.candidates, tcc, resolver);
-  if (analysis.allSessionCovered) return buildBashPathBypass(tcc, input);
+  if (analysis.allSessionCovered) return buildBashPathBypass();
 
   const restriction = choosePathRestriction(analysis.uncovered);
   if (!restriction) return null;
@@ -99,22 +99,8 @@ function choosePathRestriction(uncovered: PathRestriction[]): PathRestriction | 
   return uncovered.find(({ check }) => check === worstCheck) ?? null;
 }
 
-function buildBashPathBypass(tcc: ToolCallContext, input: BashPathInput): GateResult {
-  return {
-    action: "allow",
-    log: {
-      event: "permission_request.session_approved",
-      details: {
-        source: "tool_call",
-        toolCallId: tcc.toolCallId,
-        toolName: tcc.toolName,
-        agentName: tcc.agentName,
-        command: input.command,
-        tokens: input.tokens,
-        resolution: "session_approved",
-      },
-    },
-  };
+function buildBashPathBypass(): GateResult {
+  return { action: "allow" };
 }
 
 function buildBashPathDescriptor(args: {
@@ -145,14 +131,6 @@ function buildBashPathDescriptor(args: {
       command,
       promptSurface: "path",
       promptValue: restriction.token,
-    },
-    logContext: {
-      source: "tool_call",
-      toolCallId: tcc.toolCallId,
-      toolName: tcc.toolName,
-      agentName: tcc.agentName,
-      command,
-      path: restriction.token,
     },
     decision: {
       surface: "path",

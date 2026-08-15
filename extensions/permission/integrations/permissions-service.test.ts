@@ -9,15 +9,11 @@ import type { SessionRules } from "#src/policy/session-rules";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 import { makeFakePermissionManager } from "#test/helpers/session-fixtures";
 
-// ── input-normalizer stub ──────────────────────────────────────────────────
-
 const mockBuildInputForSurface = vi.hoisted(() => vi.fn<(surface: string, value?: string) => unknown>());
 
 vi.mock("#src/policy/input-normalizer", () => ({
   buildInputForSurface: mockBuildInputForSurface,
 }));
-
-// ── helpers ────────────────────────────────────────────────────────────────
 
 function makeSessionRules(rules: Ruleset = []): Pick<SessionRules, "getRuleset"> {
   return {
@@ -59,8 +55,6 @@ function makeServiceDeps(overrides: ServiceOverrides): LocalPermissionsServiceDe
   };
 }
 
-// ── tests ──────────────────────────────────────────────────────────────────
-
 beforeEach(() => {
   mockBuildInputForSurface.mockReset();
   mockBuildInputForSurface.mockReturnValue({ type: "tool-input" });
@@ -88,7 +82,7 @@ describe("checkPermission", () => {
     });
     service.checkPermission("bash", "echo hi", "my-agent");
     expect(permissionManager.checkPermission).toHaveBeenCalledWith("bash", builtInput, "my-agent", ruleset);
-    void sessionRules; // used indirectly
+    void sessionRules;
   });
 
   it("returns the result from permissionManager.checkPermission", () => {

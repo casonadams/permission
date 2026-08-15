@@ -1,18 +1,15 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-// Hoisted stubs for mocks that reference them in vi.mock factories.
 const { mockSpawnSync, mockExistsSync } = vi.hoisted(() => ({
   mockSpawnSync: vi.fn(),
   mockExistsSync: vi.fn(),
 }));
 
-// Mock node:child_process so tests don't spawn real subprocesses.
 vi.mock("node:child_process", () => ({
   spawnSync: mockSpawnSync,
   default: { spawnSync: mockSpawnSync },
 }));
 
-// Mock node:fs so existsSync is controllable.
 vi.mock("node:fs", () => ({
   existsSync: mockExistsSync,
   default: { existsSync: mockExistsSync },

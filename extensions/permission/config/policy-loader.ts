@@ -21,10 +21,6 @@ function getFileStamp(path: string): string {
 
 type FileCacheEntry<TValue> = { stamp: string; value: TValue };
 
-/**
- * Production `PolicyLoader` that reads config files from disk with
- * mtime-based caching.
- */
 export class FilePolicyLoader implements PolicyLoader {
   private readonly globalConfigPath: string;
   private readonly agentsDir: string;

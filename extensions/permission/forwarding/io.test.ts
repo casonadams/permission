@@ -8,17 +8,15 @@ import {
   cleanupPermissionForwardingLocationIfEmpty,
   formatUnknownErrorMessage,
   isErrnoCode,
-  logPermissionForwardingError,
-  logPermissionForwardingWarning,
+  notifyPermissionForwardingError,
+  notifyPermissionForwardingWarning,
   tryRemoveDirectoryIfEmpty,
 } from "#src/forwarding/io";
 import { createPermissionForwardingLocation } from "#src/forwarding/permission-forwarding";
-import type { ReviewLogger } from "#src/integrations/session-logger";
+import type { PermissionNotifier } from "#src/integrations/notifier";
 
-function makeLogger(): ReviewLogger {
-  return {
-    review: vi.fn(),
-  };
+function makeNotifier(): PermissionNotifier {
+  return { warn: vi.fn() };
 }
 
 describe("formatUnknownErrorMessage", () => {
@@ -55,65 +53,21 @@ describe("isErrnoCode", () => {
   });
 });
 
-describe("logPermissionForwardingWarning", () => {
-  it("calls logger.review with the warning event", () => {
-    const logger = makeLogger();
-    logPermissionForwardingWarning(logger, "something went wrong");
-    expect(logger.review).toHaveBeenCalledWith("permission_forwarding.warning", { message: "something went wrong" });
+describe("forwarding notifications", () => {
+  it("warns with the message", () => {
+    const notifier = makeNotifier();
+    notifyPermissionForwardingWarning(notifier, "something went wrong");
+    expect(notifier.warn).toHaveBeenCalledWith("something went wrong");
   });
 
-  it("only writes to review (debug stream removed)", () => {
-    const logger = makeLogger();
-    logPermissionForwardingWarning(logger, "something went wrong");
-    expect(logger.review).toHaveBeenCalledWith("permission_forwarding.warning", { message: "something went wrong" });
+  it("includes formatted errors", () => {
+    const notifier = makeNotifier();
+    notifyPermissionForwardingError(notifier, "io error", new Error("ENOENT"));
+    expect(notifier.warn).toHaveBeenCalledWith("io error: ENOENT");
   });
 
-  it("includes formatted error when an error is provided", () => {
-    const logger = makeLogger();
-    logPermissionForwardingWarning(logger, "bad thing", new Error("fs fail"));
-    expect(logger.review).toHaveBeenCalledWith("permission_forwarding.warning", {
-      message: "bad thing",
-      error: "fs fail",
-    });
-  });
-
-  it("does not throw when logger is null", () => {
-    expect(() => logPermissionForwardingWarning(null, "ignored")).not.toThrow();
-  });
-
-  it("does not call anything when logger is null", () => {
-    expect(() => logPermissionForwardingWarning(null, "msg", new Error("err"))).not.toThrow();
-  });
-});
-
-describe("logPermissionForwardingError", () => {
-  it("calls logger.review with the error event", () => {
-    const logger = makeLogger();
-    logPermissionForwardingError(logger, "critical failure");
-    expect(logger.review).toHaveBeenCalledWith("permission_forwarding.error", {
-      message: "critical failure",
-    });
-  });
-
-  it("only writes to review (debug stream removed)", () => {
-    const logger = makeLogger();
-    logPermissionForwardingError(logger, "critical failure");
-    expect(logger.review).toHaveBeenCalledWith("permission_forwarding.error", {
-      message: "critical failure",
-    });
-  });
-
-  it("includes formatted error when an error is provided", () => {
-    const logger = makeLogger();
-    logPermissionForwardingError(logger, "io error", new Error("ENOENT"));
-    expect(logger.review).toHaveBeenCalledWith("permission_forwarding.error", {
-      message: "io error",
-      error: "ENOENT",
-    });
-  });
-
-  it("does not throw when logger is null", () => {
-    expect(() => logPermissionForwardingError(null, "ignored")).not.toThrow();
+  it("does not throw without a notifier", () => {
+    expect(() => notifyPermissionForwardingWarning(null, "ignored")).not.toThrow();
   });
 });
 

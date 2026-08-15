@@ -78,13 +78,6 @@ function addResolvedMcpServerTargets(server: string, tool: string, targets: McpT
   targets.add(server);
 }
 
-/**
- * Derive the ordered list of MCP permission-lookup candidates from a raw MCP
- * tool invocation input.
- *
- * Candidates are ordered from most-specific to least-specific so that
- * `evaluateFirst()` stops at the first non-default match.
- */
 type McpTargetInput = {
   tool: string | null;
   server: string | null;

@@ -27,7 +27,7 @@ export class PermissionForwarder implements ApprovalRequester, InboxProcessor {
       subagentSessionsDir: deps.subagentSessionsDir,
       registry: deps.registry,
       events: deps.events,
-      logger: deps.logger,
+      notifier: deps.notifier,
       requestPermissionDecisionFromUi: deps.requestPermissionDecisionFromUi,
     };
   }

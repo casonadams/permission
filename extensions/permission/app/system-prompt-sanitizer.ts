@@ -36,9 +36,9 @@ function isTopLevelSectionHeader(line: string): boolean {
 
 function isSectionBodyLine(line: string): boolean {
   const trimmed = line.trim();
-  if (trimmed.length === 0) return true; // blank line
-  if (trimmed.startsWith("- ")) return true; // bullet
-  if (line !== line.trimStart()) return true; // indented
+  if (trimmed.length === 0) return true;
+  if (trimmed.startsWith("- ")) return true;
+  if (line !== line.trimStart()) return true;
   return false;
 }
 
@@ -48,10 +48,6 @@ function findSection(lines: readonly string[], header: string): LineSection | nu
   return { start, end: sectionEnd(lines, start) };
 }
 
-/**
- * End of the section starting at `start`: the index of the next recognised
- * section header, else the first non-body line, else `lines.length`.
- */
 function sectionEnd(lines: readonly string[], start: number): number {
   for (let index = start + 1; index < lines.length; index += 1) {
     if (isTopLevelSectionHeader(lines[index])) return index;

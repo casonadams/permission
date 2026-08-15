@@ -10,8 +10,6 @@ import {
 } from "#src/integrations/permission-events";
 import { createManager } from "#test/helpers/manager-harness";
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
 function makeCheckResult(state: "allow" | "deny" | "ask", overrides: Record<string, unknown> = {}) {
   return {
     toolName: "bash",
@@ -31,12 +29,9 @@ function makeDeps(overrides: Partial<PermissionRpcDeps> = {}): PermissionRpcDeps
     sessionRules: { getRuleset: vi.fn().mockReturnValue([]) },
     session: { getRuntimeContext: vi.fn().mockReturnValue(null) },
     requestPermissionDecisionFromUi: vi.fn(),
-    logger: { review: vi.fn() },
     ...overrides,
   };
 }
-
-/** Wait for a single event on the bus reply channel. */
 function waitForReply<T>(bus: ReturnType<typeof createEventBus>, channel: string): Promise<T> {
   return new Promise((resolve) => {
     const unsub = bus.on(channel, (data) => {
@@ -45,8 +40,6 @@ function waitForReply<T>(bus: ReturnType<typeof createEventBus>, channel: string
     });
   });
 }
-
-// ── registerPermissionRpcHandlers — check RPC ──────────────────────────────
 
 describe("registerPermissionRpcHandlers — permissions:rpc:check", () => {
   it("returns unsubscribe handles", () => {
@@ -194,18 +187,15 @@ describe("registerPermissionRpcHandlers — permissions:rpc:check", () => {
     const bus = createEventBus();
     registerPermissionRpcHandlers(bus, makeDeps());
 
-    // No reply channel to wait on — emit without requestId and confirm
-    // no throw / crash. We check indirectly via a timeout-free approach:
-    // emit an immediately-followable good request and ensure both succeed.
     const replyPromise = waitForReply<PermissionsRpcReply>(bus, `${PERMISSIONS_RPC_CHECK_CHANNEL}:reply:req-good`);
-    bus.emit(PERMISSIONS_RPC_CHECK_CHANNEL, {}); // missing requestId — should not crash
+    bus.emit(PERMISSIONS_RPC_CHECK_CHANNEL, {});
     bus.emit(PERMISSIONS_RPC_CHECK_CHANNEL, {
       requestId: "req-good",
       surface: "bash",
     });
 
     const reply = await replyPromise;
-    expect(reply.success).toBe(true); // good request still handled
+    expect(reply.success).toBe(true);
   });
 
   it("unsubCheck stops the handler from firing", async () => {
@@ -222,7 +212,6 @@ describe("registerPermissionRpcHandlers — permissions:rpc:check", () => {
       surface: "bash",
     });
 
-    // Give async handlers a chance to fire
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(checkPermission).not.toHaveBeenCalled();
   });
@@ -260,8 +249,6 @@ describe("registerPermissionRpcHandlers — permissions:rpc:check", () => {
     }
   });
 });
-
-// ── registerPermissionRpcHandlers — prompt RPC ──────────────────────────
 
 describe("registerPermissionRpcHandlers — permissions:rpc:prompt", () => {
   function makeUi() {
@@ -447,39 +434,6 @@ describe("registerPermissionRpcHandlers — permissions:rpc:prompt", () => {
     const reply = await replyPromise;
     expect(reply.success).toBe(false);
     expect((reply as { success: false; error: string }).error).toBe("no_ui");
-  });
-
-  it("writes to the review log after a prompt decision", async () => {
-    const bus = createEventBus();
-    const ctx = makeCtxWithUi();
-    const logger = { review: vi.fn() };
-    const deps = makeDeps({
-      session: { getRuntimeContext: vi.fn().mockReturnValue(ctx) },
-      requestPermissionDecisionFromUi: vi.fn().mockResolvedValue({ approved: true, state: "approved" as const }),
-      logger,
-    });
-    registerPermissionRpcHandlers(bus, deps);
-
-    const replyPromise = waitForReply(bus, `${PERMISSIONS_RPC_PROMPT_CHANNEL}:reply:req-log`);
-    bus.emit(PERMISSIONS_RPC_PROMPT_CHANNEL, {
-      requestId: "req-log",
-      surface: "bash",
-      value: "git push",
-      message: "Allow git push?",
-      agentName: "Worker",
-    });
-    await replyPromise;
-
-    expect(logger.review).toHaveBeenCalledWith(
-      "permission_request.rpc_prompt",
-      expect.objectContaining({
-        requestId: "req-log",
-        surface: "bash",
-        value: "git push",
-        agentName: "Worker",
-        approved: true,
-      }),
-    );
   });
 
   it("unsubPrompt stops the handler from firing", async () => {

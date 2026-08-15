@@ -1,22 +1,8 @@
-/**
- * Curated arity dictionary for common CLI commands.
- *
- * Keys are lowercase, space-joined command prefixes.
- * Values are the total token count that defines the "human-understandable
- * subcommand" — i.e. how many tokens to include in a session-approval pattern.
- *
- * Multi-level entries (e.g. "npm run": 3) take precedence over shorter entries
- * ("npm": 2) because `prefix()` uses longest-match-wins.
- *
- * Exported for testability.
- */
 export const ARITY: Record<string, number> = {
-  // Version control
   git: 2,
   hg: 2,
   svn: 2,
 
-  // Node.js package managers
   npm: 2,
   "npm run": 3,
   "npm exec": 3,
@@ -32,31 +18,25 @@ export const ARITY: Record<string, number> = {
   "bun add": 2,
   "bun x": 3,
 
-  // Runtimes
   deno: 2,
   "deno run": 3,
   "deno task": 3,
   "deno compile": 3,
 
-  // Python
   pip: 2,
   pip3: 2,
   uv: 2,
   "uv run": 3,
   "uv pip": 3,
 
-  // Rust
   cargo: 2,
 
-  // Go
   go: 2,
   "go run": 3,
 
-  // Ruby
   bundle: 2,
   "bundle exec": 3,
 
-  // Docker / container
   docker: 2,
   "docker compose": 3,
   "docker container": 3,
@@ -66,11 +46,9 @@ export const ARITY: Record<string, number> = {
   podman: 2,
   "podman compose": 3,
 
-  // Kubernetes
   kubectl: 2,
   helm: 2,
 
-  // Cloud CLIs
   aws: 3,
   az: 3,
   gcloud: 3,
@@ -82,20 +60,16 @@ export const ARITY: Record<string, number> = {
   vercel: 2,
   wrangler: 2,
 
-  // Build tools
   make: 1,
   bazel: 2,
 
-  // Infrastructure
   terraform: 2,
   tofu: 2,
   pulumi: 2,
 
-  // System service management
   systemctl: 2,
   service: 2,
 
-  // Shell file-ops — args are paths/targets, not subcommands
   ls: 1,
   ll: 1,
   la: 1,
@@ -131,7 +105,6 @@ export const ARITY: Record<string, number> = {
   zip: 1,
   unzip: 1,
 
-  // Network
   curl: 1,
   wget: 1,
   ssh: 1,
@@ -139,33 +112,16 @@ export const ARITY: Record<string, number> = {
   rsync: 1,
   ping: 1,
 
-  // Process management
   kill: 1,
   killall: 1,
   pkill: 1,
 
-  // Package managers (system)
   brew: 2,
   apt: 2,
   "apt-get": 2,
   yum: 2,
   dnf: 2,
 };
-
-/**
- * Return the semantically meaningful prefix tokens for a tokenized command.
- *
- * Performs a longest-match-wins lookup against the `ARITY` dictionary:
- * iterates from the longest possible prefix down to a single token, returning
- * the first (longest) match. Lookup is case-insensitive; the returned tokens
- * preserve their original casing.
- *
- * When no entry matches, defaults to arity 1 (first token only).
- * When the resolved arity exceeds the available tokens, it is clamped.
- *
- * @param tokens - The command split by whitespace (e.g. `["git", "checkout", "main"]`).
- * @returns The prefix tokens defining the meaningful subcommand.
- */
 export function prefix(tokens: string[]): string[] {
   if (tokens.length === 0) return [];
 
@@ -181,6 +137,5 @@ export function prefix(tokens: string[]): string[] {
     }
   }
 
-  // Unknown command — default arity 1.
   return [tokens[0]];
 }

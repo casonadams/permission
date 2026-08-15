@@ -6,7 +6,7 @@ import { ConfigStore } from "../config/config-store";
 import { ForwardingManager } from "../forwarding/forwarding-manager";
 import { PermissionForwarder, type PermissionForwarderDeps } from "../forwarding/permission-forwarder";
 import { getSubagentSessionRegistry, type SubagentSessionRegistry } from "../forwarding/subagents/subagent-registry";
-import { PermissionSessionLogger } from "../integrations/session-logger";
+import type { PermissionNotifier } from "../integrations/notifier";
 import { ToolAccessExtractorRegistry } from "../integrations/tool-access-extractor-registry";
 import { ToolInputFormatterRegistry } from "../integrations/tool-input-formatter-registry";
 import { PermissionManager } from "../policy/permission-manager";
@@ -35,7 +35,7 @@ type Core = {
 export type Runtime = Core & {
   config: ConfigStore;
   session: PermissionSession;
-  logger: PermissionSessionLogger;
+  notifier: PermissionNotifier;
   forwarder: PermissionForwarder;
   prompter: PermissionPrompter;
   gateway: PromptingGateway;
@@ -44,10 +44,10 @@ export type Runtime = Core & {
 export function createRuntime(pi: ExtensionAPI): Runtime {
   const core = createCore();
   const state: { session?: PermissionSession } = {};
-  const logger = createLogger(core.paths.globalLogsDir, state);
-  const config = new ConfigStore({ agentDir: core.agentDir, policyPaths: core.manager, logger });
-  const forwarder = createForwarder({ pi, core, logger });
-  const prompter = new PermissionPrompter({ logger, events: pi.events, forwarder });
+  const notifier = createNotifier(state);
+  const config = new ConfigStore({ agentDir: core.agentDir, policyPaths: core.manager });
+  const forwarder = createForwarder({ pi, core, notifier });
+  const prompter = new PermissionPrompter({ events: pi.events, forwarder });
   const gateway = new PromptingGateway({
     subagentSessionsDir: core.paths.subagentSessionsDir,
     registry: core.registries.subagents,
@@ -62,7 +62,7 @@ export function createRuntime(pi: ExtensionAPI): Runtime {
     gateway,
   });
   state.session = session;
-  return { ...core, config, session, logger, forwarder, prompter, gateway };
+  return { ...core, config, session, notifier, forwarder, prompter, gateway };
 }
 
 function createCore(): Core {
@@ -78,20 +78,17 @@ function createCore(): Core {
   };
 }
 
-function createLogger(globalLogsDir: string, state: { session?: PermissionSession }): PermissionSessionLogger {
-  return new PermissionSessionLogger({
-    globalLogsDir,
-    notify: (message) => state.session?.notify(message),
-  });
+function createNotifier(state: { session?: PermissionSession }): PermissionNotifier {
+  return { warn: (message) => state.session?.notify(message) };
 }
 
-function createForwarder(args: { pi: ExtensionAPI; core: Core; logger: PermissionSessionLogger }): PermissionForwarder {
+function createForwarder(args: { pi: ExtensionAPI; core: Core; notifier: PermissionNotifier }): PermissionForwarder {
   const deps: PermissionForwarderDeps = {
     forwardingDir: args.core.paths.forwardingDir,
     subagentSessionsDir: args.core.paths.subagentSessionsDir,
     registry: args.core.registries.subagents,
     events: args.pi.events,
-    logger: args.logger,
+    notifier: args.notifier,
     requestPermissionDecisionFromUi: (params) =>
       requestPermissionDecisionFromUi(params.ui, params.title, params.message, params.options),
   };

@@ -4,7 +4,6 @@ import { wildcardMatch } from "../policy/wildcard-matcher";
 import { expandHomePath } from "./expand-home";
 import { isPathWithinDirectory } from "./path-containment";
 
-// File tools eligible for the Pi infrastructure auto-allow are defined in permission-surfaces.
 export { READ_ONLY_PATH_BEARING_TOOLS } from "../policy/permission-surfaces";
 
 interface PiInfrastructureReadArgs {

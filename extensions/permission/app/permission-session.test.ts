@@ -264,12 +264,6 @@ describe("PermissionSession", () => {
       session.refreshConfig(ctx);
       expect(configStore.refresh).toHaveBeenCalledWith(ctx);
     });
-
-    it("logResolvedConfigPaths delegates to configStore.logResolvedPaths", () => {
-      const { session, configStore } = createSession();
-      session.logResolvedConfigPaths();
-      expect(configStore.logResolvedPaths).toHaveBeenCalled();
-    });
   });
 
   describe("reload", () => {

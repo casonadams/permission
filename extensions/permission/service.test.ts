@@ -6,8 +6,6 @@ import type { PermissionCheckResult } from "#src/policy/types";
 import type { PermissionsService } from "#src/service";
 import { getPermissionsService, publishPermissionsService, unpublishPermissionsService } from "#src/service";
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
 function makeService(overrides: Partial<PermissionsService> = {}): PermissionsService {
   return {
     checkPermission: vi.fn(),
@@ -17,8 +15,6 @@ function makeService(overrides: Partial<PermissionsService> = {}): PermissionsSe
     ...overrides,
   };
 }
-
-// ── globalThis accessor ────────────────────────────────────────────────────
 
 describe("globalThis accessor", () => {
   afterEach(() => {
@@ -57,8 +53,7 @@ describe("globalThis accessor", () => {
     const parent = makeService();
     const child = makeService();
     publishPermissionsService(parent);
-    // A child instance never published `parent`; unpublishing its own service
-    // must be a no-op that leaves the parent's slot intact.
+
     unpublishPermissionsService(child);
     expect(getPermissionsService()).toBe(parent);
   });
@@ -68,8 +63,6 @@ describe("globalThis accessor", () => {
     expect(getPermissionsService()).toBeUndefined();
   });
 });
-
-// ── service adapter delegation ─────────────────────────────────────────────
 
 describe("service adapter delegation", () => {
   afterEach(() => {
@@ -99,7 +92,6 @@ describe("service adapter delegation", () => {
       },
     ];
 
-    // Build the adapter the same way index.ts will
     const service = makeService({
       checkPermission(surface, value, agentName) {
         const input = buildInputForSurface(surface, value);
@@ -200,8 +192,6 @@ describe("service adapter delegation", () => {
   });
 });
 
-// ── registerToolInputFormatter delegation ─────────────────────────────────
-
 describe("registerToolInputFormatter delegation", () => {
   afterEach(() => {
     const current = getPermissionsService();
@@ -223,10 +213,8 @@ describe("registerToolInputFormatter delegation", () => {
     publishPermissionsService(service);
     const dispose = getPermissionsService()!.registerToolInputFormatter("my-tool", formatter);
 
-    // Registry received the registration
     expect(registry.get("my-tool")).toBe(formatter);
 
-    // Disposer returned from service removes it from the registry
     dispose();
     expect(registry.get("my-tool")).toBeUndefined();
   });
@@ -245,8 +233,6 @@ describe("registerToolInputFormatter delegation", () => {
     expect(() => getPermissionsService()!.registerToolInputFormatter("my-tool", () => "")).toThrow("my-tool");
   });
 });
-
-// ── registerToolAccessExtractor delegation (#352) ────────────────────────
 
 describe("registerToolAccessExtractor delegation", () => {
   afterEach(() => {

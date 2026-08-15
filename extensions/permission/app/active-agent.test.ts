@@ -98,7 +98,7 @@ describe("getActiveAgentName", () => {
       { type: "custom", customType: "active_agent", data: { name: "first" } },
       { type: "custom", customType: "active_agent", data: { name: "   " } },
     ]);
-    // "   " normalizes to null — not a sentinel reset, keeps scanning backwards
+
     expect(getActiveAgentName(ctx)).toBe("first");
   });
 

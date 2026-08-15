@@ -13,8 +13,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
 const CWD = "/projects/my-app";
 
 function makeManager(
@@ -44,8 +42,6 @@ function availableSkillsSection(...names: string[]): string {
   return ["<available_skills>", ...names.map((n) => skillBlock(n)), "</available_skills>"].join("\n");
 }
 
-// ── resolveSkillPromptEntries ───────────────────────────────────────────────
-
 describe("resolveSkillPromptEntries", () => {
   test("returns unchanged prompt and empty entries when no skills section present", () => {
     const input = "You are a helpful assistant.";
@@ -71,7 +67,6 @@ describe("resolveSkillPromptEntries", () => {
     const result = resolveSkillPromptEntries(input, manager, null, CWD);
     expect(result.prompt).toContain("librarian");
     expect(result.prompt).not.toContain("dangerous");
-    // denied skill is excluded from returned entries
     expect(result.entries.map((e) => e.name)).not.toContain("dangerous");
   });
 
@@ -110,11 +105,9 @@ describe("resolveSkillPromptEntries", () => {
   });
 
   test("caches permission result: checkPermission called once per unique skill name", () => {
-    // Same skill appears in two separate sections.
     const input = [availableSkillsSection("librarian"), availableSkillsSection("librarian")].join("\n");
     const manager = makeManager("allow");
     resolveSkillPromptEntries(input, manager, null, CWD);
-    // Should only be called once despite appearing twice.
     expect(manager.checkPermission).toHaveBeenCalledTimes(1);
   });
 
@@ -137,8 +130,6 @@ describe("resolveSkillPromptEntries", () => {
     expect(result.entries.map((e) => e.name)).not.toContain("beta");
   });
 });
-
-// ── findSkillPathMatch ──────────────────────────────────────────────────────
 
 describe("findSkillPathMatch", () => {
   const entries = [
@@ -184,7 +175,6 @@ describe("findSkillPathMatch", () => {
   });
 
   test("returns null for sibling path that shares a prefix", () => {
-    // "/skills/librarian-extra" should not match "/skills/librarian"
     const match = findSkillPathMatch("/skills/librarian-extra/SKILL.md", entries);
     expect(match).toBeNull();
   });
@@ -212,10 +202,6 @@ describe("findSkillPathMatch", () => {
     expect(match?.name).toBe("child");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Moved from permission-system.test.ts catch-all (#342)
-// ---------------------------------------------------------------------------
 
 test("parseAllSkillPromptSections finds every available_skills block", () => {
   const prompt = [

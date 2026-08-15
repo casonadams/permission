@@ -3,7 +3,6 @@ import { vi } from "vitest";
 import type { ExtensionPaths } from "#src/app/extension-paths";
 import { PermissionSession } from "#src/app/permission-session";
 import type { ForwardingController } from "#src/forwarding/forwarding-manager";
-import type { SessionLogger } from "#src/integrations/session-logger";
 import type { ScopedPermissionManager } from "#src/policy/permission-manager";
 import { PermissionResolver } from "#src/policy/permission-resolver";
 import type { Ruleset } from "#src/policy/rule";
@@ -18,23 +17,14 @@ export function makePaths(overrides: Partial<ExtensionPaths> = {}): ExtensionPat
     sessionsDir: "/test/agent/sessions",
     subagentSessionsDir: "/test/agent/subagent-sessions",
     forwardingDir: "/test/agent/sessions/permission-forwarding",
-    globalLogsDir: "/test/agent/logs",
     piInfrastructureDirs: ["/test/agent", "/test/agent/git"],
     ...overrides,
-  };
-}
-
-export function makeLogger(): SessionLogger {
-  return {
-    review: vi.fn(),
-    warn: vi.fn(),
   };
 }
 
 export function makeConfigStore(overrides: Partial<SessionConfigStore> = {}): SessionConfigStore {
   return {
     refresh: overrides.refresh ?? vi.fn<(ctx?: ExtensionContext) => void>(),
-    logResolvedPaths: overrides.logResolvedPaths ?? vi.fn<() => void>(),
   };
 }
 
@@ -77,7 +67,6 @@ export function makeFakePermissionManager() {
 
 export interface RealSessionOverrides {
   paths?: Partial<ExtensionPaths>;
-  logger?: SessionLogger;
   forwarding?: ForwardingController;
   permissionManager?: ScopedPermissionManager;
   sessionRules?: SessionRules;
@@ -88,7 +77,6 @@ export interface RealSessionOverrides {
 export interface RealSessionHarness {
   session: PermissionSession;
   paths: ExtensionPaths;
-  logger: SessionLogger;
   forwarding: ForwardingController;
   permissionManager: ReturnType<typeof makeFakePermissionManager>;
   sessionRules: SessionRules;
@@ -105,17 +93,12 @@ export function makeRealSession(overrides: RealSessionOverrides = {}): RealSessi
 function makeRealSessionDeps(overrides: RealSessionOverrides) {
   return {
     paths: makePaths(overrides.paths),
-    logger: resolveLogger(overrides),
     forwarding: resolveForwarding(overrides),
     permissionManager: resolvePermissionManager(overrides),
     sessionRules: resolveSessionRules(overrides),
     configStore: resolveConfigStore(overrides),
     gateway: resolveGateway(overrides),
   };
-}
-
-function resolveLogger(overrides: RealSessionOverrides): SessionLogger {
-  return overrides.logger ?? makeLogger();
 }
 
 function resolveForwarding(overrides: RealSessionOverrides): ForwardingController {
