@@ -32,7 +32,7 @@ export type DenialContext =
   | SkillInputDenialContext;
 
 export function formatDenyReason(ctx: DenialContext): string {
-  return withExtensionTag(buildDenyBody(ctx));
+  return buildDenyBody(ctx);
 }
 export function formatUnavailableReason(ctx: DenialContext): string {
   return withExtensionTag(buildUnavailableBody(ctx));

@@ -42,24 +42,24 @@ describe("EXTENSION_TAG", () => {
 describe("formatDenyReason", () => {
   describe("tool context", () => {
     test("generic tool without agent", () => {
-      expect(formatDenyReason(toolCtx(toolCheck("write")))).toBe("[permission] is not permitted to run 'write'.");
+      expect(formatDenyReason(toolCtx(toolCheck("write")))).toBe("is not permitted to run 'write'.");
     });
 
     test("generic tool with agent", () => {
       expect(formatDenyReason(toolCtx(toolCheck("write"), "my-agent"))).toBe(
-        "[permission] Agent 'my-agent' is not permitted to run 'write'.",
+        "Agent 'my-agent' is not permitted to run 'write'.",
       );
     });
 
     test("MCP target", () => {
       expect(formatDenyReason(toolCtx(mcpCheck("server:do-thing")))).toBe(
-        "[permission] is not permitted to run MCP target 'server:do-thing'.",
+        "is not permitted to run MCP target 'server:do-thing'.",
       );
     });
 
     test("bash with command", () => {
       expect(formatDenyReason(toolCtx(toolCheck("bash", { command: "rm -rf /" })))).toBe(
-        "[permission] is not permitted to run 'bash' command 'rm -rf /'.",
+        "is not permitted to run 'bash' command 'rm -rf /'.",
       );
     });
 
@@ -73,7 +73,7 @@ describe("formatDenyReason", () => {
             }),
           ),
         ),
-      ).toBe("[permission] is not permitted to run 'bash' command 'rm -rf /' (matched 'rm *').");
+      ).toBe("is not permitted to run 'bash' command 'rm -rf /' (matched 'rm *').");
     });
 
     test("bash with nested execution context", () => {
@@ -87,9 +87,7 @@ describe("formatDenyReason", () => {
             }),
           ),
         ),
-      ).toBe(
-        "[permission] is not permitted to run 'bash' command 'rm -rf foo' (matched 'rm *', inside command substitution).",
-      );
+      ).toBe("is not permitted to run 'bash' command 'rm -rf foo' (matched 'rm *', inside command substitution).");
     });
 
     test("does not duplicate punctuation in a custom reason", () => {
@@ -103,9 +101,7 @@ describe("formatDenyReason", () => {
             }),
           ),
         ),
-      ).toBe(
-        "[permission] is not permitted to run 'bash' command 'npm install' (matched 'npm *'). Reason: Use pnpm instead.",
-      );
+      ).toBe("is not permitted to run 'bash' command 'npm install' (matched 'npm *'). Reason: Use pnpm instead.");
     });
 
     test("custom reason with no matched pattern", () => {
@@ -117,7 +113,7 @@ describe("formatDenyReason", () => {
             }),
           ),
         ),
-      ).toBe("[permission] is not permitted to run 'write'. Reason: Write access is disabled for security.");
+      ).toBe("is not permitted to run 'write'. Reason: Write access is disabled for security.");
     });
 
     test("custom reason is included alongside the agent name", () => {
@@ -133,7 +129,7 @@ describe("formatDenyReason", () => {
           ),
         ),
       ).toBe(
-        "[permission] Agent 'dev-agent' is not permitted to run 'bash' command 'yarn build' (matched 'yarn *'). Reason: Use pnpm instead.",
+        "Agent 'dev-agent' is not permitted to run 'bash' command 'yarn build' (matched 'yarn *'). Reason: Use pnpm instead.",
       );
     });
 
@@ -147,13 +143,13 @@ describe("formatDenyReason", () => {
           ),
         ),
       ).toBe(
-        "[permission] is not permitted to run MCP target 'server:deploy'. Reason: Deploy requires approval from a senior engineer.",
+        "is not permitted to run MCP target 'server:deploy'. Reason: Deploy requires approval from a senior engineer.",
       );
     });
 
     test("MCP source with target on non-mcp toolName", () => {
       expect(formatDenyReason(toolCtx(toolCheck("anything", { source: "mcp", target: "server:tool" })))).toBe(
-        "[permission] is not permitted to run MCP target 'server:tool'.",
+        "is not permitted to run MCP target 'server:tool'.",
       );
     });
   });
@@ -166,7 +162,7 @@ describe("formatDenyReason", () => {
           toolName: "read",
           pathValue: "/etc/passwd",
         }),
-      ).toBe("[permission] Current agent is not permitted to access path '/etc/passwd' via tool 'read'.");
+      ).toBe("Current agent is not permitted to access path '/etc/passwd' via tool 'read'.");
     });
 
     test("with agent", () => {
@@ -177,7 +173,7 @@ describe("formatDenyReason", () => {
           pathValue: "/etc/passwd",
           agentName: "sec-agent",
         }),
-      ).toBe("[permission] Agent 'sec-agent' is not permitted to access path '/etc/passwd' via tool 'read'.");
+      ).toBe("Agent 'sec-agent' is not permitted to access path '/etc/passwd' via tool 'read'.");
     });
   });
 
@@ -189,7 +185,7 @@ describe("formatDenyReason", () => {
           command: "cat /etc/passwd",
           pathValue: "/etc/passwd",
         }),
-      ).toBe("[permission] Current agent is not permitted to access path '/etc/passwd' via tool 'bash'.");
+      ).toBe("Current agent is not permitted to access path '/etc/passwd' via tool 'bash'.");
     });
 
     test("with agent", () => {
@@ -200,7 +196,7 @@ describe("formatDenyReason", () => {
           pathValue: "/etc/passwd",
           agentName: "my-agent",
         }),
-      ).toBe("[permission] Agent 'my-agent' is not permitted to access path '/etc/passwd' via tool 'bash'.");
+      ).toBe("Agent 'my-agent' is not permitted to access path '/etc/passwd' via tool 'bash'.");
     });
   });
 
@@ -212,9 +208,7 @@ describe("formatDenyReason", () => {
           skillName: "librarian",
           readPath: "/skills/librarian/SKILL.md",
         }),
-      ).toBe(
-        "[permission] Current agent is not permitted to access skill 'librarian' via '/skills/librarian/SKILL.md'.",
-      );
+      ).toBe("Current agent is not permitted to access skill 'librarian' via '/skills/librarian/SKILL.md'.");
     });
 
     test("with agent", () => {
@@ -225,9 +219,7 @@ describe("formatDenyReason", () => {
           readPath: "/skills/librarian/SKILL.md",
           agentName: "my-agent",
         }),
-      ).toBe(
-        "[permission] Agent 'my-agent' is not permitted to access skill 'librarian' via '/skills/librarian/SKILL.md'.",
-      );
+      ).toBe("Agent 'my-agent' is not permitted to access skill 'librarian' via '/skills/librarian/SKILL.md'.");
     });
   });
 
@@ -238,7 +230,7 @@ describe("formatDenyReason", () => {
           kind: "skill_input",
           skillName: "librarian",
         }),
-      ).toBe("[permission] Current agent is not permitted to access skill 'librarian'.");
+      ).toBe("Current agent is not permitted to access skill 'librarian'.");
     });
 
     test("with agent", () => {
@@ -248,7 +240,7 @@ describe("formatDenyReason", () => {
           skillName: "librarian",
           agentName: "my-agent",
         }),
-      ).toBe("[permission] Agent 'my-agent' is not permitted to access skill 'librarian'.");
+      ).toBe("Agent 'my-agent' is not permitted to access skill 'librarian'.");
     });
   });
 });

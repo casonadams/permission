@@ -247,7 +247,7 @@ describe("GateRunner — descriptor path", () => {
   });
 
   describe("denialContext formatting", () => {
-    it("uses denialContext to format denyReason with extension tag", async () => {
+    it("uses denialContext to format denyReason", async () => {
       const { runner } = makeGateRunner({
         resolveResult: makeCheckResult({ state: "deny", matchedPattern: "*" }),
       });
@@ -259,7 +259,7 @@ describe("GateRunner — descriptor path", () => {
       const result = await runner.run(makeDenialDescriptor(ctx), "test-agent", "tc-1");
       expect(result.action).toBe("block");
       if (result.action === "block") {
-        expect(result.reason).toContain(EXTENSION_TAG);
+        expect(result.reason).not.toContain(EXTENSION_TAG);
         expect(result.reason).not.toContain("Hard stop");
       }
     });
