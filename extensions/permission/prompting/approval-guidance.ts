@@ -1,7 +1,9 @@
+import { abbreviateHomePath } from "../paths/expand-home";
+
 export function formatApprovalGuidance(surface: string, pattern: string | undefined): string | undefined {
   if (!pattern) return undefined;
 
-  return `To allow this ${guidanceSubject(surface)} without prompting in the future, add under "permission.${surface}":\n\n${JSON.stringify(pattern)}: "allow"`;
+  return `To allow this ${guidanceSubject(surface)} without prompting in the future, add under "permission.${surface}":\n\n${JSON.stringify(abbreviateHomePath(pattern))}: "allow"`;
 }
 
 function guidanceSubject(surface: string): string {

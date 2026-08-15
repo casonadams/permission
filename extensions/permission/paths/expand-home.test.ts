@@ -8,12 +8,26 @@ vi.mock("node:os", () => ({
   default: { homedir: mockHomedir },
 }));
 
-import { expandHomePath } from "#src/paths/expand-home";
+import { abbreviateHomePath, expandHomePath } from "#src/paths/expand-home";
 
 const FAKE_HOME = "/home/testuser";
 
 afterEach(() => {
   mockHomedir.mockClear();
+});
+
+describe("abbreviateHomePath", () => {
+  test("abbreviates the home directory", () => {
+    expect(abbreviateHomePath(FAKE_HOME)).toBe("~");
+  });
+
+  test("abbreviates paths below the home directory", () => {
+    expect(abbreviateHomePath(`${FAKE_HOME}/projects/permission/*`)).toBe("~/projects/permission/*");
+  });
+
+  test("does not abbreviate sibling paths", () => {
+    expect(abbreviateHomePath("/home/testuser-other/project")).toBe("/home/testuser-other/project");
+  });
 });
 
 describe("expandHomePath", () => {
