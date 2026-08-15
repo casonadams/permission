@@ -1,5 +1,5 @@
 import { normalize, relative, resolve } from "node:path";
-import type { ToolAccessExtractorLookup } from "../integrations/tool-access-extractor-registry";
+import type { ToolAccessExtractorLookup } from "../integrations/tool-customizations";
 import { PATH_BEARING_TOOLS, SPECIAL_PERMISSION_KEYS } from "../policy/permission-surfaces";
 import { getNonEmptyString, toRecord } from "../shared/common";
 import { canonicalizePath } from "./canonicalize-path";

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { SkillPromptEntry } from "#src/app/skill-prompt-sanitizer";
-import type { ToolInputFormatterLookup } from "#src/integrations/tool-input-formatter-registry";
+import type { ToolInputFormatterLookup } from "#src/integrations/tool-customizations";
 import type { PermissionCheckResult } from "#src/policy/types";
 import {
   formatAskPrompt as formatAskPromptFromArgs,

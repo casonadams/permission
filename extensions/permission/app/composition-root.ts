@@ -53,8 +53,8 @@ function createServiceLifecycle(pi: ExtensionAPI, runtime: Runtime): PermissionS
   const service = new LocalPermissionsService({
     permissionManager: runtime.manager,
     sessionRules: runtime.rules,
-    formatterRegistry: runtime.registries.formatters,
-    accessExtractorRegistry: runtime.registries.extractors,
+    formatterRegistry: runtime.registries.tools.formatters,
+    accessExtractorRegistry: runtime.registries.tools.extractors,
   });
   const unsubSubagents = subscribeSubagentLifecycle(pi.events, runtime.registries.subagents);
   return new PermissionServiceLifecycle({
@@ -82,8 +82,8 @@ function createGateHandler(args: {
     pipeline: new ToolCallGatePipeline({
       resolver,
       inputs: runtime.session,
-      customFormatters: runtime.registries.formatters,
-      customExtractors: runtime.registries.extractors,
+      customFormatters: runtime.registries.tools.formatters,
+      customExtractors: runtime.registries.tools.extractors,
     }),
     skillInputPipeline: new SkillInputGatePipeline(resolver),
     runner,

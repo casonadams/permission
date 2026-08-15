@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { ToolInputFormatterLookup } from "#src/integrations/tool-input-formatter-registry";
+import type { ToolInputFormatterLookup } from "#src/integrations/tool-customizations";
 
 vi.mock("../shared/json.js", () => ({
   safeJsonStringify: vi.fn((value: unknown) => JSON.stringify(value)),

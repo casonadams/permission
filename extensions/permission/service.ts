@@ -1,8 +1,7 @@
 /** `Symbol.for()` and `globalThis` allow this service to cross jiti module isolation.
  * Resolve the service per use so reloads cannot leave consumers with a stale reference. */
 
-import type { ToolAccessExtractor } from "./integrations/tool-access-extractor-registry";
-import type { ToolInputFormatter } from "./integrations/tool-input-formatter-registry";
+import type { ToolAccessExtractor, ToolInputFormatter } from "./integrations/tool-customizations";
 import type { PermissionCheckResult, PermissionState } from "./policy/types";
 
 export type {

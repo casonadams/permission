@@ -7,8 +7,7 @@ import { ForwardingManager } from "../forwarding/forwarding-manager";
 import { PermissionForwarder, type PermissionForwarderDeps } from "../forwarding/permission-forwarder";
 import { getSubagentSessionRegistry, type SubagentSessionRegistry } from "../forwarding/subagents/subagent-registry";
 import type { PermissionNotifier } from "../integrations/notifier";
-import { ToolAccessExtractorRegistry } from "../integrations/tool-access-extractor-registry";
-import { ToolInputFormatterRegistry } from "../integrations/tool-input-formatter-registry";
+import { ToolCustomizations } from "../integrations/tool-customizations";
 import { PermissionManager } from "../policy/permission-manager";
 import { SessionRules } from "../policy/session-rules";
 import { registerBuiltinToolInputFormatters } from "../prompting/builtin-tool-input-formatters";
@@ -20,8 +19,7 @@ import { PermissionSession } from "./permission-session";
 
 type Registries = {
   subagents: SubagentSessionRegistry;
-  formatters: ToolInputFormatterRegistry;
-  extractors: ToolAccessExtractorRegistry;
+  tools: ToolCustomizations;
 };
 
 type Core = {
@@ -67,14 +65,14 @@ export function createRuntime(pi: ExtensionAPI): Runtime {
 
 function createCore(): Core {
   const agentDir = getAgentDir();
-  const formatters = new ToolInputFormatterRegistry();
-  registerBuiltinToolInputFormatters(formatters);
+  const tools = new ToolCustomizations();
+  registerBuiltinToolInputFormatters(tools.formatters);
   return {
     agentDir,
     paths: computeExtensionPaths(agentDir, getPackageDir()),
     manager: new PermissionManager({ agentDir }),
     rules: new SessionRules(),
-    registries: { subagents: getSubagentSessionRegistry(), formatters, extractors: new ToolAccessExtractorRegistry() },
+    registries: { subagents: getSubagentSessionRegistry(), tools },
   };
 }
 

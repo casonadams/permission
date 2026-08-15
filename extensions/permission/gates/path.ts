@@ -1,4 +1,4 @@
-import type { ToolAccessExtractorLookup } from "#src/integrations/tool-access-extractor-registry";
+import type { ToolAccessExtractorLookup } from "#src/integrations/tool-customizations";
 import {
   canonicalNormalizePathForComparison,
   getToolInputPath,

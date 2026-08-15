@@ -1,4 +1,4 @@
-import type { ToolInputFormatter, ToolInputFormatterRegistry } from "../integrations/tool-input-formatter-registry";
+import type { ToolInputFormatter, ToolInputFormatterRegistrar } from "../integrations/tool-customizations";
 import { toRecord } from "../shared/common";
 import { formatArgsSummary } from "./arg-summary";
 
@@ -9,6 +9,6 @@ export const formatMcpInputForPrompt: ToolInputFormatter = (input: Record<string
   return summary ? `with ${summary}` : undefined;
 };
 
-export function registerBuiltinToolInputFormatters(registry: ToolInputFormatterRegistry): void {
+export function registerBuiltinToolInputFormatters(registry: ToolInputFormatterRegistrar): void {
   registry.register("mcp", formatMcpInputForPrompt);
 }

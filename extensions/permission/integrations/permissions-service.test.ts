@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalPermissionsService, type LocalPermissionsServiceDeps } from "#src/integrations/permissions-service";
-import type { ToolAccessExtractorRegistrar } from "#src/integrations/tool-access-extractor-registry";
-import type { ToolInputFormatter, ToolInputFormatterRegistrar } from "#src/integrations/tool-input-formatter-registry";
+import type {
+  ToolAccessExtractorRegistrar,
+  ToolInputFormatter,
+  ToolInputFormatterRegistrar,
+} from "#src/integrations/tool-customizations";
 import type { ScopedPermissionManager } from "#src/policy/permission-manager";
 import type { Ruleset } from "#src/policy/rule";
 import type { SessionRules } from "#src/policy/session-rules";

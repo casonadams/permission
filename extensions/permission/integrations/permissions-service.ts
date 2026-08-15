@@ -2,8 +2,12 @@ import { buildInputForSurface } from "../policy/input-normalizer";
 import type { ScopedPermissionManager } from "../policy/permission-manager";
 import type { SessionRules } from "../policy/session-rules";
 import type { PermissionsService } from "../service";
-import type { ToolAccessExtractor, ToolAccessExtractorRegistrar } from "./tool-access-extractor-registry";
-import type { ToolInputFormatter, ToolInputFormatterRegistrar } from "./tool-input-formatter-registry";
+import type {
+  ToolAccessExtractor,
+  ToolAccessExtractorRegistrar,
+  ToolInputFormatter,
+  ToolInputFormatterRegistrar,
+} from "./tool-customizations";
 
 export interface LocalPermissionsServiceDeps {
   permissionManager: ScopedPermissionManager;

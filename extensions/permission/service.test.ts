@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ToolAccessExtractorRegistry } from "#src/integrations/tool-access-extractor-registry";
-import { ToolInputFormatterRegistry } from "#src/integrations/tool-input-formatter-registry";
+import { ToolCustomizations } from "#src/integrations/tool-customizations";
 import { buildInputForSurface } from "#src/policy/input-normalizer";
 import type { PermissionCheckResult } from "#src/policy/types";
 import type { PermissionsService } from "#src/service";
@@ -201,7 +200,7 @@ describe("registerToolInputFormatter delegation", () => {
   });
 
   it("delegates to the registry and returns its disposer", () => {
-    const registry = new ToolInputFormatterRegistry();
+    const registry = new ToolCustomizations().formatters;
     const formatter = () => "preview";
 
     const service = makeService({
@@ -220,7 +219,7 @@ describe("registerToolInputFormatter delegation", () => {
   });
 
   it("throws when a formatter is already registered for the tool name", () => {
-    const registry = new ToolInputFormatterRegistry();
+    const registry = new ToolCustomizations().formatters;
     registry.register("my-tool", () => undefined);
 
     const service = makeService({
@@ -243,7 +242,7 @@ describe("registerToolAccessExtractor delegation", () => {
   });
 
   it("delegates to the registry and returns its disposer", () => {
-    const registry = new ToolAccessExtractorRegistry();
+    const registry = new ToolCustomizations().extractors;
     const extractor = () => "/etc/hosts";
 
     const service = makeService({
@@ -262,7 +261,7 @@ describe("registerToolAccessExtractor delegation", () => {
   });
 
   it("throws when an extractor is already registered for the tool name", () => {
-    const registry = new ToolAccessExtractorRegistry();
+    const registry = new ToolCustomizations().extractors;
     registry.register("ffgrep", () => undefined);
 
     const service = makeService({

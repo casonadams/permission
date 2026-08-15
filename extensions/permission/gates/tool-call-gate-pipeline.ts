@@ -1,6 +1,5 @@
 import type { SkillPromptEntry } from "#src/app/skill-prompt-sanitizer";
-import type { ToolAccessExtractorLookup } from "#src/integrations/tool-access-extractor-registry";
-import type { ToolInputFormatterLookup } from "#src/integrations/tool-input-formatter-registry";
+import type { ToolAccessExtractorLookup, ToolInputFormatterLookup } from "#src/integrations/tool-customizations";
 import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
 import type { PermissionCheckResult } from "#src/policy/types";
 import { DEFAULT_TOOL_PREVIEW_OPTIONS, ToolPreviewFormatter } from "#src/prompting/tool-preview-formatter";

@@ -1,4 +1,4 @@
-import type { ToolInputFormatterLookup } from "../integrations/tool-input-formatter-registry";
+import type { ToolInputFormatterLookup } from "../integrations/tool-customizations";
 import { SEARCH_PATH_TOOLS } from "../policy/permission-surfaces";
 import { getNonEmptyString, toRecord } from "../shared/common";
 import { formatArgsSummary } from "./arg-summary";

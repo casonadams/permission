@@ -15,7 +15,7 @@ vi.mock("node:fs", () => ({
   default: { realpathSync },
 }));
 
-import type { ToolAccessExtractorLookup } from "#src/integrations/tool-access-extractor-registry";
+import type { ToolAccessExtractorLookup } from "#src/integrations/tool-customizations";
 import {
   canonicalNormalizePathForComparison,
   getPathBearingToolPath,

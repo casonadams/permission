@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { ToolInputFormatterRegistry } from "#src/integrations/tool-input-formatter-registry";
+import { ToolCustomizations } from "#src/integrations/tool-customizations";
 import {
   formatMcpInputForPrompt,
   registerBuiltinToolInputFormatters,
@@ -89,13 +89,13 @@ describe("formatMcpInputForPrompt", () => {
 
 describe("registerBuiltinToolInputFormatters", () => {
   test("registers the mcp formatter in the registry", () => {
-    const registry = new ToolInputFormatterRegistry();
+    const registry = new ToolCustomizations().formatters;
     registerBuiltinToolInputFormatters(registry);
     expect(registry.get("mcp")).toBe(formatMcpInputForPrompt);
   });
 
   test("throws if called twice (duplicate registration guard)", () => {
-    const registry = new ToolInputFormatterRegistry();
+    const registry = new ToolCustomizations().formatters;
     registerBuiltinToolInputFormatters(registry);
     expect(() => registerBuiltinToolInputFormatters(registry)).toThrow("mcp");
   });
