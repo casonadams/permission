@@ -66,7 +66,15 @@ const SUBJECT_RESOLVERS: Array<(toolName: string, input: ToolInput) => TitledSub
   (toolName, input) => (toolName === "bash" ? { label: "Bash", subject: bashSubject(input) } : null),
 ];
 
+function pathAccessSubject(input: ToolInput): TitledSubject | null {
+  const path = readString(input, "path");
+  return input?.promptSurface === "path" && path ? { label: "Path access", subject: path } : null;
+}
+
 function titledSubject(toolName: string, input: ToolInput): TitledSubject | null {
+  const pathSubject = pathAccessSubject(input);
+  if (pathSubject) return pathSubject;
+
   for (const resolve of SUBJECT_RESOLVERS) {
     const titled = resolve(toolName, input);
     if (titled?.subject) return titled;

@@ -22,6 +22,10 @@ describe("toolTitle", () => {
     expect(toolTitle("bash", { command: "git push --force" })).toBe("Bash: git push");
   });
 
+  test("prioritizes path access over the underlying tool title", () => {
+    expect(toolTitle("bash", { promptSurface: "path", path: "/Users/cadams" })).toBe("Path access: /Users/cadams");
+  });
+
   test("names a bare bash command", () => {
     expect(toolTitle("bash", { command: "date -u +%Y" })).toBe("Bash: date");
   });
@@ -94,7 +98,7 @@ describe("promptBody", () => {
   });
 
   test("keeps the full path when the title does not state it", () => {
-    expect(promptBody("External read", "/Users/cason/deep/notes.md")).toBe("/Users/cason/deep/notes.md");
+    expect(promptBody("External read", "/Users/me/deep/notes.md")).toBe("/Users/me/deep/notes.md");
   });
 
   test("keeps a body that extends the title", () => {
