@@ -1,12 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { PERMISSIONS_UI_PROMPT_CHANNEL, type PermissionEventBus } from "#src/integrations/permission-events";
 import type { PromptPermissionDetails } from "#src/prompting/permission-prompter";
-import {
-  maybeAutoApprovePrompt,
-  type PromptAuditDeps,
-  recordPromptDecision,
-  recordPromptWaiting,
-} from "#src/prompting/prompt-audit";
+import { type PromptAuditDeps, recordPromptDecision, recordPromptWaiting } from "#src/prompting/prompt-audit";
 
 function makeDetails(overrides: Partial<PromptPermissionDetails> = {}): PromptPermissionDetails {
   return {
@@ -21,34 +16,14 @@ function makeDetails(overrides: Partial<PromptPermissionDetails> = {}): PromptPe
   };
 }
 
-function makeDeps(yoloMode = false): PromptAuditDeps & { events: PermissionEventBus } {
+function makeDeps(): PromptAuditDeps & { events: PermissionEventBus } {
   return {
-    config: { current: () => ({ debugLog: false, permissionReviewLog: true, yoloMode }) },
     logger: { review: vi.fn() },
     events: { emit: vi.fn(), on: vi.fn(() => vi.fn()) },
   };
 }
 
 describe("prompt audit helpers", () => {
-  it("records and returns an auto-approved decision when yolo mode is enabled", () => {
-    const deps = makeDeps(true);
-    const decision = maybeAutoApprovePrompt(makeDetails(), deps);
-
-    expect(decision).toEqual({ approved: true, state: "approved", autoApproved: true });
-    expect(deps.logger.review).toHaveBeenCalledWith(
-      "permission_request.auto_approved",
-      expect.objectContaining({ requestId: "req-1", command: "git status", resolution: null, denialReason: null }),
-    );
-  });
-
-  it("returns null without writing when yolo mode is disabled", () => {
-    const deps = makeDeps(false);
-    const decision = maybeAutoApprovePrompt(makeDetails(), deps);
-
-    expect(decision).toBeNull();
-    expect(deps.logger.review).not.toHaveBeenCalled();
-  });
-
   it("records waiting and emits the UI prompt event before showing the picker", () => {
     const deps = makeDeps();
     recordPromptWaiting(makeDetails(), deps);

@@ -4,7 +4,7 @@ import {
   createPermissionForwardingLocation,
   type PermissionForwardingLocation,
 } from "#src/forwarding/permission-forwarding";
-import type { DebugReviewLogger } from "#src/integrations/session-logger";
+import type { ReviewLogger } from "#src/integrations/session-logger";
 import { logPermissionForwardingError, logPermissionForwardingWarning } from "./io-log";
 
 export { listRequestFiles, sleep } from "./io-list";
@@ -15,7 +15,7 @@ export function isErrnoCode(error: unknown, code: string): boolean {
   return Boolean(error && typeof error === "object" && "code" in error && (error as { code?: string }).code === code);
 }
 
-export function ensureDirectoryExists(logger: DebugReviewLogger | null, path: string, description: string): boolean {
+export function ensureDirectoryExists(logger: ReviewLogger | null, path: string, description: string): boolean {
   try {
     mkdirSync(path, { recursive: true });
     return true;
@@ -33,7 +33,7 @@ export function getPermissionForwardingLocationForSession(
 }
 
 export function ensurePermissionForwardingLocation(
-  logger: DebugReviewLogger | null,
+  logger: ReviewLogger | null,
   forwardingDir: string,
   sessionId: string,
 ): PermissionForwardingLocation | null {
@@ -66,18 +66,7 @@ export function getExistingPermissionForwardingLocation(
   return existsSync(location.requestsDir) ? location : null;
 }
 
-/**
- * Attempt to remove a directory if it is empty.
- *
- * Returns `true` when the directory is absent after the call (successfully
- * removed, or never existed).  Returns `false` when the directory still exists
- * (non-empty, or a filesystem error prevented removal).
- */
-export function tryRemoveDirectoryIfEmpty(
-  logger: DebugReviewLogger | null,
-  path: string,
-  description: string,
-): boolean {
+export function tryRemoveDirectoryIfEmpty(logger: ReviewLogger | null, path: string, description: string): boolean {
   if (!existsSync(path)) {
     return true;
   }
@@ -103,7 +92,7 @@ export function tryRemoveDirectoryIfEmpty(
 }
 
 function handleRemoveEmptyDirectoryError(params: {
-  logger: DebugReviewLogger | null;
+  logger: ReviewLogger | null;
   path: string;
   description: string;
   error: unknown;
@@ -120,11 +109,10 @@ function handleRemoveEmptyDirectoryError(params: {
 }
 
 export function cleanupPermissionForwardingLocationIfEmpty(
-  logger: DebugReviewLogger | null,
+  logger: ReviewLogger | null,
   location: PermissionForwardingLocation,
 ): void {
-  // Only remove responses/ when requests/ is already gone — removing responses/
-  // while a request is still pending causes the ENOENT write loop (issue #398).
+  // Requests must be gone first; concurrent response writes otherwise hit the ENOENT loop tracked in #398.
   const requestsGone = tryRemoveDirectoryIfEmpty(
     logger,
     location.requestsDir,
@@ -136,7 +124,7 @@ export function cleanupPermissionForwardingLocationIfEmpty(
   tryRemoveDirectoryIfEmpty(logger, location.sessionRootDir, `${location.label} permission forwarding session root`);
 }
 
-export function safeDeleteFile(logger: DebugReviewLogger | null, filePath: string, description: string): void {
+export function safeDeleteFile(logger: ReviewLogger | null, filePath: string, description: string): void {
   try {
     unlinkSync(filePath);
   } catch (error) {
@@ -148,7 +136,7 @@ export function safeDeleteFile(logger: DebugReviewLogger | null, filePath: strin
   }
 }
 
-export function writeJsonFileAtomic(logger: DebugReviewLogger | null, filePath: string, value: unknown): void {
+export function writeJsonFileAtomic(logger: ReviewLogger | null, filePath: string, value: unknown): void {
   const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
 
   try {

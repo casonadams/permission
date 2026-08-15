@@ -35,7 +35,7 @@ describe("evaluate", () => {
   };
   const askSpecialExtDir: Rule = {
     surface: "special",
-    pattern: "external_directory",
+    pattern: "path",
     action: "ask",
     origin: "global",
   };
@@ -76,7 +76,7 @@ describe("evaluate", () => {
     expect(evaluate("read", "src/foo.ts", [allowRead]).action).toBe("allow");
     expect(evaluate("mcp", "exa_search", [askMcp]).action).toBe("ask");
     expect(evaluate("skill", "librarian", [allowSkillLibrarian]).action).toBe("allow");
-    expect(evaluate("special", "external_directory", [askSpecialExtDir]).action).toBe("ask");
+    expect(evaluate("special", "path", [askSpecialExtDir]).action).toBe("ask");
   });
 
   test("last-match-wins: later conflicting rule overrides earlier", () => {
@@ -116,7 +116,6 @@ describe("evaluate", () => {
 
   test("specific surface rule does not match a different surface", () => {
     const ruleset: Ruleset = [allowBashGit];
-    // bash rule should not match mcp surface
     const result = evaluate("mcp", "git status", ruleset);
     expect(result.action).toBe("ask"); // falls back to default
   });
@@ -132,7 +131,6 @@ describe("evaluate", () => {
   test("merged rulesets: earlier scope used when later scope has no match", () => {
     const globalRules: Ruleset = [{ surface: "bash", pattern: "git *", action: "allow", origin: "global" }];
     const agentRules: Ruleset = [{ surface: "bash", pattern: "npm *", action: "deny", origin: "agent" }];
-    // git status matches global but not agent rule
     const merged = [...globalRules, ...agentRules];
     const result = evaluate("bash", "git status", merged);
     expect(result.action).toBe("allow"); // global rule is the last match for this pattern
@@ -166,13 +164,10 @@ describe("evaluate", () => {
       layer: "default",
       origin: "builtin",
     };
-    // Both rules with and without layer field produce the same match.
     expect(evaluate("bash", "git status", [withLayer]).action).toBe("allow");
     expect(evaluate("bash", "git status", [withoutLayer]).action).toBe("allow");
-    // Layer metadata does not affect last-match-wins ordering.
     const ruleset: Rule[] = [withDefault, withLayer];
     expect(evaluate("bash", "git status", ruleset)).toEqual(withLayer);
-    // A rule with layer: "default" still wins if it is last in the array.
     const reversedRuleset: Rule[] = [withLayer, withDefault];
     expect(evaluate("bash", "git status", reversedRuleset)).toEqual(withDefault);
   });
@@ -270,26 +265,24 @@ describe("evaluate", () => {
     }
   });
 
-  // ── Windows: path-surface patterns fold case (last-match-wins) ──────────
-
   const denyExternalAll: Rule = {
-    surface: "external_directory",
+    surface: "path",
     pattern: "*",
     action: "deny",
     layer: "config",
     origin: "global",
   };
   const allowExternalPi: Rule = {
-    surface: "external_directory",
+    surface: "path",
     pattern: "C:\\Users\\Foo\\pi\\*",
     action: "allow",
     layer: "config",
     origin: "global",
   };
 
-  test("win32: external_directory allow override matches a lowercased path over a preceding deny", () => {
+  test("win32: path allow override matches a lowercased path over a preceding deny", () => {
     const result = evaluate(
-      "external_directory",
+      "path",
       "c:\\users\\foo\\pi\\docs\\readme.md",
       [denyExternalAll, allowExternalPi],
       undefined,
@@ -300,7 +293,7 @@ describe("evaluate", () => {
 
   test("posix: the same mixed-case override stays case-sensitive (falls through to deny)", () => {
     const result = evaluate(
-      "external_directory",
+      "path",
       "c:\\users\\foo\\pi\\docs\\readme.md",
       [denyExternalAll, allowExternalPi],
       undefined,
@@ -309,16 +302,16 @@ describe("evaluate", () => {
     expect(result.action).toBe("deny");
   });
 
-  test("win32: a forward-slash external_directory pattern matches a backslash value", () => {
+  test("win32: a forward-slash path pattern matches a backslash value", () => {
     const allowForwardSlash: Rule = {
-      surface: "external_directory",
+      surface: "path",
       pattern: "C:/Users/Foo/pi/*",
       action: "allow",
       layer: "config",
       origin: "global",
     };
     const result = evaluate(
-      "external_directory",
+      "path",
       "c:\\users\\foo\\pi\\docs\\readme.md",
       [denyExternalAll, allowForwardSlash],
       undefined,
@@ -377,8 +370,6 @@ describe("evaluateFirst", () => {
   });
 
   test("skips candidates that only match the default rule", () => {
-    // "npm install" matches only the default; "*" also matches only the
-    // default — falls back to first candidate.
     const rules: Ruleset = [defaultRule];
     const result = evaluateFirst("bash", ["npm install", "*"], rules);
     expect(result.rule.layer).toBe("default");
@@ -392,8 +383,6 @@ describe("evaluateFirst", () => {
   });
 
   test("stops at first non-default match, does not continue to remaining candidates", () => {
-    // "exa_search" matches denyMcp (non-default). The loop stops there;
-    // "mcp" is never evaluated even though it would match a different rule.
     const allowMcpCatchAll: Rule = {
       surface: "mcp",
       pattern: "mcp",
@@ -408,8 +397,6 @@ describe("evaluateFirst", () => {
   });
 
   test("skips candidates that match only the default and continues to next", () => {
-    // "unknown_tool" matches only the universal default;
-    // "exa_search" matches denyMcp (non-default) — that is the result.
     const rules: Ruleset = [defaultRule, denyMcp];
     const result = evaluateFirst("mcp", ["unknown_tool", "exa_search"], rules);
     expect(result.rule).toEqual(denyMcp);

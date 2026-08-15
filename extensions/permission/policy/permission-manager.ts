@@ -17,10 +17,6 @@ type FileCacheEntry<TValue> = {
 };
 
 type ResolvedPermissions = {
-  /**
-   * Fully composed ruleset: synthesized defaults → baseline → config.
-   * Session rules are appended at call-time inside checkPermission().
-   */
   composedRules: Ruleset;
 };
 
@@ -39,13 +35,6 @@ export class PermissionManager implements ScopedPermissionManager {
       );
   }
 
-  /**
-   * Rebuild the policy loader for a new working directory and clear the
-   * resolved-permissions cache.
-   *
-   * When `agentDir` was not provided at construction (e.g. test managers
-   * built with explicit paths), only the cache is cleared.
-   */
   configureForCwd(cwd: string | undefined | null): void {
     this.currentCwd = typeof cwd === "string" && cwd.trim().length > 0 ? cwd : undefined;
     if (this.agentDir !== undefined) {
@@ -55,7 +44,6 @@ export class PermissionManager implements ScopedPermissionManager {
   }
 
   getConfigIssues(agentName?: string): string[] {
-    // Trigger a load/resolve to ensure issues are collected.
     this.resolvePermissions(agentName);
     return [...this.loader.getConfigIssues(agentName)];
   }
@@ -123,27 +111,15 @@ export class PermissionManager implements ScopedPermissionManager {
     );
   }
 
-  /**
-   * Return the composed config-layer rules for the given agent scope.
-   * Used by the `/permission-system show` command to display effective rules
-   * with their origin annotations.
-   * Session rules are not included — they are runtime-only.
-   */
   getComposedConfigRules(agentName?: string): Ruleset {
     const { composedRules } = this.resolvePermissions(agentName);
     return composedRules.filter((r) => r.layer === "config");
   }
 
-  /**
-   * Get the tool-level permission state for a tool, without considering
-   * command-level rules. Used for tool injection decisions.
-   */
   getToolPermission(toolName: string, agentName?: string): PermissionState {
     const { composedRules } = this.resolvePermissions(agentName);
     const normalizedToolName = toolName.trim();
 
-    // Bash, MCP, skill: evaluate with "*" value — the per-surface catch-all
-    // (or universal default) handles this correctly.
     if (normalizedToolName === "bash") {
       return evaluate("bash", "*", composedRules).action;
     }
@@ -154,7 +130,6 @@ export class PermissionManager implements ScopedPermissionManager {
       return evaluate("skill", "*", composedRules).action;
     }
 
-    // Tool-name surfaces (read, write, etc. and extension tools).
     return evaluate(normalizedToolName, "*", composedRules).action;
   }
 
@@ -165,8 +140,6 @@ export class PermissionManager implements ScopedPermissionManager {
     const { composedRules } = this.resolvePermissions(agentName);
     const normalizedToolName = toolName.trim();
 
-    // Append session rules at the end (highest priority) so evaluate() handles
-    // them via last-match-wins — no separate per-branch pre-check needed.
     const fullRules: Ruleset = sessionRules?.length ? [...composedRules, ...sessionRules] : composedRules;
 
     const { surface, values, resultExtras } = normalizeInput(
@@ -195,6 +168,5 @@ export class PermissionManager implements ScopedPermissionManager {
   }
 }
 
-// Re-export types that external modules import from this file.
 export type { PolicyLoader, ResolvedPolicyPaths } from "../config/policy-loader";
 export type { PermissionManagerOptions, ScopedPermissionManager } from "./permission-manager-types";

@@ -11,13 +11,10 @@ import {
   makeToolCallEvent,
 } from "#test/helpers/handler-fixtures";
 
-// ── SDK stubs ──────────────────────────────────────────────────────────────
 vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
   const original = await importOriginal<typeof import("@earendil-works/pi-coding-agent")>();
   return { ...original };
 });
-
-// ── getEventInput ──────────────────────────────────────────────────────────
 
 describe("getEventInput", () => {
   it("returns the input field when present", () => {
@@ -43,14 +40,11 @@ describe("getEventInput", () => {
   });
 });
 
-// ── handleToolCall ─────────────────────────────────────────────────────────
-
 describe("handleToolCall", () => {
   it("activates session with ctx", async () => {
     const ctx = makeCtx();
     const { handler, forwarding } = makeHandler();
     await handler.handleToolCall(makeToolCallEvent("read"), ctx);
-    // session.activate(ctx) calls forwarding.start(ctx) on the real session
     expect(forwarding.start).toHaveBeenCalledWith(ctx);
   });
 
@@ -85,8 +79,6 @@ describe("handleToolCall", () => {
     expect(result).toMatchObject({ block: true });
   });
 });
-
-// ── skill-read gate ────────────────────────────────────────────────────────
 
 describe("handleToolCall — skill-read gate", () => {
   it("blocks a read of a denied skill path", async () => {
@@ -144,8 +136,6 @@ describe("handleToolCall — skill-read gate", () => {
   });
 });
 
-// ── external-directory gate ────────────────────────────────────────────────
-
 describe("handleToolCall — external-directory gate", () => {
   it("blocks a read of a path outside cwd when policy is deny", async () => {
     const { handler } = makeHandler({
@@ -162,8 +152,6 @@ describe("handleToolCall — external-directory gate", () => {
   });
 });
 
-// ── bash external-directory gate ──────────────────────────────────────────
-
 describe("handleToolCall — bash external-directory gate", () => {
   it("blocks a bash command referencing an external path when policy is deny", async () => {
     const { handler } = makeHandler({
@@ -179,8 +167,6 @@ describe("handleToolCall — bash external-directory gate", () => {
     expect(result).toMatchObject({ block: true });
   });
 });
-
-// ── path gate (tools) ─────────────────────────────────────────────────────
 
 describe("handleToolCall — path gate (tools)", () => {
   it("blocks a read of .env when path surface denies *.env", async () => {
@@ -207,8 +193,6 @@ describe("handleToolCall — path gate (tools)", () => {
   });
 });
 
-// ── bash path gate ────────────────────────────────────────────────────────
-
 describe("handleToolCall — bash path gate", () => {
   it("blocks a bash command accessing .env when path surface denies", async () => {
     const { handler } = makeHandler({
@@ -224,8 +208,6 @@ describe("handleToolCall — bash path gate", () => {
     expect(result).toMatchObject({ block: true });
   });
 });
-
-// ── bash command chain gate ───────────────────────────────────────────────
 
 describe("handleToolCall — bash command chain gate", () => {
   it("blocks a chain when a later sub-command is denied (#301)", async () => {
@@ -272,12 +254,8 @@ describe("handleToolCall — bash command chain gate", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Moved from permission-system.test.ts catch-all (#342)
-// ---------------------------------------------------------------------------
-
-describe("handleToolCall — bash external-directory policy states", () => {
-  it("allows bash command with only internal paths when external_directory is denied", async () => {
+describe("handleToolCall — bash path policy states", () => {
+  it("allows bash command with only internal paths by default", async () => {
     const { handler } = makeHandler({ tools: ["bash"] });
     const event = makeToolCallEvent("bash", {
       input: { command: "cat src/index.ts" },
@@ -286,11 +264,11 @@ describe("handleToolCall — bash external-directory policy states", () => {
     expect(result).toEqual({});
   });
 
-  it("blocks bash command with external path when external_directory is ask and no UI", async () => {
+  it("blocks bash command with external path when path is ask and no UI", async () => {
     const { handler } = makeHandler({
       session: {
         checkPermission: makeSurfaceCheck({
-          external_directory: { state: "ask", source: "special" },
+          path: { state: "ask", source: "special" },
         }),
       },
       tools: ["bash"],
@@ -307,11 +285,11 @@ describe("handleToolCall — bash external-directory policy states", () => {
     expect(String((result as { reason?: unknown }).reason)).toMatch(/no interactive UI/i);
   });
 
-  it("allows bash command with external path when external_directory is allow", async () => {
+  it("allows bash command with external path when path is allow", async () => {
     const { handler } = makeHandler({
       session: {
         checkPermission: makeSurfaceCheck({
-          external_directory: { state: "allow", source: "special" },
+          path: { state: "allow", source: "special" },
         }),
       },
       tools: ["bash"],
@@ -323,12 +301,12 @@ describe("handleToolCall — bash external-directory policy states", () => {
     expect(result).toEqual({});
   });
 
-  it("applies bash pattern deny after external_directory allow", async () => {
+  it("applies bash pattern deny after path allow", async () => {
     const { handler } = makeHandler({
       session: {
         checkPermission: makeSurfaceCheck(
           {
-            external_directory: { state: "allow", source: "special" },
+            path: { state: "allow", source: "special" },
             bash: { state: "deny", source: "bash" },
           },
           { state: "allow" },

@@ -3,12 +3,10 @@ import { suggestBashPattern, suggestMcpPattern, suggestSessionPattern } from "#s
 
 describe("suggestBashPattern", () => {
   it("returns <command> <subcommand> * using the arity table", () => {
-    // git arity=2: include the subcommand in the prefix.
     expect(suggestBashPattern("git status --short")).toBe("git status *");
   });
 
   it("appends trailing * when arity covers all tokens (multi-word script name)", () => {
-    // npm run arity=3: prefix covers all three tokens → trailing wildcard.
     expect(suggestBashPattern("npm run build")).toBe("npm run build*");
   });
 
@@ -17,7 +15,6 @@ describe("suggestBashPattern", () => {
   });
 
   it("trims leading and trailing whitespace before lookup", () => {
-    // git arity=2, tokens=["git","log"], prefix covers all → trailing wildcard.
     expect(suggestBashPattern("  git log  ")).toBe("git log*");
   });
 
@@ -56,7 +53,6 @@ describe("suggestMcpPattern", () => {
   });
 
   it("prefers colon over underscore when both are present", () => {
-    // Qualified names contain ':'; the colon check runs first.
     expect(suggestMcpPattern("my-server:some_tool")).toBe("my-server:*");
   });
 });
@@ -64,7 +60,6 @@ describe("suggestMcpPattern", () => {
 describe("suggestSessionPattern", () => {
   describe("bash surface", () => {
     it("returns arity-aware subcommand pattern for multi-word command", () => {
-      // git arity=2: include the subcommand token in the prefix.
       const result = suggestSessionPattern("bash", "git status --short");
       expect(result).toMatchObject({
         surface: "bash",
@@ -99,16 +94,6 @@ describe("suggestSessionPattern", () => {
     it("returns exact skill name as pattern", () => {
       const result = suggestSessionPattern("skill", "librarian");
       expect(result).toMatchObject({ surface: "skill", pattern: "librarian" });
-    });
-  });
-
-  describe("external_directory surface", () => {
-    it("returns parent-directory glob from deriveApprovalPattern", () => {
-      const result = suggestSessionPattern("external_directory", "/tmp/foo.txt");
-      expect(result).toMatchObject({
-        surface: "external_directory",
-        pattern: "/tmp/*",
-      });
     });
   });
 
@@ -184,11 +169,6 @@ describe("suggestSessionPattern", () => {
     it("skill label is the skill name", () => {
       const result = suggestSessionPattern("skill", "librarian");
       expect(result.label).toBe("Session: librarian");
-    });
-
-    it("external_directory label is the directory pattern", () => {
-      const result = suggestSessionPattern("external_directory", "/tmp/foo.txt");
-      expect(result.label).toBe("Session: /tmp/*");
     });
 
     it("path-bearing tool label is the path pattern", () => {

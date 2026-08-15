@@ -21,13 +21,12 @@ import {
 } from "./permission-forwarder-response";
 import type { PermissionForwarderState } from "./permission-forwarder-state";
 import type {
-  ForwardedDecisionResponse,
   ForwarderContext,
   ProcessableInbox,
   ProcessForwardedRequestParams,
   RequestLocationPath,
 } from "./permission-forwarder-types";
-import { type ForwardedPermissionRequest, isForwardedPermissionRequestForSession } from "./permission-forwarding";
+import { isForwardedPermissionRequestForSession } from "./permission-forwarding";
 
 export async function processInbox(state: PermissionForwarderState, ctx: ForwarderContext): Promise<void> {
   const inbox = getProcessableInbox(state, ctx);
@@ -120,27 +119,11 @@ async function respondToForwardedRequest(
   safeDeleteFile(state.logger, params.requestPath, `${params.location.label} forwarded permission request`);
 }
 
-async function resolveForwardedDecision(
+function resolveForwardedDecision(
   state: PermissionForwarderState,
   params: ProcessForwardedRequestParams,
 ): Promise<PermissionPromptDecision> {
-  const auto = maybeAutoApprove({
-    state,
-    request: params.request,
-    location: params.location,
-    requestPath: params.requestPath,
-  });
-  if (auto) return auto.decision;
   return promptForForwardedDecision(state, params);
-}
-
-function maybeAutoApprove(params: {
-  state: PermissionForwarderState;
-  request: ForwardedPermissionRequest;
-  location: ProcessableInbox["location"];
-  requestPath: string;
-}): ForwardedDecisionResponse | null {
-  return null;
 }
 
 async function promptForForwardedDecision(

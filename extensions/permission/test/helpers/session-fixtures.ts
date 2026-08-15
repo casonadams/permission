@@ -1,15 +1,3 @@
-/**
- * Shared real-instance test fixtures for PermissionSession and
- * PermissionResolver.
- *
- * Use these instead of hand-rolling per-file mock intersection types.
- * Build a real PermissionSession from small per-collaborator fakes so tests
- * assert against actual behavior rather than mock contracts.
- *
- * Note: tests that exercise `resolveAgentName` must mock `active-agent` in
- * their own file (the vi.hoisted / vi.mock pattern from permission-session.test.ts)
- * since that mock is module-scoped.
- */
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { vi } from "vitest";
 import type { ExtensionPaths } from "#src/app/extension-paths";
@@ -24,8 +12,6 @@ import type { PermissionCheckResult, PermissionState } from "#src/policy/types";
 import type { PromptingGatewayLifecycle } from "#src/prompting/prompting-gateway";
 import type { SessionConfigStore } from "../../config/config-store";
 import { DEFAULT_EXTENSION_CONFIG } from "../../config/extension-config";
-
-// ── Per-collaborator fake factories ────────────────────────────────────────
 
 export function makePaths(overrides: Partial<ExtensionPaths> = {}): ExtensionPaths {
   return {
@@ -70,12 +56,6 @@ export function makeForwarding(): ForwardingController {
   };
 }
 
-/**
- * Fake `ScopedPermissionManager` with vi.fn() stubs.
- *
- * Return type is intentionally unannotated so callers retain full `vi.fn()`
- * mock access (`mock.calls`, `toHaveBeenCalledWith`, `mockReturnValue`, etc.).
- */
 export function makeFakePermissionManager() {
   return {
     configureForCwd: vi.fn<(cwd: string | undefined | null) => void>(),
@@ -99,16 +79,6 @@ export function makeFakePermissionManager() {
   };
 }
 
-// ── Real-instance factories ────────────────────────────────────────────────
-
-/**
- * Build a real PermissionSession from per-collaborator fakes.
- *
- * Returns the session and every collaborator so callers can destructure only
- * what they need and assert against collaborator spies directly.
- * The `permissionManager` is a `makeFakePermissionManager()` result unless
- * the caller passes an explicit `ScopedPermissionManager`.
- */
 export interface RealSessionOverrides {
   paths?: Partial<ExtensionPaths>;
   logger?: SessionLogger;
@@ -175,14 +145,6 @@ function resolveGateway(overrides: RealSessionOverrides): PromptingGatewayLifecy
   return overrides.gateway ?? makeGateway();
 }
 
-/**
- * Build a real PermissionResolver from a fake manager and a SessionRules
- * instance.
- *
- * When called with no arguments, creates a fresh fake manager and fresh
- * SessionRules.  Pass shared instances to connect the resolver to the same
- * manager/rules used by a real session.
- */
 export function makeRealResolver(
   manager?: ReturnType<typeof makeFakePermissionManager>,
   sessionRules?: SessionRules,

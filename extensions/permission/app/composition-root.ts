@@ -101,7 +101,6 @@ function installPromptDispatcher(pi: ExtensionAPI, runtime: Runtime): void {
   installLocalPrompter(pi, {
     prompter: runtime.prompter,
     canResolve: (ctx) => canResolvePrompt(ctx, runtime),
-    config: runtime.config,
     logger: runtime.logger,
   });
 }

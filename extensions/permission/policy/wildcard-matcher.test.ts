@@ -116,9 +116,7 @@ describe("findCompiledWildcardMatch", () => {
       ["tool.name", "allow"],
       ["tool+extra", "deny"],
     ]);
-    // "tool.name" should not match "toolXname" (dot is escaped)
     expect(findCompiledWildcardMatch(patterns, "toolXname")).toBeNull();
-    // Exact match works
     expect(findCompiledWildcardMatch(patterns, "tool.name")).not.toBeNull();
     expect(findCompiledWildcardMatch(patterns, "tool+extra")).not.toBeNull();
   });
@@ -166,7 +164,6 @@ describe("findCompiledWildcardMatchForNames", () => {
       ["read", "allow"],
       ["write", "deny"],
     ]);
-    // "read" comes before "write" in names array, so "read" should match first
     const result = findCompiledWildcardMatchForNames(patterns, ["read", "write"]);
     expect(result).not.toBeNull();
     expect(result?.matchedName).toBe("read");
@@ -206,7 +203,7 @@ describe("wildcardMatch", () => {
 
   test("exact pattern matches identical value", () => {
     expect(wildcardMatch("read", "read")).toBe(true);
-    expect(wildcardMatch("external_directory", "external_directory")).toBe(true);
+    expect(wildcardMatch("path", "path")).toBe(true);
   });
 
   test("exact pattern does not match a different value", () => {
@@ -336,9 +333,7 @@ describe("? single-character wildcard", () => {
   });
 
   test("'?' combined with '*'", () => {
-    // git + one char + anything
     expect(wildcardMatch("git?*", "git status")).toBe(true);
-    // git + zero chars — '?' requires one
     expect(wildcardMatch("git?*", "git")).toBe(false);
   });
 

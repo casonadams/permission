@@ -1,16 +1,3 @@
-/**
- * Composition-root tests for `piPermissionSystemExtension(pi)`.
- *
- * These run the real factory via the `makeFakePi()` harness and assert the
- * wiring contracts that unit tests cannot see: handler-registration
- * completeness, shared-instance contracts across factory invocations, teardown,
- * service↔gate registry sharing, and `ready`-after-publish ordering.
- *
- * Every test runs the factory, which mutates two process-global `Symbol.for()`
- * slots and reads `PI_CODING_AGENT_DIR`. The shared `beforeEach`/`afterEach`
- * isolate the agent dir to a tmpdir and clear both global slots so factory runs
- * do not leak across tests.
- */
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -33,7 +20,6 @@ import { DEFAULT_EXTENSION_CONFIG } from "../config/extension-config";
 const SERVICE_KEY = Symbol.for("@gotgenes/pi-permission-system:service");
 const SUBAGENT_REGISTRY_KEY = Symbol.for("@gotgenes/pi-permission-system:subagent-registry");
 
-/** The six events the factory must register a handler for. */
 const EXPECTED_HANDLERS = [
   "before_agent_start",
   "input",
@@ -51,7 +37,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // Drop both process-global slots so factory runs do not leak across tests.
   const store = globalThis as Record<symbol, unknown>;
 
   Reflect.deleteProperty(store, SERVICE_KEY);
@@ -60,16 +45,12 @@ afterEach(() => {
   rmSync(agentDir, { recursive: true, force: true });
 });
 
-// ── Shared helpers ──────────────────────────────────────────────────────────
-
-/** Write the global config file under the stubbed agent dir. */
 function writeGlobalConfig(config: Record<string, unknown>): void {
   const globalConfigPath = getGlobalConfigPath(agentDir);
   mkdirSync(dirname(globalConfigPath), { recursive: true });
   writeFileSync(globalConfigPath, `${JSON.stringify({ ...DEFAULT_EXTENSION_CONFIG, ...config }, null, 2)}\n`, "utf8");
 }
 
-/** Build a minimal subagent `ctx` (no UI) for driving tool-call gates. */
 function makeChildCtx(cwd: string, sessionId: string): unknown {
   return {
     cwd,
@@ -88,11 +69,6 @@ function makeChildCtx(cwd: string, sessionId: string): unknown {
   };
 }
 
-/**
- * Build a UI-present `ctx` that records the titles passed to `ui.select`, and
- * approves every prompt. The ask-prompt message (which embeds the tool-input
- * preview) is the first line of the select title.
- */
 type CustomPromptFactory = (...args: [tui: unknown, theme: unknown, kb: unknown, done: (value: unknown) => void]) => {
   render(width: number): string[];
 };
@@ -109,10 +85,6 @@ function makeUiCtx(cwd: string, capturedTitles: string[]): { ctx: unknown } {
     ui: {
       notify: (): void => {},
       setStatus: (): void => {},
-      // The local fork's gate prompter renders via ctx.ui.custom (a TUI
-      // component), not ctx.ui.select. Drive the factory once to capture the
-      // rendered prompt body (which embeds the formatter preview marker), then
-      // resolve to "allow".
       custom: async (factory: CustomPromptFactory, _opts: unknown): Promise<string> => {
         const component = factory(
           { requestRender(): void {} },
@@ -143,18 +115,10 @@ function readFirstRequestFile(requestsDir: string): string | undefined {
   }
 }
 
-/** Drive the registered `session_start` handler with a ctx. */
 function fireSessionStart(pi: ReturnType<typeof makeFakePi>, ctx: unknown): Promise<unknown> {
   return pi.fire("session_start", { reason: "start" }, ctx);
 }
 
-/**
- * Simulate the parent UI session responding to a forwarded permission request.
- *
- * Polls the parent's requests directory for the child's request file, then
- * writes an approval response so the child's forwarding poll resolves quickly
- * instead of waiting out the 10-minute timeout.
- */
 async function approveForwardedRequest(
   forwardingDir: string,
   parentSessionId: string,
@@ -195,13 +159,9 @@ describe("event-handler registration completeness", () => {
 });
 
 describe("subagent registry sharing across factory instances", () => {
-  // The #296 regression class: two factory invocations on *different* event
-  // buses must still resolve the same process-global SubagentSessionRegistry,
-  // so a child registered via the parent's bus detects itself as a subagent and
-  // forwards (rather than blocking) an external-directory `ask`.
   it("lets a child instance forward an ask it received via the parent's bus", async () => {
     writeGlobalConfig({
-      permission: { "*": "allow", external_directory: "ask" },
+      permission: { "*": "allow", path: "ask" },
     });
 
     const childCwd = mkdtempSync(join(tmpdir(), "pi-perm-child-cwd-"));
@@ -210,8 +170,6 @@ describe("subagent registry sharing across factory instances", () => {
     const parentSessionId = "parent-session-1";
     const childSessionId = "child-session-1";
 
-    // Two factory instances, each wired to its own event bus (as in production:
-    // every session's ResourceLoader creates a separate bus).
     const parentBus = createEventBus();
     const childBus = createEventBus();
     piPermissionSystemExtension(makeFakePi({ events: parentBus }) as unknown as ExtensionAPI);
@@ -221,23 +179,11 @@ describe("subagent registry sharing across factory instances", () => {
     });
     piPermissionSystemExtension(childPi as unknown as ExtensionAPI);
 
-    // The child session is announced on the *parent's* bus only; the parent's
-    // lifecycle subscription writes it into the shared global registry.
     parentBus.emit(SUBAGENT_CHILD_SESSION_CREATED, {
       sessionId: childSessionId,
       parentSessionId,
     });
 
-    // The child fires an external-directory read with no UI. With the shared
-    // registry it detects itself as a subagent and forwards; the simulated
-    // parent approves.
-    //
-    // First fire session_start so the child's picker captures the ctx
-    // (the GatePrompter interface binds ctx at session_start, not per call).
-    // This mirrors production: every gate call is preceded by session_start.
-    // Without it the picker's captured ctx is null, canConfirm returns
-    // false, and the gate short-circuits to a block before the forwarder
-    // runs.
     await childPi.fire("session_start", { reason: "start" }, makeChildCtx(childCwd, childSessionId));
     const firePromise = childPi.fire(
       "tool_call",
@@ -252,10 +198,8 @@ describe("subagent registry sharing across factory instances", () => {
     const request = await approveForwardedRequest(forwardingDir, parentSessionId);
     expect(request.targetSessionId).toBe(parentSessionId);
     expect(request.requesterSessionId).toBe(childSessionId);
-    // The child persists the normalized permission fields so the parent emits a
-    // non-degraded `permissions:ui_prompt` event (forwarded non-degradation).
     expect(request.source).toBe("tool_call");
-    expect(request.surface).toBe("external_directory");
+    expect(request.surface).toBe("path");
     expect(request.value).toBe(join(externalDir, "secret.txt"));
 
     const result = (await firePromise) as { block?: true };
@@ -272,16 +216,13 @@ describe("shutdown teardown chain", () => {
     const pi = makeFakePi();
     piPermissionSystemExtension(pi as unknown as ExtensionAPI);
 
-    // The service is published at session_start, not at factory init.
     await fireSessionStart(pi, makeChildCtx(cwd, "top-session"));
     expect(getPermissionsService()).toBeDefined();
 
     await pi.fire("session_shutdown");
 
-    // Service slot cleared.
     expect(getPermissionsService()).toBeUndefined();
 
-    // Lifecycle unsubscribed: a post-shutdown session-created must not register.
     pi.events.emit(SUBAGENT_CHILD_SESSION_CREATED, {
       sessionId: "late-child",
       parentSessionId: "p-late",
@@ -293,9 +234,6 @@ describe("shutdown teardown chain", () => {
 });
 
 describe("service and gate share one formatter registry", () => {
-  // A formatter registered through the published service must be consulted by
-  // the live gate handler — proving both reference the same
-  // ToolInputFormatterRegistry instance the factory created once.
   it("surfaces a service-registered formatter in the gate's ask prompt", async () => {
     writeGlobalConfig({
       permission: { "*": "allow", demo: "ask" },
@@ -307,7 +245,6 @@ describe("service and gate share one formatter registry", () => {
 
     const capturedTitles: string[] = [];
     const { ctx } = makeUiCtx(cwd, capturedTitles);
-    // The service is published at session_start; publish before resolving it.
     await fireSessionStart(pi, ctx);
 
     const previewMarker = "PREVIEW::shared-registry-proof";
@@ -318,8 +255,6 @@ describe("service and gate share one formatter registry", () => {
       ctx,
     )) as { block?: true };
 
-    // The gate prompted (not blocked) and the prompt embedded the formatter's
-    // preview — so the gate consulted the same registry the service wrote to.
     expect(result.block).toBeUndefined();
     expect(capturedTitles.some((t) => t.includes(previewMarker))).toBe(true);
 
@@ -328,9 +263,6 @@ describe("service and gate share one formatter registry", () => {
 });
 
 describe("service and gate share one access extractor registry", () => {
-  // An extractor registered through the published service must be consulted by
-  // the live gate handler — proving both reference the same
-  // ToolAccessExtractorRegistry instance the factory created once (#352).
   it("path-gates a custom-shaped tool via a service-registered extractor", async () => {
     writeGlobalConfig({
       permission: { "*": "allow", path: { "*.env": "deny" } },
@@ -343,8 +275,6 @@ describe("service and gate share one access extractor registry", () => {
     const { ctx } = makeUiCtx(cwd, []);
     await fireSessionStart(pi, ctx);
 
-    // ffgrep carries its path under a non-standard key; without the extractor
-    // the default input.path convention would miss it.
     getPermissionsService()!.registerToolAccessExtractor("ffgrep", (input) =>
       typeof input.target === "string" ? input.target : undefined,
     );
@@ -355,8 +285,6 @@ describe("service and gate share one access extractor registry", () => {
       ctx,
     )) as { block?: true };
 
-    // The path deny fired — so the gate extracted ffgrep's path through the
-    // same registry the service wrote to.
     expect(result.block).toBe(true);
 
     rmSync(cwd, { recursive: true, force: true });
@@ -364,9 +292,6 @@ describe("service and gate share one access extractor registry", () => {
 });
 
 describe("ready emitted after service publication", () => {
-  // Ordering contracts exist only at the composition root: a consumer reacting
-  // to permissions:ready must be able to resolve the service immediately. The
-  // service is published and ready fires at session_start (not factory init).
   it("publishes the service before emitting permissions:ready", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "pi-perm-ready-cwd-"));
     const seen: string[] = [];
@@ -377,7 +302,6 @@ describe("ready emitted after service publication", () => {
 
     piPermissionSystemExtension(pi as unknown as ExtensionAPI);
 
-    // ready is not emitted at load; only after session_start publishes.
     expect(seen).toEqual([]);
 
     await fireSessionStart(pi, makeChildCtx(cwd, "top-session"));
@@ -389,10 +313,6 @@ describe("ready emitted after service publication", () => {
 });
 
 describe("single source of truth for session state", () => {
-  // Regression guard for the split-brain bug: before the fix, the gate path
-  // recorded session approvals into a private SessionRules instance that the
-  // RPC check and the service never saw. After the fix, both readers use the
-  // same SessionRules the gate writes into.
   it("gate session-approval is visible to the RPC check and the service", async () => {
     writeGlobalConfig({
       permission: { "*": "allow", demo: "ask" },
@@ -402,7 +322,6 @@ describe("single source of truth for session state", () => {
     const pi = makeFakePi({ toolNames: ["demo"] });
     piPermissionSystemExtension(pi as unknown as ExtensionAPI);
 
-    // UI ctx that approves the gate prompt for this session (options[1]).
     const ctx = {
       cwd,
       hasUI: true,
@@ -414,10 +333,6 @@ describe("single source of truth for session state", () => {
       ui: {
         notify: (): void => {},
         setStatus: (): void => {},
-        // The local fork's gate prompter renders via ctx.ui.custom (a TUI
-        // component). Resolve to "allow_session" to record a session-scoped
-        // approval — the contract under test is that session approvals are
-        // visible to the RPC check and the service accessor.
         custom: async (): Promise<string> => "allow_session",
         input: async (): Promise<string | undefined> => undefined,
       },
@@ -425,8 +340,6 @@ describe("single source of truth for session state", () => {
 
     await fireSessionStart(pi, ctx);
 
-    // Drive a tool_call on "demo"; the gate prompts and the mock selects
-    // options[1], recording a session-scoped approval.
     await pi.fire(
       "tool_call",
       {
@@ -436,8 +349,6 @@ describe("single source of truth for session state", () => {
       },
       ctx,
     );
-
-    // RPC check — the deprecated channel must now reflect the session approval.
 
     const rpcCheckChannel: string = PERMISSIONS_RPC_CHECK_CHANNEL;
     const requestId = "sot-rpc-1";
@@ -454,10 +365,8 @@ describe("single source of truth for session state", () => {
     };
 
     expect(reply.success).toBe(true);
-    // Before the fix this was "ask" — the RPC channel read an empty SessionRules.
     expect(reply.data?.result).toBe("allow");
 
-    // Service accessor must also see the session approval.
     const serviceResult = getPermissionsService()!.checkPermission("demo");
     expect(serviceResult.state).toBe("allow");
 
@@ -466,11 +375,6 @@ describe("single source of truth for session state", () => {
 });
 
 describe("multi-instance global service interplay", () => {
-  // The fix (#302) scopes the process-global service slot to the publishing
-  // instance. The parent publishes at its session_start; an in-process child
-  // (registered by session id) skips publishing, and its identity-scoped
-  // teardown is a no-op — so the parent's service is the one that resolves
-  // throughout the child's lifecycle and survives the child's shutdown.
   it("keeps the parent's service published across the child's lifecycle", async () => {
     const parentCwd = mkdtempSync(join(tmpdir(), "pi-perm-parent-cwd-"));
     const childCwd = mkdtempSync(join(tmpdir(), "pi-perm-child-cwd-"));
@@ -481,22 +385,17 @@ describe("multi-instance global service interplay", () => {
     const childPi = makeFakePi({ events: createEventBus() });
     piPermissionSystemExtension(childPi as unknown as ExtensionAPI);
 
-    // The parent is not a registered child, so it publishes its service.
     await fireSessionStart(parentPi, makeChildCtx(parentCwd, "parent-session-mi"));
     const parentService = getPermissionsService();
     expect(parentService).toBeDefined();
 
-    // The child is registered in the shared global registry before its own
-    // session_start, so it detects itself and skips publishing.
     getSubagentSessionRegistry().register(childSessionId, {
       parentSessionId: "parent-session-mi",
     });
     await fireSessionStart(childPi, makeChildCtx(childCwd, childSessionId));
 
-    // Mid-run: the slot resolves the parent's service, never the child's.
     expect(getPermissionsService()).toBe(parentService);
 
-    // The child's shutdown is a no-op for the slot it never owned.
     await childPi.fire("session_shutdown");
     expect(getPermissionsService()).toBe(parentService);
 

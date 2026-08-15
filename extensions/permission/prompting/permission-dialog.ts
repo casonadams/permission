@@ -4,12 +4,6 @@ export type PermissionPromptDecision = {
   approved: boolean;
   state: PermissionDecisionState;
   denialReason?: string;
-  /**
-   * True when the decision was made automatically by yolo mode rather than
-   * by an interactive user prompt. Used by handlers to emit "auto_approved"
-   * rather than "user_approved" in the permissions:decision broadcast.
-   */
-  autoApproved?: true;
 };
 
 export interface PermissionDecisionUi {
@@ -53,10 +47,6 @@ export function createSessionApprovedPermissionDecision(): PermissionPromptDecis
   return { approved: true, state: "approved_for_session" };
 }
 
-export function createAutoApprovedPermissionDecision(): PermissionPromptDecision {
-  return { ...createApprovedPermissionDecision(), autoApproved: true };
-}
-
 export function isPermissionDecisionState(value: unknown): value is PermissionDecisionState {
   return (
     value === "approved" || value === "approved_for_session" || value === "denied" || value === "denied_with_reason"
@@ -64,7 +54,6 @@ export function isPermissionDecisionState(value: unknown): value is PermissionDe
 }
 
 export interface RequestPermissionOptions {
-  /** Override the "for this session" option label (e.g. to show the suggested pattern). */
   sessionLabel?: string;
 }
 

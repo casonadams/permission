@@ -4,12 +4,7 @@ import { fileURLToPath } from "node:url";
 
 export const EXTENSION_ID = "pi-permission-system";
 
-/**
- * Marker type for the extension config. The config has no user-facing
- * settings; runtime knobs (logging, yolo, preview-length, infrastructure
- * paths) have been removed and their defaults are baked into consumers.
- */
-export interface PermissionSystemExtensionConfig {}
+export type PermissionSystemExtensionConfig = Record<string, never>;
 
 export const DEFAULT_EXTENSION_CONFIG: PermissionSystemExtensionConfig = {};
 
@@ -33,6 +28,7 @@ export function detectMisplacedPermissionKeys(raw: Record<string, unknown>): str
 }
 
 export function normalizePermissionSystemConfig(raw: Record<string, unknown>): PermissionSystemExtensionConfig {
+  void raw;
   return {};
 }
 

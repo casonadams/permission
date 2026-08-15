@@ -5,8 +5,6 @@ import { ToolCallGatePipeline } from "#src/gates/tool-call-gate-pipeline";
 import { makeGateInputs, makeGateRunner, makeResolver, makeTcc } from "#test/helpers/gate-fixtures";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 
-// ── BashProgram.parse mock ─────────────────────────────────────────────────
-
 const { mockBashProgramParse } = vi.hoisted(() => ({
   mockBashProgramParse: vi.fn(),
 }));
@@ -23,15 +21,11 @@ function makeMockBashProgram() {
   };
 }
 
-// ── ToolCallGatePipeline ───────────────────────────────────────────────────
-
 describe("ToolCallGatePipeline", () => {
   beforeEach(() => {
     mockBashProgramParse.mockReset();
     mockBashProgramParse.mockResolvedValue(makeMockBashProgram());
   });
-
-  // ── non-bash tools ───────────────────────────────────────────────────────
 
   describe("evaluate — non-bash tool", () => {
     it("returns allow when all gates pass", async () => {
@@ -66,24 +60,7 @@ describe("ToolCallGatePipeline", () => {
       const result = await pipeline.evaluate(makeTcc({ toolName: "read", input: {} }), runner);
 
       expect(result).toEqual({ action: "block", reason: "first gate blocked" });
-      // Pipeline looped to the first gate, got block, and stopped — not all 6 gates.
       expect(runSpy).toHaveBeenCalledTimes(1);
-    });
-
-    it("calls getToolPreviewLimits() during evaluate", async () => {
-      const getToolPreviewLimits = vi.fn(() => ({
-        toolInputPreviewMaxLength: 500,
-        toolTextSummaryMaxLength: 100,
-        toolInputLogPreviewMaxLength: 200,
-      }));
-      const resolver = makeResolver(makeCheckResult());
-      const inputs = makeGateInputs({ getToolPreviewLimits });
-      const { runner } = makeGateRunner();
-      const pipeline = new ToolCallGatePipeline({ resolver, inputs });
-
-      await pipeline.evaluate(makeTcc({ toolName: "read", input: {} }), runner);
-
-      expect(getToolPreviewLimits).toHaveBeenCalled();
     });
 
     it("calls getInfrastructureReadDirs() during evaluate", async () => {
@@ -122,8 +99,6 @@ describe("ToolCallGatePipeline", () => {
     });
   });
 
-  // ── bash tool ────────────────────────────────────────────────────────────
-
   describe("evaluate — bash tool", () => {
     it("returns allow when the bash command is permitted", async () => {
       const resolver = makeResolver(makeCheckResult());
@@ -155,7 +130,7 @@ describe("ToolCallGatePipeline", () => {
       let callCount = 0;
       const runSpy = vi.spyOn(runner, "run").mockImplementation(async () => {
         callCount++;
-        return callCount === 4 ? { action: "allow", toolCallApproved: true } : { action: "allow" };
+        return callCount === 2 ? { action: "allow", toolCallApproved: true } : { action: "allow" };
       });
       mockBashProgramParse.mockResolvedValue({
         ...makeMockBashProgram(),
@@ -168,7 +143,8 @@ describe("ToolCallGatePipeline", () => {
         runner,
       );
 
-      expect(runSpy).toHaveBeenNthCalledWith(6, expect.anything(), null, "tc-1", true);
+      expect(runSpy.mock.calls[2]?.[3]).toBe(true);
+      expect(runSpy.mock.calls[3]?.[3]).toBe(true);
     });
 
     it("does not parse BashProgram when the bash command is empty", async () => {
@@ -183,11 +159,7 @@ describe("ToolCallGatePipeline", () => {
     });
   });
 
-  // ── customExtractors threading (#352) ────────────────────────────────────
-
   describe("evaluate — customExtractors threading (#352)", () => {
-    // Deny only the cross-cutting `path` surface; allow everything else, so a
-    // block can only come from the path gate seeing the extracted path.
     function pathDenyingResolver() {
       const resolver = makeResolver();
       resolver.resolve.mockImplementation((surface) =>

@@ -4,10 +4,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FilePolicyLoader } from "./policy-loader";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), "policy-loader-test-"));
 }
@@ -31,10 +27,6 @@ function makeLoader(
     mcpServerNames: options.mcpServerNames ? [...options.mcpServerNames] : undefined,
   });
 }
-
-// ---------------------------------------------------------------------------
-// loadGlobalConfig
-// ---------------------------------------------------------------------------
 
 describe("FilePolicyLoader.loadGlobalConfig", () => {
   it("returns ScopeConfig with permission from a valid config file", () => {
@@ -63,7 +55,7 @@ describe("FilePolicyLoader.loadGlobalConfig", () => {
     const baseDir = makeTempDir();
     try {
       const loader = makeLoader(baseDir, {
-        globalConfig: { debugLog: true },
+        globalConfig: { unknownSetting: true },
       });
       const config = loader.loadGlobalConfig();
       expect(config.permission).toBeUndefined();
@@ -72,10 +64,6 @@ describe("FilePolicyLoader.loadGlobalConfig", () => {
     }
   });
 });
-
-// ---------------------------------------------------------------------------
-// loadProjectConfig
-// ---------------------------------------------------------------------------
 
 describe("FilePolicyLoader.loadProjectConfig", () => {
   it("returns empty ScopeConfig when no project path is configured", () => {
@@ -104,10 +92,6 @@ describe("FilePolicyLoader.loadProjectConfig", () => {
     }
   });
 });
-
-// ---------------------------------------------------------------------------
-// loadAgentConfig / loadProjectAgentConfig
-// ---------------------------------------------------------------------------
 
 describe("FilePolicyLoader.loadAgentConfig", () => {
   it("returns empty ScopeConfig when agentName is undefined", () => {
@@ -161,10 +145,6 @@ describe("FilePolicyLoader.loadProjectAgentConfig", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// getConfigIssues
-// ---------------------------------------------------------------------------
-
 describe("FilePolicyLoader.getConfigIssues", () => {
   it("returns empty array before any loads", () => {
     const loader = new FilePolicyLoader({
@@ -216,10 +196,6 @@ describe("FilePolicyLoader.getConfigIssues", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// getResolvedPolicyPaths
-// ---------------------------------------------------------------------------
-
 describe("FilePolicyLoader.getResolvedPolicyPaths", () => {
   it("returns correct paths and existence when files exist", () => {
     const baseDir = makeTempDir();
@@ -246,10 +222,6 @@ describe("FilePolicyLoader.getResolvedPolicyPaths", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// getCacheStamp
-// ---------------------------------------------------------------------------
-
 describe("FilePolicyLoader.getCacheStamp", () => {
   it("returns a string stamp", () => {
     const loader = new FilePolicyLoader({
@@ -272,11 +244,7 @@ describe("FilePolicyLoader.getCacheStamp", () => {
       const loader = new FilePolicyLoader({ globalConfigPath, agentsDir });
       const stamp1 = loader.getCacheStamp();
 
-      // Wait a tick so mtime changes
-      const now = Date.now();
-      while (Date.now() - now < 50) {
-        // busy-wait for mtime resolution
-      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
       writeFileSync(globalConfigPath, '{"permission": {}}');
       const stamp2 = loader.getCacheStamp();
 
@@ -301,17 +269,12 @@ describe("FilePolicyLoader.getCacheStamp", () => {
 
       const stampWithout = loader.getCacheStamp();
       const stampWith = loader.getCacheStamp("coder");
-      // Agent file exists, so the stamp differs from the no-agent case.
       expect(stampWithout).not.toBe(stampWith);
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
     }
   });
 });
-
-// ---------------------------------------------------------------------------
-// Mtime cache invalidation
-// ---------------------------------------------------------------------------
 
 describe("FilePolicyLoader mtime caching", () => {
   it("returns cached value on second call with unchanged file", () => {
@@ -322,7 +285,6 @@ describe("FilePolicyLoader mtime caching", () => {
       });
       const first = loader.loadGlobalConfig();
       const second = loader.loadGlobalConfig();
-      // Same reference — cache hit
       expect(second).toBe(first);
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -341,11 +303,7 @@ describe("FilePolicyLoader mtime caching", () => {
       const first = loader.loadGlobalConfig();
       expect(first.permission?.["*"]).toBe("allow");
 
-      // busy-wait for mtime resolution
-      const now = Date.now();
-      while (Date.now() - now < 50) {
-        /* spin */
-      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
 
       writeFileSync(globalConfigPath, JSON.stringify({ permission: { "*": "deny" } }));
       const second = loader.loadGlobalConfig();
@@ -356,10 +314,6 @@ describe("FilePolicyLoader mtime caching", () => {
     }
   });
 });
-
-// ---------------------------------------------------------------------------
-// Agent frontmatter loading
-// ---------------------------------------------------------------------------
 
 describe("FilePolicyLoader agent frontmatter", () => {
   it("loads permission from agent frontmatter with pattern map", () => {
@@ -429,10 +383,6 @@ describe("FilePolicyLoader agent frontmatter", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// MCP server name reading
-// ---------------------------------------------------------------------------
-
 describe("FilePolicyLoader.getConfiguredMcpServerNames", () => {
   it("returns override names when provided", () => {
     const loader = new FilePolicyLoader({
@@ -493,7 +443,6 @@ describe("FilePolicyLoader.getConfiguredMcpServerNames", () => {
       });
       const first = loader.getConfiguredMcpServerNames();
       const second = loader.getConfiguredMcpServerNames();
-      // Same reference — cache hit
       expect(second).toBe(first);
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -501,15 +450,10 @@ describe("FilePolicyLoader.getConfiguredMcpServerNames", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Config issue accumulation
-// ---------------------------------------------------------------------------
-
 describe("FilePolicyLoader config issues", () => {
   it("tracks issues from malformed config files", () => {
     const baseDir = makeTempDir();
     try {
-      // Write invalid JSON to trigger a parse error issue
       const globalConfigPath = join(baseDir, "config.json");
       const agentsDir = join(baseDir, "agents");
       mkdirSync(agentsDir, { recursive: true });
@@ -537,11 +481,7 @@ describe("FilePolicyLoader config issues", () => {
       loader.loadGlobalConfig();
       const issuesBefore = loader.getConfigIssues();
 
-      // Bust cache by waiting for mtime change
-      const now = Date.now();
-      while (Date.now() - now < 50) {
-        /* spin */
-      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
       writeFileSync(globalConfigPath, "{ INVALID JSON");
       loader.loadGlobalConfig();
       const issuesAfter = loader.getConfigIssues();
@@ -563,10 +503,7 @@ describe("FilePolicyLoader config issues", () => {
       loader.loadGlobalConfig();
       expect(loader.getConfigIssues()).toHaveLength(1);
 
-      const now = Date.now();
-      while (Date.now() - now < 50) {
-        /* spin */
-      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
       writeFileSync(globalConfigPath, JSON.stringify({ permission: { "*": "ask" } }));
       loader.loadGlobalConfig();
 

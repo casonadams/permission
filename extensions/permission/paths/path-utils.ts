@@ -21,37 +21,11 @@ export function normalizePathForComparison(pathValue: string, cwd: string): stri
   return process.platform === "win32" ? normalizedAbsolutePath.toLowerCase() : normalizedAbsolutePath;
 }
 
-/**
- * Returns true when `pathValue` is `directory` itself or nested inside it.
- *
- * Containment is decided with Node's platform-native `path.relative` rather
- * than a hand-rolled prefix check: on `win32` the comparison folds case (and
- * tolerates either separator), matching the case-insensitive filesystem.
- * `platform` defaults to `process.platform` and is injectable so Windows
- * behavior is testable on a POSIX CI.
- */
-
 export interface PathPolicyValueOptions {
-  /**
-   * Current Pi working directory. When provided, returned values include a
-   * project-relative alias for paths that resolve inside this directory.
-   */
   cwd?: string;
-  /**
-   * Directory used to resolve `pathValue` into an absolute policy value.
-   * Defaults to `cwd`. Bash uses this for tokens seen after a literal `cd`.
-   */
   resolveBase?: string;
 }
 
-/**
- * Normalize a single path-like lookup value without resolving it against CWD.
- *
- * Preserves compatibility with existing relative path rules (`src/*`, `*.env`)
- * while applying the same lexical cleanup as
- * {@link normalizePathForComparison}: trim, strip simple wrapping quotes,
- * strip the OpenCode-style leading `@`, and expand `~` / `$HOME`.
- */
 export function normalizePathPolicyLiteral(pathValue: string): string {
   return cleanPathLiteral(pathValue);
 }
@@ -63,13 +37,6 @@ function cleanPathLiteral(pathValue: string): string {
   return expandHomePath(unprefixed);
 }
 
-/**
- * Return equivalent lookup values for path-policy matching.
- *
- * The first value is the cwd/effective-base normalized absolute path when a
- * base is available. The later values preserve project-relative and raw
- * relative forms so existing rules like `src/*` and `*.env` continue to match.
- */
 export function getPathPolicyValues(pathValue: string, options: PathPolicyValueOptions = {}): string[] {
   const literal = normalizePathPolicyLiteral(pathValue);
   if (!literal) return [];
@@ -103,10 +70,6 @@ function isWithinNormalizedCwd(absolute: string, normalizedCwd: string): boolean
   return absolute === normalizedCwd || isPathWithinDirectory(absolute, normalizedCwd);
 }
 
-/**
- * Paths that are universally safe and should never trigger external-directory checks.
- * These are OS device files: read returns EOF or process streams, write discards or goes to process streams.
- */
 export const SAFE_SYSTEM_PATHS: ReadonlySet<string> = new Set([
   "/dev/null",
   "/dev/stdin",
@@ -114,19 +77,10 @@ export const SAFE_SYSTEM_PATHS: ReadonlySet<string> = new Set([
   "/dev/stderr",
 ]);
 
-/**
- * Returns true if the given normalized path is a safe OS device file
- * that should never trigger external-directory checks.
- */
 export function isSafeSystemPath(normalizedPath: string): boolean {
   return SAFE_SYSTEM_PATHS.has(normalizedPath);
 }
 
-/**
- * Surfaces whose patterns are matched against filesystem paths and therefore
- * fold case (and separators) on Windows: the path-bearing tools plus the
- * cross-cutting `path` gate and the `external_directory` boundary gate.
- */
 export const PATH_SURFACES: ReadonlySet<string> = new Set([...PATH_BEARING_TOOLS, ...SPECIAL_PERMISSION_KEYS]);
 
 export function getPathBearingToolPath(toolName: string, input: unknown): string | null {
@@ -137,19 +91,6 @@ export function getPathBearingToolPath(toolName: string, input: unknown): string
   return getNonEmptyString(toRecord(input).path);
 }
 
-/**
- * Extract the filesystem path a tool will access, for the cross-cutting `path`
- * and `external_directory` gates.
- *
- * Unlike {@link getPathBearingToolPath} (built-in tools only), this recognizes
- * extension and MCP tools so they are no longer exempt from path gating:
- *
- * - `bash` → `null` (bash has its own token-based path gates).
- * - Built-in path-bearing tools → `input.path`.
- * - `mcp` → `input.arguments.path`.
- * - Any other tool → a registered {@link ToolAccessExtractor}'s path, else the
- *   default `input.path` convention.
- */
 export function getToolInputPath(
   toolName: string,
   input: unknown,
@@ -185,11 +126,6 @@ function getCustomToolInputPath(
   return getNonEmptyString(custom(record));
 }
 
-/**
- * Like {@link normalizePathForComparison} but also resolves symlinks via
- * `realpathSync` (best-effort). Use this for containment decisions where the
- * OS-followed path matters, not for pattern matching.
- */
 export function canonicalNormalizePathForComparison(pathValue: string, cwd: string): string {
   const lexical = normalizePathForComparison(pathValue, cwd);
   if (!lexical) return "";

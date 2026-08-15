@@ -1,4 +1,3 @@
-import type { ConfigReader } from "../config/config-store";
 import { emitUiPromptEvent, type PermissionEventBus } from "../integrations/permission-events";
 import type { ReviewLogger } from "../integrations/session-logger";
 import type { PermissionPromptDecision } from "./permission-dialog";
@@ -6,17 +5,8 @@ import type { PromptPermissionDetails } from "./permission-prompter";
 import { buildDirectUiPrompt } from "./permission-ui-prompt";
 
 export type PromptAuditDeps = {
-  config: ConfigReader;
   logger: ReviewLogger;
 };
-
-/** Auto-approval has been removed; this hook is preserved for callers. */
-export function maybeAutoApprovePrompt(
-  _details: PromptPermissionDetails,
-  _deps: PromptAuditDeps,
-): PermissionPromptDecision | null {
-  return null;
-}
 
 export function recordPromptWaiting(
   details: PromptPermissionDetails,

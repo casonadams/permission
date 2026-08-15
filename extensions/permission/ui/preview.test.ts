@@ -46,17 +46,6 @@ describe("toolTitle", () => {
     expect(toolTitle("read", { skillName: "librarian", path: "/skills/librarian/SKILL.md" })).toBe("Skill: librarian");
   });
 
-  test("names the access as external and states the operation", () => {
-    expect(toolTitle("read", { promptSurface: "external_directory", path: "/other/notes.md" })).toBe("External read");
-    expect(toolTitle("write", { promptSurface: "external_directory", path: "/other/notes.md" })).toBe("External write");
-  });
-
-  test("external access outranks the bash sub-command", () => {
-    expect(
-      toolTitle("bash", { promptSurface: "external_directory", path: "/etc/hosts", command: "cat /etc/hosts" }),
-    ).toBe("External bash");
-  });
-
   test("flags a webhook-shaped MCP target", () => {
     expect(toolTitle("mcp", { target: "gateway_send_webhook" })).toBe("Webhook: gateway_send_webhook");
   });

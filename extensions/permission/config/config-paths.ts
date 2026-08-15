@@ -9,9 +9,6 @@ export function getGlobalConfigDir(agentDir: string): string {
 }
 
 export function getGlobalConfigPath(agentDir: string): string {
-  // Local fork: config lives at the agent root, not under the extension
-  // subdirectory. See `permission.json` next to `mcp.json`, `models.json`,
-  // etc.
   return join(agentDir, "permission.json");
 }
 
@@ -20,8 +17,6 @@ export function getGlobalLogsDir(agentDir: string): string {
 }
 
 export function getProjectConfigPath(cwd: string): string {
-  // Local fork: project config also at `.pi/agent/permission.json`
-  // rather than under the extension subdirectory.
   return join(cwd, ".pi", "agent", "permission.json");
 }
 

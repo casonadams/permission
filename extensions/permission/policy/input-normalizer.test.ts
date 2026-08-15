@@ -26,10 +26,6 @@ describe("buildInputForSurface", () => {
     }
   });
 
-  it("preserves external_directory values as paths", () => {
-    expect(buildInputForSurface("external_directory", "/other/project")).toEqual({ path: "/other/project" });
-  });
-
   it("preserves MCP values as tool targets", () => {
     expect(buildInputForSurface("mcp", "exa:search")).toEqual({ tool: "exa:search" });
   });
@@ -105,50 +101,6 @@ describe("normalizeInput — non-MCP surfaces", () => {
         [],
         "/workspace/project",
       );
-      expect(result.values).toEqual(["/workspace/project/src/App.jsx", "src/App.jsx"]);
-    });
-  });
-
-  describe("special / external_directory", () => {
-    it("uses path from input as the lookup value", () => {
-      const result = normalizeInput("external_directory", { path: "/other/project" }, []);
-      expect(result.surface).toBe("external_directory");
-      expect(result.values).toEqual(["/other/project"]);
-      expect(result.resultExtras).toEqual({});
-    });
-
-    it("falls back to '*' when path is missing", () => {
-      const result = normalizeInput("external_directory", {}, []);
-      expect(result.values).toEqual(["*"]);
-    });
-
-    it("falls back to '*' when path is not a string", () => {
-      const result = normalizeInput("external_directory", { path: 42 }, []);
-      expect(result.values).toEqual(["*"]);
-    });
-
-    it("falls back to '*' when path is an empty string", () => {
-      const result = normalizeInput("external_directory", { path: "" }, []);
-      expect(result.values).toEqual(["*"]);
-    });
-
-    it("handles null input", () => {
-      const result = normalizeInput("external_directory", null, []);
-      expect(result.values).toEqual(["*"]);
-    });
-
-    it("expands ~/... path value to absolute home path", () => {
-      const result = normalizeInput("external_directory", { path: "~/dev/project" }, []);
-      expect(result.values).toEqual([join("/mock/home", "dev/project")]);
-    });
-
-    it("expands $HOME/... path value to absolute home path", () => {
-      const result = normalizeInput("external_directory", { path: "$HOME/dev/project" }, []);
-      expect(result.values).toEqual([join("/mock/home", "dev/project")]);
-    });
-
-    it("adds cwd-normalized and relative aliases when cwd is provided", () => {
-      const result = normalizeInput("external_directory", { path: "src/App.jsx" }, [], "/workspace/project");
       expect(result.values).toEqual(["/workspace/project/src/App.jsx", "src/App.jsx"]);
     });
   });
@@ -273,7 +225,6 @@ describe("normalizeInput — MCP surface", () => {
     expect(result.values).toContain("exa:search");
     expect(result.values).toContain("exa");
     expect(result.values).toContain("mcp_call");
-    // 'mcp' is always last
     expect(result.values.at(-1)).toBe("mcp");
   });
 
@@ -289,7 +240,6 @@ describe("normalizeInput — MCP surface", () => {
   });
 
   it("resultExtras.target is 'mcp' when no specific targets are derived", () => {
-    // Empty input → only mcp_status then mcp appended
     const result = normalizeInput("mcp", {}, []);
     expect(result.resultExtras.target).toBe("mcp_status");
   });

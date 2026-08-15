@@ -7,9 +7,6 @@ import type { ToolCallContext } from "#src/gates/types";
 
 import { makeGateCheckResult as makeCheckResult, makeResolver } from "#test/helpers/gate-fixtures";
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
-// path.test.ts uses read-tool defaults; the shared makeTcc uses bash defaults.
 function makeTcc(overrides: Partial<ToolCallContext> = {}): ToolCallContext {
   return {
     toolName: "read",
@@ -20,8 +17,6 @@ function makeTcc(overrides: Partial<ToolCallContext> = {}): ToolCallContext {
     ...overrides,
   };
 }
-
-// ── tests ──────────────────────────────────────────────────────────────────
 
 describe("describePathGate", () => {
   it("returns null for non-path-bearing tools", () => {
@@ -123,12 +118,6 @@ describe("describePathGate", () => {
   });
 });
 
-// Home-relative path characterization (#350) ──────────────────────────────
-//
-// The gate passes the raw path to the resolver; home expansion is handled
-// downstream by normalizeInput. These tests lock in that the gate works
-// correctly when the tool input contains a ~/... or $HOME/... path.
-
 describe("describePathGate — home-relative paths", () => {
   it("passes raw ~/... path to resolver and builds descriptor on deny", () => {
     const resolver = makeResolver(makeCheckResult({ state: "deny", matchedPattern: "~/.ssh/*" }));
@@ -136,7 +125,6 @@ describe("describePathGate — home-relative paths", () => {
 
     expect(isGateDescriptor(result)).toBe(true);
     expect(result.preCheck?.state).toBe("deny");
-    // Raw path preserved in denial context for display.
     expect(result.denialContext).toMatchObject({
       kind: "path",
       toolName: "read",
@@ -157,14 +145,12 @@ describe("describePathGate — home-relative paths", () => {
     });
   });
 
-  it("returns null when home-relative path resolves to allow", () => {
-    const resolver = makeResolver(makeCheckResult({ state: "allow" }));
+  it("returns null when an explicit rule allows a home-relative path", () => {
+    const resolver = makeResolver(makeCheckResult({ state: "allow", matchedPattern: "~/.ssh/*" }));
     const result = describePathGate(makeTcc({ input: { path: "~/.ssh/config" } }), resolver);
     expect(result).toBeNull();
   });
 });
-
-// Extension and MCP tools are now path-gated (#352) ──────────────────────────
 
 describe("describePathGate — extension and MCP tools (#352)", () => {
   function extractorLookup(toolName: string, key: string) {

@@ -3,8 +3,6 @@ import type { RuleOrigin } from "#src/policy/rule";
 import { evaluate } from "#src/policy/rule";
 import { composeRuleset, synthesizeBaseline, synthesizeDefaults } from "#src/policy/synthesize";
 
-// ── synthesizeDefaults ─────────────────────────────────────────────────────
-
 describe("synthesizeDefaults", () => {
   test("emits a single universal catch-all rule with layer 'default' and origin 'builtin'", () => {
     const rules = synthesizeDefaults("ask");
@@ -28,7 +26,7 @@ describe("synthesizeDefaults", () => {
     const rules = synthesizeDefaults("ask");
     expect(evaluate("read", "*", rules).action).toBe("ask");
     expect(evaluate("bash", "git status", rules).action).toBe("ask");
-    expect(evaluate("external_directory", "*", rules).action).toBe("ask");
+    expect(evaluate("path", "*", rules).action).toBe("ask");
     expect(evaluate("future_surface", "*", rules).action).toBe("ask");
   });
 
@@ -62,8 +60,6 @@ describe("synthesizeDefaults", () => {
     }
   });
 });
-
-// ── synthesizeBaseline ─────────────────────────────────────────────────────
 
 describe("synthesizeBaseline", () => {
   test("returns empty ruleset when config has no mcp allow rules", () => {
@@ -165,8 +161,6 @@ describe("synthesizeBaseline", () => {
     expect(result.origin).toBe("baseline");
   });
 });
-
-// ── composeRuleset ─────────────────────────────────────────────────────────
 
 describe("composeRuleset", () => {
   test("returns concatenation of all layers in order", () => {

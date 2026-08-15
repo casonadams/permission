@@ -25,9 +25,8 @@ describe("detectMisplacedPermissionKeys", () => {
         mcp: {},
         skills: {},
         special: {},
-        external_directory: {},
       }),
-    ).toEqual(["defaultPolicy", "tools", "bash", "mcp", "skills", "special", "external_directory"]);
+    ).toEqual(["defaultPolicy", "tools", "bash", "mcp", "skills", "special"]);
   });
 
   it("does not flag the flat-format permission key as misplaced", () => {
@@ -41,7 +40,7 @@ describe("detectMisplacedPermissionKeys", () => {
 
 describe("normalizePermissionSystemConfig", () => {
   it("returns an empty config regardless of the input", () => {
-    expect(normalizePermissionSystemConfig({ debugLog: true })).toEqual({});
+    expect(normalizePermissionSystemConfig({ unknownSetting: true })).toEqual({});
     expect(normalizePermissionSystemConfig({})).toEqual({});
   });
 });

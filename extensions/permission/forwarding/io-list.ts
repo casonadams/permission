@@ -1,8 +1,8 @@
 import { readdirSync } from "node:fs";
-import type { DebugReviewLogger } from "#src/integrations/session-logger";
+import type { ReviewLogger } from "#src/integrations/session-logger";
 import { logPermissionForwardingWarning } from "./io-log";
 
-export function listRequestFiles(logger: DebugReviewLogger | null, requestsDir: string): string[] {
+export function listRequestFiles(logger: ReviewLogger | null, requestsDir: string): string[] {
   try {
     return readdirSync(requestsDir)
       .filter((name) => name.endsWith(".json"))

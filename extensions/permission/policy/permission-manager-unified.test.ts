@@ -1,9 +1,3 @@
-/**
- * Integration tests verifying the unified checkPermission() path.
- *
- * Step 5: session rules concatenated into the composed ruleset.
- * Step 6: all five surfaces produce identical decisions to the old branching code.
- */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -13,11 +7,6 @@ import type { Rule, Ruleset } from "#src/policy/rule";
 import { createManager, createManagerWithProject } from "#test/helpers/manager-harness";
 import { getGlobalConfigPath, getProjectConfigPath } from "../config/config-paths";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Manager backed by a missing config file — universal default is "ask". */
 function makeManager(mcpServerNames: readonly string[] = []): PermissionManager {
   return new PermissionManager({
     globalConfigPath: "/nonexistent/config.json",
@@ -26,10 +15,6 @@ function makeManager(mcpServerNames: readonly string[] = []): PermissionManager 
   });
 }
 
-/**
- * Manager backed by a real on-disk config file written to a temp directory.
- * Returns the manager and a cleanup function.
- */
 function makeManagerWithConfig(
   permission: Record<string, unknown>,
   mcpServerNames: readonly string[] = [],
@@ -58,20 +43,7 @@ const sessionAllow = (surface: string, pattern: string): Rule => ({
   origin: "session",
 });
 
-// ---------------------------------------------------------------------------
-// Step 5: session rules concatenated — wins over config/default
-// ---------------------------------------------------------------------------
-
 describe("checkPermission — session rules", () => {
-  it("session rule wins over the universal default (external_directory)", () => {
-    const manager = makeManager();
-    const sessionRules: Ruleset = [sessionAllow("external_directory", "/other/project")];
-    const result = manager.checkPermission("external_directory", { path: "/other/project" }, undefined, sessionRules);
-    expect(result.state).toBe("allow");
-    expect(result.source).toBe("session");
-    expect(result.matchedPattern).toBe("/other/project");
-  });
-
   it("session rule wins over the universal default (skill)", () => {
     const manager = makeManager();
     const sessionRules: Ruleset = [sessionAllow("skill", "librarian")];
@@ -115,7 +87,6 @@ describe("checkPermission — session rules", () => {
 
   it("session rule with narrower pattern does not block a broader command not in session", () => {
     const manager = makeManager();
-    // Only "git status" is session-approved; "git push" should fall through to default.
     const sessionRules: Ruleset = [sessionAllow("bash", "git status")];
     const result = manager.checkPermission("bash", { command: "git push origin main" }, undefined, sessionRules);
     expect(result.state).toBe("ask");
@@ -134,48 +105,7 @@ describe("checkPermission — session rules", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Step 6: source field and matchedPattern for all five surfaces
-// ---------------------------------------------------------------------------
-
 describe("checkPermission — source derivation and matchedPattern", () => {
-  describe("external_directory (special surface)", () => {
-    it("source is 'special' for a config-matched path", () => {
-      const { manager, cleanup } = makeManagerWithConfig({
-        "*": "ask",
-        external_directory: { "/trusted/*": "allow" },
-      });
-      try {
-        const result = manager.checkPermission("external_directory", {
-          path: "/trusted/repo",
-        });
-        expect(result.state).toBe("allow");
-        expect(result.source).toBe("special");
-        expect(result.matchedPattern).toBe("/trusted/*");
-      } finally {
-        cleanup();
-      }
-    });
-
-    it("source is 'special' even for a default match (no config rule)", () => {
-      const manager = makeManager();
-      const result = manager.checkPermission("external_directory", {
-        path: "/some/path",
-      });
-      expect(result.state).toBe("ask");
-      expect(result.source).toBe("special");
-      expect(result.matchedPattern).toBeUndefined();
-    });
-
-    it("matchedPattern is undefined for a default match", () => {
-      const manager = makeManager();
-      const result = manager.checkPermission("external_directory", {
-        path: "/unknown",
-      });
-      expect(result.matchedPattern).toBeUndefined();
-    });
-  });
-
   describe("skill surface", () => {
     it("source is 'skill' for a config-matched skill name", () => {
       const { manager, cleanup } = makeManagerWithConfig({
@@ -327,87 +257,6 @@ describe("checkPermission — source derivation and matchedPattern", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Home directory expansion in external_directory patterns
-// ---------------------------------------------------------------------------
-
-describe("checkPermission — home path expansion in external_directory rules", () => {
-  it("~/glob pattern allows a path under the real home directory", () => {
-    const { manager, cleanup } = makeManagerWithConfig({
-      "*": "ask",
-      external_directory: { "~/trusted/*": "allow" },
-    });
-    try {
-      const result = manager.checkPermission("external_directory", {
-        path: join(homedir(), "trusted/repo"),
-      });
-      expect(result.state).toBe("allow");
-      expect(result.source).toBe("special");
-      expect(result.matchedPattern).toBe("~/trusted/*");
-    } finally {
-      cleanup();
-    }
-  });
-
-  it("$HOME/glob pattern allows a path under the real home directory", () => {
-    const { manager, cleanup } = makeManagerWithConfig({
-      "*": "ask",
-      external_directory: { "$HOME/trusted/*": "allow" },
-    });
-    try {
-      const result = manager.checkPermission("external_directory", {
-        path: join(homedir(), "trusted/repo"),
-      });
-      expect(result.state).toBe("allow");
-      expect(result.source).toBe("special");
-      expect(result.matchedPattern).toBe("$HOME/trusted/*");
-    } finally {
-      cleanup();
-    }
-  });
-
-  it("~/glob deny rule blocks a path under home", () => {
-    const { manager, cleanup } = makeManagerWithConfig({
-      "*": "allow",
-      external_directory: { "~/private/*": "deny" },
-    });
-    try {
-      const result = manager.checkPermission("external_directory", {
-        path: join(homedir(), "private/secrets.txt"),
-      });
-      expect(result.state).toBe("deny");
-      expect(result.matchedPattern).toBe("~/private/*");
-    } finally {
-      cleanup();
-    }
-  });
-
-  it("~/glob pattern does not match a path outside home", () => {
-    const { manager, cleanup } = makeManagerWithConfig({
-      "*": "ask",
-      external_directory: { "~/trusted/*": "allow" },
-    });
-    try {
-      const result = manager.checkPermission("external_directory", {
-        path: "/tmp/not-home/file",
-      });
-      // Falls back to the "*": "ask" default — no allow from the ~/trusted/* rule.
-      expect(result.state).toBe("ask");
-      expect(result.matchedPattern).toBeUndefined();
-    } finally {
-      cleanup();
-    }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Rule origin provenance
-// ---------------------------------------------------------------------------
-
-/**
- * Build a manager with a global config and an optional project config.
- * Returns the manager and a cleanup function.
- */
 function makeManagerWithScopes(
   globalPermission: Record<string, unknown>,
   projectPermission?: Record<string, unknown>,
@@ -472,8 +321,6 @@ describe("checkPermission — rule origin provenance", () => {
   });
 
   it("both-object merge: patterns retain their own origins", () => {
-    // global defines bash["git *"] = allow; project adds bash["rm *"] = deny.
-    // Both patterns should survive with their own origins.
     const { manager, cleanup } = makeManagerWithScopes({ bash: { "git *": "allow" } }, { bash: { "rm *": "deny" } });
     try {
       const gitResult = manager.checkPermission("bash", {
@@ -493,7 +340,6 @@ describe("checkPermission — rule origin provenance", () => {
   });
 
   it("both-object merge: project pattern overrides global pattern for same key", () => {
-    // Both scopes define bash["git *"]; project wins for that pattern.
     const { manager, cleanup } = makeManagerWithScopes({ bash: { "git *": "ask" } }, { bash: { "git *": "allow" } });
     try {
       const result = manager.checkPermission("bash", {
@@ -507,10 +353,8 @@ describe("checkPermission — rule origin provenance", () => {
   });
 
   it("string replaces object: all patterns from replacing scope get origin 'project'", () => {
-    // global defines bash as an object; project replaces with string "allow".
     const { manager, cleanup } = makeManagerWithScopes({ bash: { "git *": "ask", "npm *": "ask" } }, { bash: "allow" });
     try {
-      // The catch-all "*" now comes from the project scope.
       const result = manager.checkPermission("bash", {
         command: "anything",
       });
@@ -522,7 +366,6 @@ describe("checkPermission — rule origin provenance", () => {
   });
 
   it("object replaces string: all patterns from replacing scope get origin 'project'", () => {
-    // global defines read as a string "ask"; project replaces with object.
     const { manager, cleanup } = makeManagerWithScopes({ read: "ask" }, { read: { "*": "allow" } });
     try {
       const result = manager.checkPermission("read", {});
@@ -534,7 +377,6 @@ describe("checkPermission — rule origin provenance", () => {
   });
 
   it("no config match: origin is 'builtin' (default layer)", () => {
-    // No config — falls back to synthesized default.
     const manager = makeManager();
     const result = manager.checkPermission("read", {});
     expect(result.state).toBe("ask");
@@ -561,7 +403,6 @@ describe("checkPermission — rule origin provenance", () => {
   it("universal fallback (*) set in global config carries origin 'global'", () => {
     const { manager, cleanup } = makeManagerWithScopes({ "*": "allow" });
     try {
-      // No explicit surface rule — hits the synthesized default derived from "*".
       const result = manager.checkPermission("read", {});
       expect(result.state).toBe("allow");
       expect(result.origin).toBe("global");
@@ -582,7 +423,6 @@ describe("checkPermission — rule origin provenance", () => {
   });
 
   it("built-in fallback (no * in any config): origin is 'builtin'", () => {
-    // Manager with no config file — built-in "ask" default.
     const manager = makeManager();
     const result = manager.checkPermission("read", {});
     expect(result.state).toBe("ask");
@@ -590,18 +430,10 @@ describe("checkPermission — rule origin provenance", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// In-memory PolicyLoader stub tests — no filesystem required
-// ---------------------------------------------------------------------------
-
 import type { ResolvedPolicyPaths } from "#src/config/policy-loader";
 import type { PolicyLoader } from "#src/policy/permission-manager";
 import type { PermissionCheckResult, ScopeConfig } from "#src/policy/types";
 
-/**
- * Minimal in-memory PolicyLoader for testing merge + evaluation logic
- * without touching the filesystem.
- */
 function createInMemoryPolicyLoader(
   scopes: {
     global?: ScopeConfig;
@@ -634,7 +466,6 @@ function createInMemoryPolicyLoader(
   };
 }
 
-/** Create a PermissionManager backed by an in-memory PolicyLoader. */
 function makeInMemoryManager(
   scopes: Parameters<typeof createInMemoryPolicyLoader>[0] = {},
   mcpServerNames: readonly string[] = [],
@@ -721,22 +552,6 @@ describe("PermissionManager with in-memory PolicyLoader", () => {
       });
       expect(result.state).toBe("allow");
       expect(result.source).toBe("mcp");
-    });
-
-    it("external_directory surface routes correctly", () => {
-      const manager = makeInMemoryManager({
-        global: {
-          permission: {
-            "*": "ask",
-            external_directory: { "/trusted/*": "allow" },
-          },
-        },
-      });
-      const result = manager.checkPermission("external_directory", {
-        path: "/trusted/repo",
-      });
-      expect(result.state).toBe("allow");
-      expect(result.source).toBe("special");
     });
 
     it("extension tools use 'default' source when no config rule matches", () => {
@@ -887,10 +702,6 @@ describe("PermissionManager with in-memory PolicyLoader", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Per-tool path patterns (#147)
-// ---------------------------------------------------------------------------
-
 describe("checkPermission — per-tool path patterns", () => {
   it("denies read of .env when path pattern matches", () => {
     const { manager, cleanup } = makeManagerWithConfig({
@@ -1013,10 +824,6 @@ describe("checkPermission — per-tool path patterns", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Cross-cutting path surface (#148)
-// ---------------------------------------------------------------------------
-
 describe("cross-cutting path surface", () => {
   it("denies .env via the path surface", () => {
     const { manager, cleanup } = makeManagerWithConfig({
@@ -1051,12 +858,10 @@ describe("cross-cutting path surface", () => {
       read: { "*": "allow", "*.secret": "deny" },
     });
     try {
-      // path surface allows, per-tool denies
       const readResult = manager.checkPermission("read", {
         path: "data.secret",
       });
       expect(readResult.state).toBe("deny");
-      // path surface also allows
       const pathResult = manager.checkPermission("path", {
         path: "data.secret",
       });
@@ -1097,7 +902,6 @@ describe("cross-cutting path surface", () => {
       read: "allow",
     });
     try {
-      // path surface falls through to universal default
       const result = manager.checkPermission("path", { path: ".env" });
       expect(result.state).toBe("ask");
     } finally {
@@ -1112,15 +916,12 @@ describe("cross-cutting path surface", () => {
       find: "allow",
     });
     try {
-      // No explicit "path" key → matchedPattern must be undefined so the
-      // path gate skips (describePathGate returns null).
       const result = manager.checkPermission("path", {
         path: "src/main.ts",
       });
       expect(result.state).toBe("ask");
       expect(result.matchedPattern).toBeUndefined();
 
-      // Meanwhile the tool-level check should allow read.
       const readResult = manager.checkPermission("read", {
         path: "src/main.ts",
       });
@@ -1130,8 +931,6 @@ describe("cross-cutting path surface", () => {
       cleanup();
     }
   });
-
-  // ── Deny-with-reason ────────────────────────────────────────────────────
 
   it("deny-with-reason: reason threads through to PermissionCheckResult", () => {
     const { manager, cleanup } = makeManagerWithConfig({
@@ -1196,16 +995,12 @@ describe("cross-cutting path surface", () => {
     }
   });
 
-  // ── Last-match-wins ordering ────────────────────────────────────────────
-
   it("last-match-wins: catch-all after deny overrides the deny", () => {
-    // Classic misconfiguration: deny is before allow, so allow wins.
     const { manager, cleanup } = makeManagerWithConfig({
       path: { "*.env": "deny", "*": "allow" },
     });
     try {
       const result = manager.checkPermission("path", { path: ".env" });
-      // "*" is last and matches .env → allow (the deny is shadowed)
       expect(result.state).toBe("allow");
     } finally {
       cleanup();
@@ -1213,7 +1008,6 @@ describe("cross-cutting path surface", () => {
   });
 
   it("last-match-wins: deny after catch-all blocks the path", () => {
-    // Correct ordering: catch-all first, specific deny after.
     const { manager, cleanup } = makeManagerWithConfig({
       path: { "*": "allow", "*.env": "deny" },
     });
@@ -1224,8 +1018,6 @@ describe("cross-cutting path surface", () => {
       cleanup();
     }
   });
-
-  // ── .env.example override recipe ────────────────────────────────────────
 
   it(".env.example override: denies .env and .env.local, allows .env.example", () => {
     const { manager, cleanup } = makeManagerWithConfig({
@@ -1247,8 +1039,6 @@ describe("cross-cutting path surface", () => {
       cleanup();
     }
   });
-
-  // ── Universal fallback interaction ──────────────────────────────────────
 
   it("universal '*': 'allow' with no path key makes the path gate transparent", () => {
     const { manager, cleanup } = makeManagerWithConfig({
@@ -1274,15 +1064,12 @@ describe("cross-cutting path surface", () => {
     }
   });
 
-  // ── Composition: path allows, per-tool denies ──────────────────────────
-
   it("per-tool deny still blocks even when path surface allows", () => {
     const { manager, cleanup } = makeManagerWithConfig({
       path: { "*": "allow" },
       read: "deny",
     });
     try {
-      // path gate passes (allow), but tool gate denies
       const pathResult = manager.checkPermission("path", {
         path: "secret.txt",
       });
@@ -1296,10 +1083,6 @@ describe("cross-cutting path surface", () => {
     }
   });
 });
-
-// ---------------------------------------------------------------------------
-// Home-expansion in path values (issue #350)
-// ---------------------------------------------------------------------------
 
 describe("cross-cutting path surface — home-expanded values", () => {
   it("~/... path value is denied by a ~/* rule (reported footgun)", () => {
@@ -1391,15 +1174,7 @@ describe("cross-cutting path surface — home-expanded values", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// configureForCwd and agentDir construction
-// ---------------------------------------------------------------------------
-
 describe("PermissionManager — configureForCwd and agentDir option", () => {
-  /**
-   * Build a temp agentDir with a global config and an optional cwd with a
-   * project config.  Returns the paths and a cleanup function.
-   */
   function makeAgentDirSetup(opts: {
     globalPermission: Record<string, unknown>;
     projectPermission?: Record<string, unknown>;
@@ -1414,12 +1189,10 @@ describe("PermissionManager — configureForCwd and agentDir option", () => {
     const agentDir = join(baseDir, "agent");
     const cwd = join(baseDir, "project");
 
-    // Write global config under getGlobalConfigPath(agentDir)
     const globalConfigPath = getGlobalConfigPath(agentDir);
     mkdirSync(dirname(globalConfigPath), { recursive: true });
     writeFileSync(globalConfigPath, JSON.stringify({ permission: opts.globalPermission }, null, 2));
 
-    // Write project config under getProjectConfigPath(cwd)
     const projectConfigPath = getProjectConfigPath(cwd);
     mkdirSync(dirname(projectConfigPath), { recursive: true });
     if (opts.projectPermission) {
@@ -1436,7 +1209,6 @@ describe("PermissionManager — configureForCwd and agentDir option", () => {
   }
 
   it("ScopedPermissionManager is exported and PermissionManager satisfies it", () => {
-    // Type-level assertion: assigning PermissionManager to ScopedPermissionManager compiles.
     const manager = new PermissionManager({
       globalConfigPath: "/nonexistent/config.json",
       agentsDir: "/nonexistent/agents",
@@ -1469,12 +1241,10 @@ describe("PermissionManager — configureForCwd and agentDir option", () => {
     });
     try {
       const manager = new PermissionManager({ agentDir });
-      // Before configureForCwd: global policy applies
       expect(manager.checkPermission("read", { path: "foo.txt" }).state).toBe("deny");
 
       manager.configureForCwd(cwd);
 
-      // After configureForCwd: project override applies (last-match-wins)
       expect(manager.checkPermission("read", { path: "foo.txt" }).state).toBe("allow");
     } finally {
       cleanup();
@@ -1493,7 +1263,6 @@ describe("PermissionManager — configureForCwd and agentDir option", () => {
 
       manager.configureForCwd(undefined);
 
-      // After reverting: global policy applies again
       expect(manager.checkPermission("read", { path: "foo.txt" }).state).toBe("deny");
     } finally {
       cleanup();
@@ -1506,23 +1275,15 @@ describe("PermissionManager — configureForCwd and agentDir option", () => {
     });
     try {
       const manager = new PermissionManager({ agentDir });
-      // Warm the cache
       expect(manager.checkPermission("read", { path: "foo.txt" }).state).toBe("allow");
-      // Update global config on disk to deny read
       writeFileSync(globalConfigPath, JSON.stringify({ permission: { read: "deny" } }, null, 2));
-      // configureForCwd clears cache + rebuilds loader
       manager.configureForCwd(undefined);
-      // Should pick up the changed global config
       expect(manager.checkPermission("read", { path: "foo.txt" }).state).toBe("deny");
     } finally {
       cleanup();
     }
   });
 });
-
-// ---------------------------------------------------------------------------
-// Project-level and per-agent config scope — moved from catch-all (#342)
-// ---------------------------------------------------------------------------
 
 test("Project-level config overrides base bash patterns", () => {
   const { manager, cleanup } = createManagerWithProject(
@@ -1697,10 +1458,6 @@ permission:
   }
 });
 
-// ---------------------------------------------------------------------------
-// PermissionManager surface resolution — moved from catch-all (#342)
-// ---------------------------------------------------------------------------
-
 test("PermissionManager canonical built-in permission checking", () => {
   const { manager, cleanup } = createManager({
     permission: { "*": "deny", read: "allow" },
@@ -1720,9 +1477,6 @@ test("PermissionManager canonical built-in permission checking", () => {
 });
 
 test("multiline bash command resolves to allow via universal fallback", () => {
-  // Regression test for #73: node -e "..." with embedded newlines was
-  // falling through to the hard-coded 'ask' default because wildcardMatch
-  // used /^.*$/ (no dotAll), which does not match '\n'.
   const { manager, cleanup } = createManager({
     permission: {
       "*": "allow",
@@ -1740,8 +1494,6 @@ test("multiline bash command resolves to allow via universal fallback", () => {
 });
 
 test("Bash specific deny patterns override catch-all within the same config", () => {
-  // In the flat format, patterns within a surface map are ordered by insertion.
-  // Last-match-wins means specific patterns placed AFTER the catch-all override it.
   const { manager, cleanup } = createManager({
     permission: {
       "*": "ask",
@@ -1815,8 +1567,6 @@ test("Arbitrary extension tools use exact-name tool permissions instead of MCP f
     expect(allowed.state).toBe("allow");
     expect(allowed.source).toBe("tool");
 
-    // another_extension_tool has no explicit rule — falls through to the
-    // universal default (permission["*"] = "deny") with source "default".
     const fallback = manager.checkPermission("another_extension_tool", {});
     expect(fallback.state).toBe("deny");
     expect(fallback.source).toBe("default");
@@ -2215,94 +1965,6 @@ test("getToolPermission supports arbitrary extension tool names", () => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// external_directory config resolution and pattern maps — moved from catch-all (#342)
-// ---------------------------------------------------------------------------
-
-test("external_directory permission falls back to universal default when not explicitly configured", () => {
-  const { manager, cleanup } = createManager({ permission: {} });
-
-  try {
-    const result = manager.checkPermission("external_directory", {});
-    expect(result.state).toBe("ask");
-    expect(result.source).toBe("special");
-    expect(result.matchedPattern).toBe(undefined);
-  } finally {
-    cleanup();
-  }
-});
-
-test("external_directory permission respects explicit deny", () => {
-  const { manager, cleanup } = createManager({
-    permission: { "*": "allow", external_directory: "deny" },
-  });
-
-  try {
-    const result = manager.checkPermission("external_directory", {});
-    expect(result.state).toBe("deny");
-    expect(result.source).toBe("special");
-    expect(result.matchedPattern).toBe("*");
-  } finally {
-    cleanup();
-  }
-});
-
-test("external_directory permission can be explicitly allowed", () => {
-  const { manager, cleanup } = createManager({
-    permission: { "*": "allow", external_directory: "allow" },
-  });
-
-  try {
-    const result = manager.checkPermission("external_directory", {});
-    expect(result.state).toBe("allow");
-    expect(result.source).toBe("special");
-    expect(result.matchedPattern).toBe("*");
-  } finally {
-    cleanup();
-  }
-});
-
-test("external_directory permission respects per-agent override", () => {
-  const { manager, cleanup } = createManager(
-    {
-      permission: { "*": "allow", external_directory: "deny" },
-    },
-    {
-      trusted: `---
-name: trusted
-permission:
-  external_directory: allow
----
-`,
-    },
-  );
-
-  try {
-    const globalResult = manager.checkPermission("external_directory", {});
-    expect(globalResult.state).toBe("deny");
-
-    const agentResult = manager.checkPermission("external_directory", {}, "trusted");
-    expect(agentResult.state).toBe("allow");
-    expect(agentResult.source).toBe("special");
-  } finally {
-    cleanup();
-  }
-});
-
-test("external_directory permission is not affected by unrelated surface keys", () => {
-  const { manager, cleanup } = createManager({
-    permission: { "*": "allow", external_directory: "allow" },
-  });
-
-  try {
-    const extResult = manager.checkPermission("external_directory", {});
-    expect(extResult.state).toBe("allow");
-    expect(extResult.matchedPattern).toBe("*");
-  } finally {
-    cleanup();
-  }
-});
-
 test("skill pattern map in agent frontmatter overrides global skill policy", () => {
   const { manager, cleanup } = createManager(
     {
@@ -2333,49 +1995,6 @@ permission:
     const denied = manager.checkPermission("skill", { name: "pi-code-review" });
     expect(denied.state).toBe("deny");
     expect(denied.source).toBe("skill");
-  } finally {
-    cleanup();
-  }
-});
-
-test("external_directory pattern map in agent frontmatter overrides global policy", () => {
-  const { manager, cleanup } = createManager(
-    {
-      permission: { "*": "allow", external_directory: "deny" },
-    },
-    {
-      trusted: `---
-name: trusted
-permission:
-  external_directory:
-    "*": deny
-    "~/Downloads/*": allow
----
-`,
-    },
-  );
-
-  try {
-    const allowed = manager.checkPermission(
-      "external_directory",
-      { path: `${homedir()}/Downloads/file.txt` },
-      "trusted",
-    );
-    expect(allowed.state).toBe("allow");
-    expect(allowed.matchedPattern).toBe("~/Downloads/*");
-    expect(allowed.source).toBe("special");
-
-    const denied = manager.checkPermission(
-      "external_directory",
-      { path: `${homedir()}/Documents/secret.txt` },
-      "trusted",
-    );
-    expect(denied.state).toBe("deny");
-    expect(denied.matchedPattern).toBe("*");
-
-    const globalDenied = manager.checkPermission("external_directory", {});
-    expect(globalDenied.state).toBe("deny");
-    expect(globalDenied.source).toBe("special");
   } finally {
     cleanup();
   }
@@ -2422,47 +2041,6 @@ permission:
   }
 });
 
-test("project-agent frontmatter external_directory rules override global-agent frontmatter rules", () => {
-  const { manager, cleanup } = createManagerWithProject(
-    {
-      permission: { "*": "allow", external_directory: "deny" },
-    },
-    {
-      analyst: `---
-name: analyst
-permission:
-  external_directory: ask
----
-`,
-    },
-    {
-      projectAgentFiles: {
-        analyst: `---
-name: analyst
-permission:
-  external_directory: allow
----
-`,
-      },
-    },
-  );
-
-  try {
-    const result = manager.checkPermission("external_directory", {}, "analyst");
-    expect(result.state).toBe("allow");
-    expect(result.source).toBe("special");
-
-    const globalResult = manager.checkPermission("external_directory", {});
-    expect(globalResult.state).toBe("deny");
-  } finally {
-    cleanup();
-  }
-});
-
-// ---------------------------------------------------------------------------
-// PI_CODING_AGENT_DIR support — moved from catch-all (#342)
-// ---------------------------------------------------------------------------
-
 test("PermissionManager reads config from PI_CODING_AGENT_DIR when set", () => {
   const baseDir = mkdtempSync(join(tmpdir(), "pi-permission-system-envdir-"));
   const agentsDir = join(baseDir, "agents");
@@ -2494,13 +2072,9 @@ test("PermissionManager reads config from PI_CODING_AGENT_DIR when set", () => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// getConfigIssues — moved from catch-all (#342)
-// ---------------------------------------------------------------------------
-
 test("PermissionManager.getConfigIssues returns empty array for clean config", () => {
   const config: ScopeConfig = {
-    permission: { "*": "ask", external_directory: "ask" },
+    permission: { "*": "ask", path: "ask" },
   };
   const { manager, cleanup } = createManager(config);
   try {
@@ -2521,49 +2095,15 @@ test("PermissionManager.getConfigIssues returns empty array for empty config", (
   }
 });
 
-// ---------------------------------------------------------------------------
-// Session-aware checkPermission() — moved from catch-all (#342)
-// ---------------------------------------------------------------------------
-
-test("checkPermission returns source 'session' when session rules cover the external_directory path", () => {
-  const { manager, cleanup } = createManager({
-    permission: { "*": "allow" },
-  });
-
-  try {
-    const sessionRules = [
-      {
-        surface: "external_directory",
-        pattern: "/other/project/*",
-        action: "allow" as const,
-        layer: "session" as const,
-        origin: "session" as const,
-      },
-    ];
-
-    const result = manager.checkPermission(
-      "external_directory",
-      { path: "/other/project/src/foo.ts" },
-      undefined,
-      sessionRules,
-    );
-    expect(result.state).toBe("allow");
-    expect(result.source).toBe("session");
-    expect(result.matchedPattern).toBe("/other/project/*");
-  } finally {
-    cleanup();
-  }
-});
-
 test("checkPermission falls back to config policy when session rules do not cover the path", () => {
   const { manager, cleanup } = createManager({
-    permission: { "*": "allow", external_directory: "deny" },
+    permission: { "*": "allow", path: "deny" },
   });
 
   try {
     const sessionRules = [
       {
-        surface: "external_directory",
+        surface: "path",
         pattern: "/other/project/*",
         action: "allow" as const,
         layer: "session" as const,
@@ -2571,14 +2111,8 @@ test("checkPermission falls back to config policy when session rules do not cove
       },
     ];
 
-    const result = manager.checkPermission(
-      "external_directory",
-      { path: "/completely/different/path.ts" },
-      undefined,
-      sessionRules,
-    );
+    const result = manager.checkPermission("path", { path: "/completely/different/path.ts" }, undefined, sessionRules);
     expect(result.state).toBe("deny");
-    expect(result.source).toBe("special");
   } finally {
     cleanup();
   }
@@ -2586,16 +2120,16 @@ test("checkPermission falls back to config policy when session rules do not cove
 
 test("checkPermission with empty session rules is identical to call without sessionRules arg", () => {
   const { manager, cleanup } = createManager({
-    permission: { "*": "allow", external_directory: "deny" },
+    permission: { "*": "allow", path: "deny" },
   });
 
   try {
-    const withEmpty = manager.checkPermission("external_directory", { path: "/other/project/foo.ts" }, undefined, []);
-    const withoutArg = manager.checkPermission("external_directory", {
+    const withEmpty = manager.checkPermission("path", { path: "/other/project/foo.ts" }, undefined, []);
+    const withoutArg = manager.checkPermission("path", {
       path: "/other/project/foo.ts",
     });
     const expected: PermissionCheckResult = {
-      toolName: "external_directory",
+      toolName: "path",
       state: "deny",
       matchedPattern: "*",
       source: "special",
@@ -2614,7 +2148,7 @@ test("session rules for one surface do not affect checks on other surfaces", () 
   try {
     const sessionRules = [
       {
-        surface: "external_directory",
+        surface: "path",
         pattern: "/other/project/*",
         action: "allow" as const,
         layer: "session" as const,
@@ -2629,35 +2163,6 @@ test("session rules for one surface do not affect checks on other surfaces", () 
     const mcpResult = manager.checkPermission("mcp", { tool: "exa:search" }, undefined, sessionRules);
     expect(mcpResult.state).toBe("ask");
     expect(mcpResult.source).toBe("default");
-  } finally {
-    cleanup();
-  }
-});
-
-test("session rules override config deny for external_directory", () => {
-  const { manager, cleanup } = createManager({
-    permission: { "*": "allow", external_directory: "deny" },
-  });
-
-  try {
-    const sessionRules = [
-      {
-        surface: "external_directory",
-        pattern: "/other/project/*",
-        action: "allow" as const,
-        layer: "session" as const,
-        origin: "session" as const,
-      },
-    ];
-
-    const result = manager.checkPermission(
-      "external_directory",
-      { path: "/other/project/src/foo.ts" },
-      undefined,
-      sessionRules,
-    );
-    expect(result.state).toBe("allow");
-    expect(result.source).toBe("session");
   } finally {
     cleanup();
   }
@@ -2818,10 +2323,6 @@ test("bash session rules do not bleed into mcp checks", () => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// getResolvedPolicyPaths — moved from catch-all (#342)
-// ---------------------------------------------------------------------------
-
 test("getResolvedPolicyPaths returns correct paths and existence when files exist", () => {
   const tempDir = mkdtempSync(join(tmpdir(), "policy-paths-exist-"));
   try {
@@ -2926,7 +2427,6 @@ describe("checkPermission — cwd-aware path policy values", () => {
     try {
       manager.configureForCwd(cwd);
       const result = manager.checkPermission("read", { path: "src/App.jsx" });
-      // The later "src/*" deny wins over the earlier absolute allow.
       expect(result.state).toBe("deny");
       expect(result.matchedPattern).toBe("src/*");
     } finally {

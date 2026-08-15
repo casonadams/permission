@@ -85,11 +85,7 @@ function createLogger(globalLogsDir: string, state: { session?: PermissionSessio
   });
 }
 
-function createForwarder(args: {
-  pi: ExtensionAPI;
-  core: Core;
-  logger: PermissionSessionLogger;
-}): PermissionForwarder {
+function createForwarder(args: { pi: ExtensionAPI; core: Core; logger: PermissionSessionLogger }): PermissionForwarder {
   const deps: PermissionForwarderDeps = {
     forwardingDir: args.core.paths.forwardingDir,
     subagentSessionsDir: args.core.paths.subagentSessionsDir,

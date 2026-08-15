@@ -2,7 +2,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  DEBUG_LOG_FILENAME,
   getGlobalConfigDir,
   getGlobalConfigPath,
   getGlobalLogsDir,
@@ -51,10 +50,6 @@ describe("config-paths", () => {
   });
 
   describe("log filenames", () => {
-    it("DEBUG_LOG_FILENAME is a .jsonl file", () => {
-      expect(DEBUG_LOG_FILENAME).toBe("pi-permission-system-debug.jsonl");
-    });
-
     it("REVIEW_LOG_FILENAME is a .jsonl file", () => {
       expect(REVIEW_LOG_FILENAME).toBe("pi-permission-system-permission-review.jsonl");
     });

@@ -21,11 +21,11 @@ describe("normalizeFlatConfig", () => {
       expect(result).toEqual([{ surface: "*", pattern: "*", action: "ask", origin: "builtin" }]);
     });
 
-    test("external_directory string shorthand maps directly to its surface", () => {
-      const result = normalizeFlatConfig({ external_directory: "ask" });
+    test("path string shorthand maps directly to its surface", () => {
+      const result = normalizeFlatConfig({ path: "ask" });
       expect(result).toEqual([
         {
-          surface: "external_directory",
+          surface: "path",
           pattern: "*",
           action: "ask",
           origin: "builtin",
@@ -112,7 +112,7 @@ describe("normalizeFlatConfig", () => {
         bash: { "*": "ask", "git *": "allow" },
         mcp: { mcp_status: "allow" },
         skill: { "*": "ask" },
-        external_directory: "ask",
+        path: "ask",
       });
       expect(result).toEqual([
         { surface: "*", pattern: "*", action: "ask", origin: "builtin" },
@@ -133,7 +133,7 @@ describe("normalizeFlatConfig", () => {
         },
         { surface: "skill", pattern: "*", action: "ask", origin: "builtin" },
         {
-          surface: "external_directory",
+          surface: "path",
           pattern: "*",
           action: "ask",
           origin: "builtin",
@@ -213,9 +213,6 @@ describe("normalizeFlatConfig", () => {
     });
 
     test("top-level deny-with-reason object is treated as a pattern map", () => {
-      // At the surface level, { action: "deny", reason: "..." } is parsed as a
-      // pattern→action map: "action" is a pattern key with action "deny", and
-      // "reason" maps to a non-PermissionState string that is dropped.
       const result = normalizeFlatConfig({
         bash: { action: "deny", reason: "Not allowed" } as never,
       });

@@ -25,22 +25,12 @@ export interface ToolPreviewFormatterOptions {
   toolInputLogPreviewMaxLength: number;
 }
 
-/**
- * The default preview limits used when no config override is supplied.
- * Mirrored as module-level constants in `tool-input-preview.ts`.
- */
 export const DEFAULT_TOOL_PREVIEW_OPTIONS: ToolPreviewFormatterOptions = {
   toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
   toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
   toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
 };
 
-/**
- * Formats tool inputs for permission prompts and review logs.
- *
- * Accepts configurable limits in its constructor — the single injection
- * point for preview-length configuration (#266).
- */
 function isOmittedFromToolInputLog(result: PermissionCheckResult): boolean {
   return result.toolName === "bash" || result.toolName === "mcp" || result.source === "mcp";
 }
@@ -72,34 +62,22 @@ export class ToolPreviewFormatter {
     private readonly customFormatters?: ToolInputFormatterLookup,
   ) {}
 
-  // ── Prompt formatting ───────────────────────────────────────────────────
-
-  /**
-   * Collapse whitespace, trim, and truncate a string to fit inline.
-   * An explicit `maxLength` overrides the constructor default.
-   */
   sanitizeInlineText(value: string, maxLength?: number): string {
     const limit = maxLength ?? this.options.toolTextSummaryMaxLength;
     const normalized = value.replace(/\s+/g, " ").trim();
     return normalized ? truncateInlineText(normalized, limit) : "empty text";
   }
 
-  /** Serialize `input` to inline JSON and truncate at `toolInputPreviewMaxLength`. */
   formatJsonInputForPrompt(input: unknown): string {
     const inline = serializeToolInputPreview(input);
     return inline ? `with input ${truncateInlineText(inline, this.options.toolInputPreviewMaxLength)}` : "";
   }
 
-  /**
-   * Summarize the arguments of a tool with no dedicated formatter, falling back
-   * to inline JSON when the input is not a key/value record.
-   */
   formatArgsInputForPrompt(input: unknown): string {
     const summary = formatArgsSummary(toRecord(input), this.options.toolInputPreviewMaxLength);
     return summary ? `with ${summary}` : this.formatJsonInputForPrompt(input);
   }
 
-  /** Format search-tool (grep/find/ls) input for a permission prompt. */
   formatSearchInputForPrompt(toolName: string, input: Record<string, unknown>): string {
     const parts = [
       formatNamedPromptPart("pattern", getNonEmptyString(input.pattern), (value) => this.sanitizeInlineText(value)),
@@ -110,12 +88,6 @@ export class ToolPreviewFormatter {
     return parts.length > 0 ? `for ${parts.join(", ")}` : "";
   }
 
-  /**
-   * Format any tool input for display in a permission ask-prompt.
-   *
-   * Dispatches to the appropriate pure formatter for known tools
-   * and falls back to inline JSON for everything else.
-   */
   formatToolInputForPrompt(toolName: string, input: unknown): string {
     const inputRecord = toRecord(input);
     const customPreview = this.formatCustomInput(toolName, inputRecord);
@@ -138,15 +110,11 @@ export class ToolPreviewFormatter {
     return this.formatArgsInputForPrompt(input);
   }
 
-  // ── Log formatting ──────────────────────────────────────────────────────
-
-  /** Serialize `input` to inline JSON and truncate at `toolInputLogPreviewMaxLength`. */
   formatGenericToolInputForLog(input: unknown): string | undefined {
     const inline = serializeToolInputPreview(input);
     return inline ? `input ${truncateInlineText(inline, this.options.toolInputLogPreviewMaxLength)}` : undefined;
   }
 
-  /** Derive a loggable input preview string for the review log. */
   getToolInputPreviewForLog(
     result: PermissionCheckResult,
     input: unknown,
@@ -162,7 +130,6 @@ export class ToolPreviewFormatter {
     return this.formatGenericToolInputForLog(input);
   }
 
-  /** Build the structured log context object for a permission review log entry. */
   getPermissionLogContext(
     result: PermissionCheckResult,
     input: unknown,

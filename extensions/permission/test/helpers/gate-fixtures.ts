@@ -1,6 +1,3 @@
-/**
- * Shared gate-level test fixtures for gate descriptor and runner tests.
- */
 import { vi } from "vitest";
 import type { SkillPromptEntry } from "#src/app/skill-prompt-sanitizer";
 import type { GateDescriptor } from "#src/gates/descriptor";
@@ -14,16 +11,9 @@ import type { SessionApprovalRecorder } from "#src/policy/session-approval-recor
 import type { PermissionCheckResult } from "#src/policy/types";
 import type { DenialContext } from "#src/prompting/denial-messages";
 import type { GatePrompter } from "#src/prompting/gate-prompter";
-import type { ToolPreviewFormatterOptions } from "#src/prompting/tool-preview-formatter";
 
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 
-/**
- * Permission resolver mock with an optional default check result.
- *
- * Returns a plain object whose `resolve` is a `vi.fn` so callers retain full
- * mock access (`mockReturnValue`, `mockImplementation`, `mock.calls`).
- */
 export function makeResolver(defaultCheck?: PermissionCheckResult) {
   const resolve = vi.fn<ScopedPermissionResolver["resolve"]>();
   const resolvePathPolicy = vi.fn<ScopedPermissionResolver["resolvePathPolicy"]>();
@@ -34,12 +24,6 @@ export function makeResolver(defaultCheck?: PermissionCheckResult) {
   return { resolve, resolvePathPolicy };
 }
 
-/**
- * Gate descriptor factory with runner-test defaults.
- *
- * Uses deny as the default `denialContext` check result so tests that
- * verify block paths don't need to override the surface check.
- */
 export function makeDescriptor(overrides: Partial<GateDescriptor> = {}): GateDescriptor {
   return {
     surface: "read",
@@ -68,9 +52,6 @@ export function makeDescriptor(overrides: Partial<GateDescriptor> = {}): GateDes
   };
 }
 
-/**
- * Reporter mock with independently inspectable vi.fn() stubs.
- */
 export function makeReporter(overrides: Partial<DecisionReporter> = {}): DecisionReporter {
   return {
     writeReviewLog: vi.fn(),
@@ -79,13 +60,6 @@ export function makeReporter(overrides: Partial<DecisionReporter> = {}): Decisio
   };
 }
 
-/**
- * Gate runner factory for `GateRunner` unit tests.
- *
- * Builds one `GateRunner` from four role mocks and returns `{ runner, deps }`
- * so tests can both invoke `runner.run(...)` and assert on the individual
- * mock call records (`deps.reporter.*`, `deps.resolve`, etc.).
- */
 interface GateRunnerOverrides {
   resolveResult?: PermissionCheckResult;
   resolve?: ScopedPermissionResolver["resolve"];
@@ -151,14 +125,6 @@ function resolvePromptMock(overrides: GateRunnerOverrides): GatePrompter["prompt
   return overrides.prompt ?? vi.fn<GatePrompter["prompt"]>().mockResolvedValue({ approved: true, state: "approved" });
 }
 
-/**
- * Gate descriptor variant with write-surface defaults and a caller-supplied
- * denialContext.
- *
- * Use instead of `makeDescriptor` when the test exercises denial-message
- * formatting — the write surface and its matching promptDetails/logContext
- * keep the message helpers' field access consistent.
- */
 export function makeDenialDescriptor(
   denialContext: DenialContext,
   overrides: Partial<GateDescriptor> = {},
@@ -187,12 +153,6 @@ export function makeDenialDescriptor(
   };
 }
 
-/**
- * Tool-call context factory with bash defaults.
- *
- * path.test.ts uses different defaults (toolName "read", path input) and
- * keeps a local wrapper; bash-path.test.ts uses this factory directly.
- */
 export function makeTcc(overrides: Partial<ToolCallContext> = {}): ToolCallContext {
   return {
     toolName: "bash",
@@ -204,16 +164,6 @@ export function makeTcc(overrides: Partial<ToolCallContext> = {}): ToolCallConte
   };
 }
 
-/**
- * Resolver whose `resolve` dispatches on `input.path`, falling back to a
- * default result for any path not in the map.
- *
- * Use when a test needs different results for different path tokens without
- * writing a full `mockImplementation` block.
- *
- * Return type is intentionally unannotated so callers retain full `vi.fn()`
- * mock access (`mock.calls`, `toHaveBeenCalledWith`, etc.).
- */
 export function makePathDispatchResolver(
   byPath: Record<string, PermissionCheckResult>,
   defaultResult: PermissionCheckResult,
@@ -236,12 +186,6 @@ export function makePathDispatchResolver(
   return { resolve, resolvePathPolicy };
 }
 
-/**
- * Path-surface check result factory.
- *
- * Shared between bash-path.test.ts and path.test.ts; both use
- * toolName "path", source "special", origin "global" as defaults.
- */
 export function makeGateCheckResult(overrides: Partial<PermissionCheckResult> = {}): PermissionCheckResult {
   return {
     toolName: "path",
@@ -252,40 +196,15 @@ export function makeGateCheckResult(overrides: Partial<PermissionCheckResult> = 
   };
 }
 
-/**
- * Mock of `ToolCallGateInputs` for `ToolCallGatePipeline` unit tests.
- *
- * Each method is a `vi.fn()` stub so callers retain full mock access
- * (`mock.calls`, `mockReturnValue`, etc.) on the returned object.
- * Pass `overrides` to replace individual stubs without rebuilding the whole
- * mock from scratch.
- */
 export function makeGateInputs(
-  overrides: {
-    getActiveSkillEntries?: () => SkillPromptEntry[];
-    getInfrastructureReadDirs?: () => string[];
-    getToolPreviewLimits?: () => ToolPreviewFormatterOptions;
-  } = {},
+  overrides: { getActiveSkillEntries?: () => SkillPromptEntry[]; getInfrastructureReadDirs?: () => string[] } = {},
 ): ToolCallGateInputs {
   return {
     getActiveSkillEntries: overrides.getActiveSkillEntries ?? vi.fn<() => SkillPromptEntry[]>(() => []),
     getInfrastructureReadDirs: overrides.getInfrastructureReadDirs ?? vi.fn<() => string[]>(() => []),
-    getToolPreviewLimits:
-      overrides.getToolPreviewLimits ??
-      vi.fn<() => ToolPreviewFormatterOptions>(() => ({
-        toolInputPreviewMaxLength: 500,
-        toolTextSummaryMaxLength: 100,
-        toolInputLogPreviewMaxLength: 200,
-      })),
   };
 }
 
-/**
- * Mock of `SkillInputGateInputs` for `SkillInputGatePipeline` unit tests.
- *
- * Returns a plain object with a `checkPermission` `vi.fn()` stub so callers
- * retain full mock access (`mockReturnValue`, `mock.calls`, etc.).
- */
 export function makeSkillInputInputs(
   overrides: { checkPermission?: SkillInputGateInputs["checkPermission"] } = {},
 ): SkillInputGateInputs {
@@ -295,13 +214,6 @@ export function makeSkillInputInputs(
   };
 }
 
-/**
- * Mock `GateNotifier` for `SkillInputGatePipeline` unit tests.
- *
- * Return type is intentionally unannotated so callers retain full `vi.fn()`
- * mock access (`mock.calls`, `toHaveBeenCalledWith`, etc.) — annotating with
- * `GateNotifier` would erase `Mock<...>` methods from the inferred type.
- */
 export function makeNotifier() {
   return {
     warn: vi.fn<(message: string) => void>(),

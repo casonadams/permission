@@ -3,11 +3,7 @@ import type { ToolAccessExtractorLookup } from "#src/integrations/tool-access-ex
 import type { ToolInputFormatterLookup } from "#src/integrations/tool-input-formatter-registry";
 import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
 import type { PermissionCheckResult } from "#src/policy/types";
-import {
-  DEFAULT_TOOL_PREVIEW_OPTIONS,
-  ToolPreviewFormatter,
-  type ToolPreviewFormatterOptions,
-} from "#src/prompting/tool-preview-formatter";
+import { DEFAULT_TOOL_PREVIEW_OPTIONS, ToolPreviewFormatter } from "#src/prompting/tool-preview-formatter";
 import { getNonEmptyString, toRecord } from "#src/shared/common";
 import { resolveBashCommandCheck } from "./bash-command";
 import { describeBashPathGate } from "./bash-path";
@@ -19,33 +15,11 @@ import { describeSkillReadGate } from "./skill-read";
 import { describeToolGate } from "./tool";
 import type { GateOutcome, ToolCallContext } from "./types";
 
-/**
- * Narrow interface the pipeline needs from its session-side dependency.
- *
- * `PermissionSession` satisfies this structurally at the construction call
- * site; no `implements` clause is needed and would create a layer-inversion
- * import from the domain module into the handler layer.
- */
 export interface ToolCallGateInputs {
-  /** Active skill prompt entries for the skill-read gate. */
   getActiveSkillEntries(): SkillPromptEntry[];
-  /** Combined infrastructure read directories (static). */
   getInfrastructureReadDirs(): string[];
-  /** Resolved tool-preview formatter options from the current config. */
-  getToolPreviewLimits(): ToolPreviewFormatterOptions;
 }
 
-/**
- * Owns the ordered tool-call gate-producer assembly and the run loop.
- *
- * Constructed once in the composition root and injected into
- * `PermissionGateHandler`. `evaluate(tcc, runner)` encapsulates:
- * - bash-command extraction and single `BashProgram.parse` (#308)
- * - `ToolPreviewFormatter` construction from `getToolPreviewLimits()`
- * - infrastructure-dir list from `getInfrastructureReadDirs()`
- * - all six gate producers in their prescribed order
- * - the run loop that returns the first block outcome, or allow
- */
 type GateProducer = () => GateResult | Promise<GateResult>;
 
 export interface ToolCallGatePipelineDeps {
@@ -69,12 +43,10 @@ export class ToolCallGatePipeline {
   }
 
   async evaluate(tcc: ToolCallContext, runner: GateRunner): Promise<GateOutcome> {
-    // Parse the bash command exactly once per evaluate; the three bash gates
-    // share this single BashProgram instead of each re-parsing (#308).
     const command = getNonEmptyString(toRecord(tcc.input).command);
     const bashProgram = tcc.toolName === "bash" && command ? await BashProgram.parse(command) : null;
 
-    const formatter = new ToolPreviewFormatter(this.inputs.getToolPreviewLimits(), this.customFormatters);
+    const formatter = new ToolPreviewFormatter(DEFAULT_TOOL_PREVIEW_OPTIONS, this.customFormatters);
 
     const infraDirs = this.inputs.getInfrastructureReadDirs();
 

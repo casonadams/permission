@@ -1,19 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Injected mock ───────────────────────────────────────────────────────────
-
 const mockRequestApproval = vi.fn();
-
-// ── Imports ─────────────────────────────────────────────────────────────────
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { PermissionPromptDecision } from "#src/prompting/permission-dialog";
 import type { PromptPermissionDetails } from "#src/prompting/permission-prompter";
 import { PermissionPrompter, type PermissionPrompterDeps } from "#src/prompting/permission-prompter";
-import type { ConfigReader } from "../config/config-store";
-import { DEFAULT_EXTENSION_CONFIG } from "../config/extension-config";
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeCtx(hasUI: boolean): ExtensionContext {
   return {
@@ -34,21 +26,14 @@ function makeDetails(overrides?: Partial<PromptPermissionDetails>): PromptPermis
   };
 }
 
-function makeConfigReader(config: Partial<typeof DEFAULT_EXTENSION_CONFIG> = {}): ConfigReader {
-  return { current: () => ({ ...DEFAULT_EXTENSION_CONFIG, ...config }) };
-}
-
 function makeDeps(overrides?: Partial<PermissionPrompterDeps>): PermissionPrompterDeps {
   return {
-    config: makeConfigReader(),
     logger: { review: vi.fn() },
     events: { emit: vi.fn(), on: vi.fn().mockReturnValue(() => undefined) },
     forwarder: { requestApproval: mockRequestApproval },
     ...overrides,
   };
 }
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("PermissionPrompter", () => {
   beforeEach(() => {
@@ -59,75 +44,7 @@ describe("PermissionPrompter", () => {
     });
   });
 
-  // ── Yolo-mode auto-approve ───────────────────────────────────────────────
-
-  describe("yolo-mode auto-approve", () => {
-    it("returns approved without calling confirmPermission when yoloMode is true", async () => {
-      const events = {
-        emit: vi.fn(),
-        on: vi.fn().mockReturnValue(() => undefined),
-      };
-      const deps = makeDeps({
-        config: makeConfigReader({ yoloMode: true }),
-        events,
-      });
-      const prompter = new PermissionPrompter(deps);
-
-      const decision = await prompter.prompt(makeCtx(false), makeDetails());
-
-      expect(decision).toEqual({
-        approved: true,
-        state: "approved",
-        autoApproved: true,
-      });
-      expect(mockRequestApproval).not.toHaveBeenCalled();
-      expect(events.emit).not.toHaveBeenCalledWith("permissions:ui_prompt", expect.anything());
-    });
-
-    it("logs permission_request.auto_approved in yolo mode", async () => {
-      const logger = { review: vi.fn() };
-      const deps = makeDeps({
-        config: makeConfigReader({ yoloMode: true }),
-        logger,
-      });
-      const prompter = new PermissionPrompter(deps);
-
-      await prompter.prompt(makeCtx(false), makeDetails());
-
-      expect(logger.review).toHaveBeenCalledWith(
-        "permission_request.auto_approved",
-        expect.objectContaining({ requestId: "req-123" }),
-      );
-    });
-
-    it("does not log permission_request.waiting in yolo mode", async () => {
-      const logger = { review: vi.fn() };
-      const deps = makeDeps({
-        config: makeConfigReader({ yoloMode: true }),
-        logger,
-      });
-      const prompter = new PermissionPrompter(deps);
-
-      await prompter.prompt(makeCtx(false), makeDetails());
-
-      expect(logger.review).not.toHaveBeenCalledWith("permission_request.waiting", expect.anything());
-    });
-
-    it("does not call confirmPermission with yoloMode even when ctx has UI", async () => {
-      const deps = makeDeps({
-        config: makeConfigReader({ yoloMode: true }),
-      });
-      const prompter = new PermissionPrompter(deps);
-
-      await prompter.prompt(makeCtx(true), makeDetails());
-
-      expect(mockRequestApproval).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── Non-yolo path ────────────────────────────────────────────────────────
-
-  describe("non-yolo path (UI present)", () => {
+  describe("UI present", () => {
     it("logs permission_request.waiting before calling confirmPermission", async () => {
       const logger = { review: vi.fn() };
       const approved: PermissionPromptDecision = {
@@ -392,8 +309,6 @@ describe("PermissionPrompter", () => {
     });
   });
 
-  // ── Review log field coverage ────────────────────────────────────────────
-
   describe("review log fields", () => {
     it("includes all standard fields in the waiting log entry", async () => {
       const logger = { review: vi.fn() };
@@ -456,8 +371,6 @@ describe("PermissionPrompter", () => {
       );
     });
   });
-
-  // ── Subagent forwarding path ─────────────────────────────────────────────
 
   describe("subagent forwarding path", () => {
     it("calls confirmPermission even when ctx has no UI", async () => {

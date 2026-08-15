@@ -1,14 +1,8 @@
-/**
- * Tests that handleInput emits permissions:decision events for skill input gates.
- */
 import { describe, expect, it, vi } from "vitest";
 
 import type { GatePrompter } from "#src/prompting/gate-prompter";
 import { getDecisionEvents, makeCheckResult, makeCtx, makeHandler } from "#test/helpers/handler-fixtures";
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
-/** Build a checkPermission mock returning a skill-surface result. */
 function makeSkillCheckPermission(state: "allow" | "deny" | "ask") {
   return vi.fn().mockReturnValue(
     makeCheckResult({
@@ -20,8 +14,6 @@ function makeSkillCheckPermission(state: "allow" | "deny" | "ask") {
     }),
   );
 }
-
-// ── tests ──────────────────────────────────────────────────────────────────
 
 describe("handleInput decision events — skill gate", () => {
   it("does not emit when input is not a skill invocation", async () => {
@@ -125,32 +117,6 @@ describe("handleInput decision events — skill gate", () => {
       value: "explorer",
       result: "deny",
       resolution: "confirmation_unavailable",
-    });
-  });
-
-  it("emits allow with auto_approved when prompt returns autoApproved:true", async () => {
-    const { handler, events } = makeHandler({
-      session: {
-        checkPermission: makeSkillCheckPermission("ask"),
-      },
-      prompter: {
-        canConfirm: vi.fn().mockReturnValue(true),
-        prompt: vi.fn<GatePrompter["prompt"]>().mockResolvedValue({
-          approved: true,
-          state: "approved",
-          autoApproved: true,
-        }),
-      },
-    });
-    await handler.handleInput({ text: "/skill:explorer" }, makeCtx());
-
-    const decisions = getDecisionEvents(events);
-    expect(decisions).toHaveLength(1);
-    expect(decisions[0]).toMatchObject({
-      surface: "skill",
-      value: "explorer",
-      result: "allow",
-      resolution: "auto_approved",
     });
   });
 });

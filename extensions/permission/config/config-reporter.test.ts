@@ -83,7 +83,6 @@ test("config.resolved entry appears in review log via logger", () => {
     const logsDir = join(tempDir, "logs");
     mkdirSync(logsDir, { recursive: true });
     const reviewLogPath = join(logsDir, "review.jsonl");
-    const debugLogPath = join(logsDir, "debug.jsonl");
 
     const globalConfigPath = join(tempDir, "pi-permissions.jsonc");
     writeFileSync(globalConfigPath, "{}", "utf-8");
@@ -95,12 +94,6 @@ test("config.resolved entry appears in review log via logger", () => {
     });
 
     const logger = createPermissionSystemLogger({
-      getConfig: () => ({
-        debugLog: false,
-        permissionReviewLog: true,
-        yoloMode: false,
-      }),
-      debugLogPath,
       reviewLogPath,
       ensureLogsDirectory: () => undefined,
     });

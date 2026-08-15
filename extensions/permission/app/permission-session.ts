@@ -6,7 +6,6 @@ import type { ToolCallGateInputs } from "../gates/tool-call-gate-pipeline";
 import type { ScopedPermissionManager } from "../policy/permission-manager";
 import type { SessionRules } from "../policy/session-rules";
 import type { PromptingGatewayLifecycle } from "../prompting/prompting-gateway";
-import { DEFAULT_TOOL_PREVIEW_OPTIONS, type ToolPreviewFormatterOptions } from "../prompting/tool-preview-formatter";
 import { getActiveAgentName, getActiveAgentNameFromSystemPrompt } from "./active-agent";
 import type { ExtensionPaths } from "./extension-paths";
 import type { SkillPromptEntry } from "./skill-prompt-sanitizer";
@@ -110,9 +109,5 @@ export class PermissionSession implements ToolCallGateInputs {
 
   getInfrastructureReadDirs(): string[] {
     return [...this.deps.paths.piInfrastructureDirs];
-  }
-
-  getToolPreviewLimits(): ToolPreviewFormatterOptions {
-    return DEFAULT_TOOL_PREVIEW_OPTIONS;
   }
 }

@@ -1,5 +1,4 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { ConfigReader } from "../config/config-store.ts";
 import type { PermissionEventBus } from "../integrations/permission-events.ts";
 import type { ReviewLogger } from "../integrations/session-logger.ts";
 import {
@@ -9,12 +8,7 @@ import {
   type PermissionPromptDecision,
 } from "../prompting/permission-dialog.ts";
 import type { PermissionPrompterApi, PromptPermissionDetails } from "../prompting/permission-prompter.ts";
-import {
-  maybeAutoApprovePrompt,
-  type PromptAuditDeps,
-  recordPromptDecision,
-  recordPromptWaiting,
-} from "../prompting/prompt-audit.ts";
+import { type PromptAuditDeps, recordPromptDecision, recordPromptWaiting } from "../prompting/prompt-audit.ts";
 import { type GatePrompter, setGatePrompter } from "../service.ts";
 import { previewToolCall, promptBody, toolTitle } from "./preview.ts";
 import { chooseHorizontalApproval, renderPromptBody } from "./prompt/horizontal.ts";
@@ -37,8 +31,6 @@ function makeGatePromter(getCtx: () => ExtensionContext | null, deps: LocalPromp
     async prompt(details: PromptPermissionDetails): Promise<PermissionPromptDecision> {
       const ctx = getCtx();
       if (ctx === null) {
-        // No captured context — deny rather than hang. Matches the upstream
-        // "confirmation_unavailable" path.
         return createDeniedPermissionDecision();
       }
 
@@ -46,7 +38,6 @@ function makeGatePromter(getCtx: () => ExtensionContext | null, deps: LocalPromp
         return promptWithHorizontalPicker(ctx, details, deps.audit);
       }
 
-      // No UI: delegate so subagent forwarding stays on the upstream path.
       return deps.prompter.prompt(ctx, details);
     },
   };
@@ -57,9 +48,6 @@ async function promptWithHorizontalPicker(
   details: PromptPermissionDetails,
   deps: PromptAuditDeps & { events: PermissionEventBus },
 ): Promise<PermissionPromptDecision> {
-  const autoDecision = maybeAutoApprovePrompt(details, deps);
-  if (autoDecision) return autoDecision;
-
   recordPromptWaiting(details, deps);
   const decision = await promptForHorizontalDecision(ctx, details);
   recordPromptDecision(details, decision, deps.logger);
@@ -120,7 +108,6 @@ export function installLocalPrompter(
   deps: {
     prompter: PermissionPrompterApi;
     canResolve: (ctx: ExtensionContext) => boolean;
-    config: ConfigReader;
     logger: ReviewLogger;
   },
 ): void {
@@ -128,7 +115,7 @@ export function installLocalPrompter(
   const prompter = makeGatePromter(() => currentCtx, {
     prompter: deps.prompter,
     canResolve: deps.canResolve,
-    audit: { config: deps.config, events: api.events, logger: deps.logger },
+    audit: { events: api.events, logger: deps.logger },
   });
 
   api.on("session_start", (_event, ctx) => {

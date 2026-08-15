@@ -1,20 +1,9 @@
-/**
- * Permission event channel — public contract.
- *
- * Exports channel name constants, protocol version, TypeScript types for all
- * emitted events and RPC envelopes, and thin emit helpers.
- *
- * Stability guarantee: fields may be added, but existing fields will not be
- * removed or renamed without a semver-major version bump.
- */
+/** Public event fields are removed or renamed only in semver-major releases. */
 
-/** Minimal event bus interface required by the emit helpers and RPC handlers. */
 export interface PermissionEventBus {
   emit(channel: string, data: unknown): void;
   on(channel: string, handler: (data: unknown) => void): () => void;
 }
-
-// ── Protocol version ───────────────────────────────────────────────────────
 
 /**
  * RPC protocol version.
@@ -22,15 +11,10 @@ export interface PermissionEventBus {
  */
 export const PERMISSIONS_PROTOCOL_VERSION = 1;
 
-// ── Channel name constants ─────────────────────────────────────────────────
-
-/** Emitted at `session_start`, after the service is published. */
 export const PERMISSIONS_READY_CHANNEL = "permissions:ready";
 
-/** Emitted when a permission request is committed to the active UI prompt path. */
 export const PERMISSIONS_UI_PROMPT_CHANNEL = "permissions:ui_prompt";
 
-/** Emitted after every permission gate resolution. */
 export const PERMISSIONS_DECISION_CHANNEL = "permissions:decision";
 
 /**
@@ -48,21 +32,11 @@ export const PERMISSIONS_DECISION_CHANNEL = "permissions:decision";
  */
 export const PERMISSIONS_RPC_CHECK_CHANNEL = "permissions:rpc:check";
 
-/** RPC request channel — forward a permission prompt to the parent UI. */
 export const PERMISSIONS_RPC_PROMPT_CHANNEL = "permissions:rpc:prompt";
 
-// ── Shared RPC envelope ────────────────────────────────────────────────────
-
-/**
- * Standard RPC reply envelope.
- * Success: `{ success: true, protocolVersion, data? }`.
- * Error:   `{ success: false, protocolVersion, error }`.
- */
 export type PermissionsRpcReply<T = void> =
   | { success: true; protocolVersion: number; data?: T }
   | { success: false; protocolVersion: number; error: string };
-
-// ── permissions:ready ──────────────────────────────────────────────────────
 
 /**
  * Payload emitted on `permissions:ready`.
@@ -73,8 +47,6 @@ export type PermissionsRpcReply<T = void> =
  */
 export type PermissionsReadyEvent = Record<string, never>;
 
-// ── permissions:ui_prompt ──────────────────────────────────────────────────
-
 /**
  * Origin of a UI prompt.
  *
@@ -84,11 +56,8 @@ export type PermissionsReadyEvent = Record<string, never>;
  */
 export type PermissionUiPromptSource = "tool_call" | "skill_input" | "skill_read" | "rpc_prompt";
 
-/** Forwarding context, present only when a prompt was forwarded from a non-UI subagent. */
 export interface ForwardedPromptContext {
-  /** Requesting subagent's display name, when known. */
   requesterAgentName: string | null;
-  /** Requesting subagent's session id, when known. */
   requesterSessionId: string | null;
 }
 
@@ -103,25 +72,15 @@ export interface ForwardedPromptContext {
  * consumers should read defensively.
  */
 export interface PermissionUiPromptEvent {
-  /** Unique ID for the permission request being prompted. */
   requestId: string;
-  /** Prompt origin. */
   source: PermissionUiPromptSource;
-  /** Normalized display surface (e.g. "bash", "skill"), when known. */
   surface: string | null;
-  /** Normalized display value (command, path, skill name, etc.), when known. */
   value: string | null;
-  /** Agent name (when known). */
   agentName: string | null;
-  /** Message displayed to the user. */
   message: string;
-  /** Forwarding context, or null for a direct prompt. */
   forwarding: ForwardedPromptContext | null;
 }
 
-// ── permissions:decision ───────────────────────────────────────────────────
-
-/** How a permission decision was reached. */
 export type PermissionDecisionResolution =
   | "policy_allow"
   | "policy_deny"
@@ -130,75 +89,42 @@ export type PermissionDecisionResolution =
   | "user_approved"
   | "user_approved_for_session"
   | "user_denied"
-  | "auto_approved"
   | "confirmation_unavailable";
 
-/** Payload emitted on `permissions:decision`. */
 export interface PermissionDecisionEvent {
-  /** Permission surface: "bash", "read", "mcp", "skill", "external_directory", etc. */
   surface: string;
-  /** The value that was evaluated (command, tool name, skill name, path). */
   value: string;
-  /** Final decision. */
   result: "allow" | "deny";
-  /** How the decision was reached. */
   resolution: PermissionDecisionResolution;
-  /** Which config scope contributed the winning rule (when available). */
   origin: string | null;
-  /** Agent name (when known). */
   agentName: string | null;
-  /** Matched pattern from the winning rule (when available). */
   matchedPattern: string | null;
 }
 
-// ── permissions:rpc:check ──────────────────────────────────────────────────
-
-/**
- * Request payload for `permissions:rpc:check`.
- *
- * @deprecated Prefer `getPermissionsService().checkPermission()` from the
- * service accessor module. See `PERMISSIONS_RPC_CHECK_CHANNEL` for details.
- */
+/** @deprecated Prefer `getPermissionsService().checkPermission()`. */
 export interface PermissionsCheckRequest {
   requestId: string;
-  /** Permission surface to evaluate. */
   surface: string;
-  /** The value to evaluate: command string, tool name, skill name, or path. */
   value?: string;
-  /** Optional agent name for per-agent policy resolution. */
   agentName?: string;
 }
 
-/**
- * Data field in a successful `permissions:rpc:check` reply.
- *
- * @deprecated Prefer `getPermissionsService().checkPermission()` from the
- * service accessor module. See `PERMISSIONS_RPC_CHECK_CHANNEL` for details.
- */
+/** @deprecated Prefer `getPermissionsService().checkPermission()`. */
 export interface PermissionsCheckReplyData {
   result: "allow" | "deny" | "ask";
   matchedPattern: string | null;
   origin: string | null;
 }
 
-// ── permissions:rpc:prompt ─────────────────────────────────────────────────
-
-/** Request payload for `permissions:rpc:prompt`. */
 export interface PermissionsPromptRequest {
   requestId: string;
-  /** Permission surface being evaluated. */
   surface: string;
-  /** Value being evaluated (shown in the dialog). */
   value: string;
-  /** Optional agent name for display. */
   agentName?: string;
-  /** Message to display in the permission dialog. */
   message: string;
-  /** Optional label for the "for this session" option. */
   sessionLabel?: string;
 }
 
-/** Data field in a successful `permissions:rpc:prompt` reply. */
 export interface PermissionsPromptReplyData {
   approved: boolean;
   /**
@@ -208,8 +134,6 @@ export interface PermissionsPromptReplyData {
   state: string;
   denialReason?: string;
 }
-
-// ── Emit helpers ───────────────────────────────────────────────────────────
 
 /**
  * Emit the `permissions:ready` broadcast.

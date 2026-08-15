@@ -1,6 +1,6 @@
 import type { SubagentSessionRegistry } from "#src/forwarding/subagents/subagent-registry";
 import type { PermissionEventBus } from "#src/integrations/permission-events";
-import type { DebugReviewLogger } from "#src/integrations/session-logger";
+import type { ReviewLogger } from "#src/integrations/session-logger";
 import type { PermissionDecisionRequester } from "./permission-forwarder-types";
 
 export type PermissionForwarderState = {
@@ -8,6 +8,6 @@ export type PermissionForwarderState = {
   subagentSessionsDir: string;
   registry: SubagentSessionRegistry | undefined;
   events: PermissionEventBus | undefined;
-  logger: DebugReviewLogger;
+  logger: ReviewLogger;
   requestPermissionDecisionFromUi: PermissionDecisionRequester;
 };

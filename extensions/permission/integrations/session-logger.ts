@@ -3,32 +3,19 @@ import { REVIEW_LOG_FILENAME } from "../config/config-paths";
 import { ensurePermissionSystemLogsDirectory } from "../config/extension-config";
 import { createPermissionSystemLogger, type PermissionSystemLogger } from "./logging";
 
-/** Narrowest logging seam — consumers that only write review-log entries. */
 export interface ReviewLogger {
   review(event: string, details?: Record<string, unknown>): void;
 }
-
-/** Logging seam. */
-export type DebugReviewLogger = ReviewLogger;
 
 export interface SessionLogger extends ReviewLogger {
   warn(message: string): void;
 }
 
 export interface SessionLoggerDeps {
-  /** Root logs directory; the review log file path derives from it. */
   globalLogsDir: string;
-  /** Surfaces a warning message to the user. */
   notify: (message: string) => void;
 }
 
-/**
- * Concrete `SessionLogger` implementation.
- *
- * Composes the JSONL log writer, privately owns the IO-failure warning
- * dedup Set, and routes both IO-failure warnings and explicit warn() calls
- * through the injected notify sink.
- */
 export class PermissionSessionLogger implements SessionLogger {
   private readonly writer: PermissionSystemLogger;
   private readonly reported = new Set<string>();

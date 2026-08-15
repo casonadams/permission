@@ -1,4 +1,4 @@
-import type { DebugReviewLogger } from "#src/integrations/session-logger";
+import type { ReviewLogger } from "#src/integrations/session-logger";
 
 export function formatUnknownErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -7,28 +7,16 @@ export function formatUnknownErrorMessage(error: unknown): string {
   return String(error);
 }
 
-/**
- * Log a warning to both the review and debug logs.
- * Pass `null` for `logger` to silently no-op (e.g. in unit tests without IO).
- */
-export function logPermissionForwardingWarning(
-  logger: DebugReviewLogger | null,
-  message: string,
-  error?: unknown,
-): void {
+export function logPermissionForwardingWarning(logger: ReviewLogger | null, message: string, error?: unknown): void {
   logPermissionForwardingIssue({ logger, event: "permission_forwarding.warning", message, error });
 }
 
-/**
- * Log an error to both the review and debug logs.
- * Pass `null` for `logger` to silently no-op (e.g. in unit tests without IO).
- */
-export function logPermissionForwardingError(logger: DebugReviewLogger | null, message: string, error?: unknown): void {
+export function logPermissionForwardingError(logger: ReviewLogger | null, message: string, error?: unknown): void {
   logPermissionForwardingIssue({ logger, event: "permission_forwarding.error", message, error });
 }
 
 type PermissionForwardingLogIssue = {
-  logger: DebugReviewLogger | null;
+  logger: ReviewLogger | null;
   event: "permission_forwarding.warning" | "permission_forwarding.error";
   message: string;
   error?: unknown;

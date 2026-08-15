@@ -30,7 +30,6 @@ function circularMarker(value: unknown, seen: WeakSet<object>): string | undefin
 }
 
 export interface PermissionSystemLogger {
-  debug?: (event: string, details?: Record<string, unknown>) => string | undefined;
   review: (event: string, details?: Record<string, unknown>) => string | undefined;
 }
 
@@ -45,12 +44,6 @@ type LogLine = {
   details: Record<string, unknown>;
 };
 
-/**
- * Build a logger that always writes the audit-trail stream to JSONL.
- *
- * The optional `debug` slot stays in the interface for compatibility but is
- * a no-op; only `review` writes to disk.
- */
 export function createPermissionSystemLogger(options: PermissionSystemLoggerOptions): PermissionSystemLogger {
   const { reviewLogPath, ensureLogsDirectory } = options;
 
@@ -79,7 +72,6 @@ export function createPermissionSystemLogger(options: PermissionSystemLoggerOpti
   };
 
   return {
-    debug: () => undefined,
     review: (event, details = {}) => writeLine({ path: reviewLogPath, event, details }),
   };
 }

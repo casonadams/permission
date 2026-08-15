@@ -4,11 +4,8 @@ import { type DecisionReporter, GateDecisionReporter } from "#src/integrations/d
 import { PERMISSIONS_DECISION_CHANNEL, type PermissionDecisionEvent } from "#src/integrations/permission-events";
 import type { SessionLogger } from "#src/integrations/session-logger";
 
-// ── fixtures ───────────────────────────────────────────────────────────────
-
 function makeLogger(): SessionLogger {
   return {
-    debug: vi.fn(),
     review: vi.fn(),
     warn: vi.fn(),
   };
@@ -33,8 +30,6 @@ function makeDecisionEvent(overrides: Partial<PermissionDecisionEvent> = {}): Pe
     ...overrides,
   };
 }
-
-// ── tests ──────────────────────────────────────────────────────────────────
 
 describe("GateDecisionReporter", () => {
   it("satisfies the DecisionReporter interface", () => {

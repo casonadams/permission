@@ -1,11 +1,6 @@
 import type { PermissionDecisionEvent, PermissionDecisionResolution } from "#src/integrations/permission-events";
 import type { PermissionCheckResult } from "#src/policy/types";
 
-/**
- * Derive the human-readable value for a decision event from a check result.
- * Bash → extracted command; MCP → qualified target;
- * path-bearing tools → file path; others → tool name.
- */
 export function deriveDecisionValue(
   toolName: string,
   check: Pick<PermissionCheckResult, "command" | "target">,
@@ -21,13 +16,6 @@ function fallbackToToolName(value: string | undefined, toolName: string): string
   return value ?? toolName;
 }
 
-/**
- * Build a `PermissionDecisionEvent` from the gate's inputs.
- *
- * Centralises the `origin / agentName / matchedPattern ?? null` normalization
- * that is otherwise duplicated across the session-hit path and the gate-result
- * path in `runGateCheck`.
- */
 export interface BuildDecisionEventArgs {
   decision: { surface: string; value: string };
   check: Pick<PermissionCheckResult, "origin" | "matchedPattern">;
@@ -49,21 +37,11 @@ export function buildDecisionEvent(args: BuildDecisionEventArgs): PermissionDeci
   };
 }
 
-/**
- * Map the gate outcome back to a PermissionDecisionResolution.
- *
- * @param state     - The permission state passed to the gate.
- * @param action    - The gate's resulting action ("allow" | "block").
- * @param hasSession - True when the gate result carries a sessionApproval
- *                    (indicates the user chose "for this session").
- * @param canConfirm - Whether an interactive prompt was available.
- */
 export interface DeriveResolutionArgs {
   state: "allow" | "deny" | "ask";
   action: "allow" | "block";
   hasSession: boolean;
   canConfirm: boolean;
-  autoApproved?: boolean;
 }
 
 export function deriveResolution(args: DeriveResolutionArgs): PermissionDecisionResolution {
@@ -74,7 +52,6 @@ export function deriveResolution(args: DeriveResolutionArgs): PermissionDecision
     action: args.action,
     hasSession: args.hasSession,
     canConfirm: args.canConfirm,
-    autoApproved: args.autoApproved ?? false,
   });
 }
 
@@ -82,10 +59,8 @@ function deriveAskResolution(params: {
   action: "allow" | "block";
   hasSession: boolean;
   canConfirm: boolean;
-  autoApproved: boolean;
 }): PermissionDecisionResolution {
   if (params.action === "allow") {
-    if (params.autoApproved) return "auto_approved";
     return params.hasSession ? "user_approved_for_session" : "user_approved";
   }
   return params.canConfirm ? "user_denied" : "confirmation_unavailable";

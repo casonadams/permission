@@ -60,12 +60,6 @@ describe("deriveResolution", () => {
     );
   });
 
-  it("returns auto_approved when autoApproved flag is set", () => {
-    expect(
-      deriveResolution({ state: "ask", action: "allow", hasSession: false, canConfirm: true, autoApproved: true }),
-    ).toBe("auto_approved");
-  });
-
   it("returns user_denied for ask + block with canConfirm", () => {
     expect(deriveResolution({ state: "ask", action: "block", hasSession: false, canConfirm: true })).toBe(
       "user_denied",

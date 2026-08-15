@@ -26,16 +26,12 @@ import {
 } from "#src/integrations/permission-events";
 import { getGlobalConfigPath } from "../config/config-paths";
 
-// ── Minimal EventBus stub ──────────────────────────────────────────────────
-
 function makeEventBus() {
   return {
     emit: vi.fn(),
     on: vi.fn().mockReturnValue(() => undefined),
   };
 }
-
-// ── Constants ──────────────────────────────────────────────────────────────
 
 describe("constants", () => {
   it("PERMISSIONS_PROTOCOL_VERSION is 1", () => {
@@ -50,8 +46,6 @@ describe("constants", () => {
     expect(PERMISSIONS_RPC_PROMPT_CHANNEL).toBe("permissions:rpc:prompt");
   });
 });
-
-// ── emitReadyEvent ─────────────────────────────────────────────────────────
 
 describe("emitReadyEvent", () => {
   it("emits an empty payload on the permissions:ready channel", () => {
@@ -79,8 +73,6 @@ describe("emitReadyEvent", () => {
     expect(() => emitReadyEvent(bus)).not.toThrow();
   });
 });
-
-// ── emitUiPromptEvent ──────────────────────────────────────────────────────
 
 describe("emitUiPromptEvent", () => {
   function makeUiPromptEvent(overrides: Partial<PermissionUiPromptEvent> = {}): PermissionUiPromptEvent {
@@ -123,8 +115,6 @@ describe("emitUiPromptEvent", () => {
     expect(() => emitUiPromptEvent(bus, makeUiPromptEvent())).not.toThrow();
   });
 });
-
-// ── emitDecisionEvent ──────────────────────────────────────────────────────
 
 describe("emitDecisionEvent", () => {
   function makeDecisionEvent(overrides: Partial<PermissionDecisionEvent> = {}): PermissionDecisionEvent {
@@ -171,7 +161,6 @@ describe("emitDecisionEvent", () => {
       "user_approved",
       "user_approved_for_session",
       "user_denied",
-      "auto_approved",
       "confirmation_unavailable",
     ];
     const bus = makeEventBus();
@@ -208,8 +197,6 @@ describe("emitDecisionEvent", () => {
     expect(() => emitDecisionEvent(bus, makeDecisionEvent())).not.toThrow();
   });
 });
-
-// ── Type-shape compile-time checks (runtime assertions on literal values) ──
 
 describe("type shapes (PermissionsRpcReply)", () => {
   it("success reply has success=true and protocolVersion", () => {
@@ -314,8 +301,6 @@ describe("type shapes (PermissionsPromptReplyData)", () => {
   });
 });
 
-// ── piPermissionSystemExtension emits permissions:ready ────────────────────
-
 describe("piPermissionSystemExtension ready event wiring", () => {
   let baseDir: string;
   let originalAgentDir: string | undefined;
@@ -356,7 +341,6 @@ describe("piPermissionSystemExtension ready event wiring", () => {
       events: { emit: emitSpy, on: vi.fn().mockReturnValue(() => undefined) },
     } as never);
 
-    // ready is not emitted at load — only after session_start publishes.
     expect(emitSpy.mock.calls.filter(([c]) => c === PERMISSIONS_READY_CHANNEL)).toHaveLength(0);
 
     const ctx = {

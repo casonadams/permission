@@ -8,17 +8,13 @@ import {
   type PermissionForwarderDeps,
 } from "#src/forwarding/permission-forwarder";
 import { createPermissionForwardingLocation } from "#src/forwarding/permission-forwarding";
-import { DEFAULT_EXTENSION_CONFIG } from "../config/extension-config";
-
-// ── Helpers ───────────────────────────────────────────────────────────────
 
 function makeDeps(overrides: Partial<PermissionForwarderDeps> = {}): PermissionForwarderDeps {
   return {
     forwardingDir: "/tmp/forwarding",
     subagentSessionsDir: "/tmp/subagents",
-    logger: { review: vi.fn(), debug: vi.fn() },
+    logger: { review: vi.fn() },
     requestPermissionDecisionFromUi: vi.fn().mockResolvedValue({ approved: true, state: "approved" as const }),
-    config: { current: () => ({ ...DEFAULT_EXTENSION_CONFIG }) },
     ...overrides,
   };
 }
@@ -45,8 +41,6 @@ function makeCtx(
 afterEach(() => {
   vi.unstubAllEnvs();
 });
-
-// ── requestApproval ───────────────────────────────────────────────────────
 
 describe("requestApproval — UI fast path", () => {
   test("calls requestPermissionDecisionFromUi but does not emit a UI prompt event (the prompter does)", async () => {
@@ -82,8 +76,6 @@ describe("requestApproval — non-UI, non-subagent path", () => {
     expect(requestPermissionDecisionFromUi).not.toHaveBeenCalled();
   });
 });
-
-// ── processInbox ──────────────────────────────────────────────────────────
 
 describe("processInbox", () => {
   test("emits a UI prompt event before showing a forwarded permission dialog", async () => {
@@ -217,68 +209,12 @@ describe("processInbox", () => {
     }
   });
 
-  test("does not emit a UI prompt event when forwarded permission auto-approves", async () => {
-    const root = mkdtempSync(join(tmpdir(), "permission-forwarding-"));
-    try {
-      const forwardingDir = join(root, "forwarding");
-      const location = createPermissionForwardingLocation(forwardingDir, "parent-session");
-      mkdirSync(location.requestsDir, { recursive: true });
-      mkdirSync(location.responsesDir, { recursive: true });
-      writeFileSync(
-        join(location.requestsDir, "req-forwarded-auto.json"),
-        JSON.stringify({
-          id: "req-forwarded-auto",
-          createdAt: Date.now(),
-          requesterSessionId: "child-session",
-          targetSessionId: "parent-session",
-          requesterAgentName: "Explore",
-          message: "Allow git push?",
-        }),
-        "utf-8",
-      );
-
-      const events = {
-        emit: vi.fn(),
-        on: vi.fn().mockReturnValue(() => undefined),
-      };
-      const requestPermissionDecisionFromUi = vi.fn();
-
-      const forwarder = new PermissionForwarder(
-        makeDeps({
-          forwardingDir,
-          events,
-          requestPermissionDecisionFromUi,
-          config: {
-            current: () => ({ ...DEFAULT_EXTENSION_CONFIG, yoloMode: true }),
-          },
-        }),
-      );
-
-      await forwarder.processInbox(
-        makeCtx({
-          hasUI: true,
-          sessionManager: {
-            getSessionId: vi.fn(() => "parent-session"),
-          },
-        }),
-      );
-
-      expect(events.emit).not.toHaveBeenCalledWith("permissions:ui_prompt", expect.anything());
-      expect(requestPermissionDecisionFromUi).not.toHaveBeenCalled();
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
   test("recreates a missing responses/ directory and still writes the response", async () => {
     const root = mkdtempSync(join(tmpdir(), "permission-forwarding-"));
     try {
       const forwardingDir = join(root, "forwarding");
       const location = createPermissionForwardingLocation(forwardingDir, "parent-session");
-      // Simulate the race: requests/ exists with a pending file, but
-      // responses/ was removed by a concurrent cleanup pass.
       mkdirSync(location.requestsDir, { recursive: true });
-      // Deliberately do NOT create location.responsesDir.
       writeFileSync(
         join(location.requestsDir, "req-race.json"),
         JSON.stringify({
@@ -312,8 +248,6 @@ describe("processInbox", () => {
         }),
       );
 
-      // processInbox must have recreated responses/ and written a response
-      // file — no permission_forwarding.error should have been logged.
       expect(logger.review).not.toHaveBeenCalledWith("permission_forwarding.error", expect.anything());
       expect(requestPermissionDecisionFromUi).toHaveBeenCalled();
     } finally {

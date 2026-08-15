@@ -1,8 +1,6 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Module mocks (hoisted) ─────────────────────────────────────────────────
-
 const { mockGetActiveAgentName, mockGetActiveAgentNameFromSystemPrompt } = vi.hoisted(() => ({
   mockGetActiveAgentName: vi.fn<(ctx: ExtensionContext) => string | null>(),
   mockGetActiveAgentNameFromSystemPrompt: vi.fn<(systemPrompt?: string) => string | null>(),
@@ -13,15 +11,11 @@ vi.mock("./active-agent", () => ({
   getActiveAgentNameFromSystemPrompt: mockGetActiveAgentNameFromSystemPrompt,
 }));
 
-// ── Test helpers ───────────────────────────────────────────────────────────
-
 import type { SkillPromptEntry } from "#src/app/skill-prompt-sanitizer";
 import { SessionApproval } from "#src/policy/session-approval";
 import { makeCtx } from "#test/helpers/handler-fixtures";
-import { makeConfigStore, makeFakePermissionManager, makeRealSession } from "#test/helpers/session-fixtures";
-import type { DEFAULT_EXTENSION_CONFIG } from "../config/extension-config";
+import { makeFakePermissionManager, makeRealSession } from "#test/helpers/session-fixtures";
 
-// Alias so the existing tests read naturally.
 const createSession = makeRealSession;
 const makePermissionManager = makeFakePermissionManager;
 
@@ -36,8 +30,6 @@ function makeSkillEntry(name: string, overrides: Partial<SkillPromptEntry> = {})
     ...overrides,
   };
 }
-
-// ── Tests ──────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   mockGetActiveAgentName.mockReset();
@@ -96,13 +88,11 @@ describe("PermissionSession", () => {
 
     it("clears cache keys", () => {
       const { session } = createSession();
-      // Prime both gates with a key
       session.activeToolsGate.runIfChanged("key-1", () => {});
       session.promptStateGate.runIfChanged("key-2", () => {});
 
       session.resetForNewSession(makeCtx());
 
-      // After reset, the same keys should run the effect again
       const toolsEffect = vi.fn();
       const promptEffect = vi.fn();
       session.activeToolsGate.runIfChanged("key-1", toolsEffect);
@@ -148,7 +138,6 @@ describe("PermissionSession", () => {
 
       session.resetForNewSession(ctx);
 
-      // Verify context is stored by calling resolveAgentName which needs it
       mockGetActiveAgentName.mockReturnValue("test-agent");
       const name = session.resolveAgentName(ctx);
       expect(name).toBe("test-agent");
@@ -168,13 +157,11 @@ describe("PermissionSession", () => {
 
     it("clears cache keys", () => {
       const { session } = createSession();
-      // Prime both gates with a key
       session.activeToolsGate.runIfChanged("k1", () => {});
       session.promptStateGate.runIfChanged("k2", () => {});
 
       session.shutdown();
 
-      // After shutdown, the same keys should run the effect again
       const toolsEffect = vi.fn();
       const promptEffect = vi.fn();
       session.activeToolsGate.runIfChanged("k1", toolsEffect);
@@ -245,11 +232,9 @@ describe("PermissionSession", () => {
       const { session } = createSession();
       const ctx = makeCtx();
 
-      // First call sets name
       mockGetActiveAgentName.mockReturnValue("first-agent");
       session.resolveAgentName(ctx);
 
-      // Second call with no name resolves to last known
       mockGetActiveAgentName.mockReturnValue(null);
       mockGetActiveAgentNameFromSystemPrompt.mockReturnValue(null);
       expect(session.resolveAgentName(ctx)).toBe("first-agent");
@@ -266,17 +251,7 @@ describe("PermissionSession", () => {
   });
 
   describe("infrastructure paths", () => {
-    it("getInfrastructureReadDirs combines piInfrastructureDirs and piInfrastructureReadPaths", () => {
-      const configStore = makeConfigStore({
-        current: vi.fn().mockReturnValue({
-          piInfrastructureReadPaths: ["/extra/path"],
-        }),
-      });
-      const { session } = createSession({ configStore });
-      expect(session.getInfrastructureReadDirs()).toEqual(["/test/agent", "/test/agent/git", "/extra/path"]);
-    });
-
-    it("getInfrastructureReadDirs returns only piInfrastructureDirs when config omits the field", () => {
+    it("getInfrastructureReadDirs returns only piInfrastructureDirs", () => {
       const { session } = createSession();
       expect(session.getInfrastructureReadDirs()).toEqual(["/test/agent", "/test/agent/git"]);
     });
@@ -295,36 +270,6 @@ describe("PermissionSession", () => {
       session.logResolvedConfigPaths();
       expect(configStore.logResolvedPaths).toHaveBeenCalled();
     });
-
-    it("config getter delegates to configStore.current()", () => {
-      const fakeConfig = { debugLog: true } as typeof DEFAULT_EXTENSION_CONFIG;
-      const configStore = makeConfigStore({
-        current: vi.fn().mockReturnValue(fakeConfig),
-      });
-      const { session } = createSession({ configStore });
-      expect(session.config).toBe(fakeConfig);
-    });
-
-    it("getToolPreviewLimits returns resolved preview limits from config", () => {
-      const configStore = makeConfigStore({
-        current: vi.fn().mockReturnValue({
-          toolInputPreviewMaxLength: 400,
-          toolTextSummaryMaxLength: 120,
-        }),
-      });
-      const { session } = createSession({ configStore });
-      const limits = session.getToolPreviewLimits();
-      expect(limits.toolInputPreviewMaxLength).toBe(400);
-      expect(limits.toolTextSummaryMaxLength).toBe(120);
-    });
-
-    it("getToolPreviewLimits falls back to built-in defaults when config omits fields", () => {
-      const { session } = createSession();
-      const limits = session.getToolPreviewLimits();
-      expect(limits.toolInputPreviewMaxLength).toBeGreaterThan(0);
-      expect(limits.toolTextSummaryMaxLength).toBeGreaterThan(0);
-      expect(limits.toolInputLogPreviewMaxLength).toBeGreaterThan(0);
-    });
   });
 
   describe("reload", () => {
@@ -341,14 +286,12 @@ describe("PermissionSession", () => {
 
     it("clears caches and skill entries", () => {
       const { session } = createSession();
-      // Prime both gates with a key
       session.activeToolsGate.runIfChanged("k1", () => {});
       session.promptStateGate.runIfChanged("k2", () => {});
       session.setActiveSkillEntries([makeSkillEntry("s")]);
 
       session.reload();
 
-      // After reload, the same keys should run the effect again
       const toolsEffect = vi.fn();
       const promptEffect = vi.fn();
       session.activeToolsGate.runIfChanged("k1", toolsEffect);

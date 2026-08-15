@@ -2,11 +2,8 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-c
 import type { Ruleset } from "../policy/rule";
 
 interface PermissionSystemConfigController {
-  /** Precomputed global config file path. */
   configPath: string;
-  /** Returns the composed config-layer ruleset for the active agent scope. */
   getActiveAgentConfigRules(): Ruleset;
-  /** Returns a short summary of the currently effective permission rules. */
   summarizeConfig(): string;
 }
 
@@ -17,6 +14,15 @@ type Subcommand = "show" | "path" | "help";
 function isSubcommand(value: string): value is Subcommand {
   return value === "show" || value === "path" || value === "help";
 }
+
+const SUBCOMMAND_HANDLERS: Record<
+  Subcommand,
+  (ctx: ExtensionCommandContext, controller: PermissionSystemConfigController) => void
+> = {
+  show: (ctx, controller) => ctx.ui.notify(`permission-system: ${controller.summarizeConfig()}`, "info"),
+  path: (ctx, controller) => ctx.ui.notify(`permission-system config: ${controller.configPath}`, "info"),
+  help: (ctx) => ctx.ui.notify(USAGE_TEXT, "info"),
+};
 
 function handleSubcommand(
   args: string,
@@ -29,17 +35,8 @@ function handleSubcommand(
     ctx.ui.notify(USAGE_TEXT, "warning");
     return true;
   }
-  switch (normalized) {
-    case "show":
-      ctx.ui.notify(`permission-system: ${controller.summarizeConfig()}`, "info");
-      return true;
-    case "path":
-      ctx.ui.notify(`permission-system config: ${controller.configPath}`, "info");
-      return true;
-    case "help":
-      ctx.ui.notify(USAGE_TEXT, "info");
-      return true;
-  }
+  SUBCOMMAND_HANDLERS[normalized](ctx, controller);
+  return true;
 }
 
 export function registerPermissionSystemCommand(pi: ExtensionAPI, controller: PermissionSystemConfigController): void {

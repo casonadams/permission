@@ -67,11 +67,11 @@ describe("buildDirectUiPrompt", () => {
         message: "Allow external directory?",
         toolName: "mcp",
         path: "/outside/file.ts",
-        promptSurface: "external_directory",
+        promptSurface: "path",
         promptValue: "/outside/file.ts",
       }),
     ).toMatchObject({
-      surface: "external_directory",
+      surface: "path",
       value: "/outside/file.ts",
     });
   });

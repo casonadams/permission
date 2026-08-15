@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createApprovedPermissionDecision,
-  createAutoApprovedPermissionDecision,
   createDeniedPermissionDecision,
   createSessionApprovedPermissionDecision,
   isPermissionDecisionState,
@@ -163,14 +162,6 @@ describe("approved permission decision helpers", () => {
 
   it("creates a session-approved decision", () => {
     expect(createSessionApprovedPermissionDecision()).toEqual({ approved: true, state: "approved_for_session" });
-  });
-
-  it("creates an auto-approved decision", () => {
-    expect(createAutoApprovedPermissionDecision()).toEqual({
-      approved: true,
-      state: "approved",
-      autoApproved: true,
-    });
   });
 });
 

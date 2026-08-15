@@ -21,7 +21,7 @@ export interface GateRunnerDeps {
 
 type DescriptorRunContext = { descriptor: GateDescriptor; agentName: string | null; toolCallId: string };
 type GateRunArgs = [agentName: string | null, toolCallId: string, toolCallApproved?: boolean];
-type AppliedDescriptorGate = { gateResult: PermissionGateResult; canConfirm: boolean; autoApproved: boolean };
+type AppliedDescriptorGate = { gateResult: PermissionGateResult; canConfirm: boolean };
 
 export class GateRunner {
   constructor(private readonly deps: GateRunnerDeps) {}
@@ -99,21 +99,16 @@ export class GateRunner {
   ): Promise<AppliedDescriptorGate> {
     const prompter = this.activePrompter();
     const canConfirm = prompter.canConfirm();
-    let autoApproved = false;
     const gateResult = await applyPermissionGate({
       state: check.state,
       canConfirm,
       sessionApproval: ctx.descriptor.sessionApproval?.toGateApproval(),
-      promptForApproval: async () => {
-        const decision = await prompter.prompt({ requestId: ctx.toolCallId, ...ctx.descriptor.promptDetails });
-        autoApproved = decision.autoApproved === true;
-        return decision;
-      },
+      promptForApproval: () => prompter.prompt({ requestId: ctx.toolCallId, ...ctx.descriptor.promptDetails }),
       writeLog: (event, details) => this.deps.reporter.writeReviewLog(event, details),
       logContext: { ...ctx.descriptor.logContext, agentName: ctx.agentName },
       messages: buildGateMessages(ctx.descriptor),
     });
-    return { gateResult, canConfirm, autoApproved };
+    return { gateResult, canConfirm };
   }
 
   private emitGateDecision(
@@ -132,7 +127,6 @@ export class GateRunner {
           action: applied.gateResult.action,
           hasSession: hasSessionApproval(applied.gateResult),
           canConfirm: applied.canConfirm,
-          autoApproved: applied.autoApproved,
         }),
       }),
     );

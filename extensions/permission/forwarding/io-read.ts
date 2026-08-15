@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { ForwardedPermissionRequest, ForwardedPermissionResponse } from "#src/forwarding/permission-forwarding";
 import type { PermissionUiPromptSource } from "#src/integrations/permission-events";
-import type { DebugReviewLogger } from "#src/integrations/session-logger";
+import type { ReviewLogger } from "#src/integrations/session-logger";
 import { isPermissionDecisionState } from "#src/prompting/permission-dialog";
 import { logPermissionForwardingWarning } from "./io-log";
 
@@ -22,7 +22,7 @@ function asNullableDisplayString(value: unknown): string | null | undefined {
 }
 
 export function readForwardedPermissionRequest(
-  logger: DebugReviewLogger | null,
+  logger: ReviewLogger | null,
   filePath: string,
 ): ForwardedPermissionRequest | null {
   try {
@@ -64,7 +64,7 @@ function buildRequest(parsed: ForwardedPermissionRequest): ForwardedPermissionRe
 }
 
 export function readForwardedPermissionResponse(
-  logger: DebugReviewLogger | null,
+  logger: ReviewLogger | null,
   filePath: string,
 ): ForwardedPermissionResponse | null {
   try {

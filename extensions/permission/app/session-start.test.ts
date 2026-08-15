@@ -59,12 +59,10 @@ describe("session_start handler consolidation", () => {
     } as never);
 
     const sessionStartHandlers = registrations.filter((r) => r.name === "session_start");
-    // The fork registers two session_start handlers: the lifecycle handler
-    // (index.ts) and installLocalPrompter's ctx-capture handler (ui/prompter.ts).
     expect(sessionStartHandlers).toHaveLength(2);
   });
 
-  test("session_start handler preserves lifecycle.reload debug log", async () => {
+  test("session_start handler writes lifecycle.reload review log", async () => {
     const registrations: Array<{ name: string; handler: MockHandler }> = [];
 
     piPermissionSystemExtension({
@@ -84,7 +82,6 @@ describe("session_start handler consolidation", () => {
 
     const sessionStartHandlers = registrations.filter((r) => r.name === "session_start");
 
-    // The single handler should accept event with reason="reload" without throwing
     const mockCtx = {
       cwd: baseDir,
       ui: { select: async () => "", input: async () => "" },
@@ -95,7 +92,6 @@ describe("session_start handler consolidation", () => {
       },
     };
 
-    // Should not throw when called with a reload event
     await expect(sessionStartHandlers[0].handler({ reason: "reload" }, mockCtx)).resolves.not.toThrow();
   });
 });

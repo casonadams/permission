@@ -7,11 +7,8 @@ import type { PermissionPromptDecision } from "./permission-dialog";
 import type { PermissionPrompterApi, PromptPermissionDetails } from "./permission-prompter";
 
 export interface PromptingGatewayDeps {
-  /** Static path used to detect a forwarding subagent context. */
   subagentSessionsDir: string;
-  /** Process-global registry used to detect a registered child session. */
   registry?: SubagentSessionRegistry;
-  /** Resolves the permission decision: direct UI dialog or forwarded to parent. */
   prompter: PermissionPrompterApi;
 }
 
@@ -33,18 +30,10 @@ export class PromptingGateway implements GatePrompter, PromptingGatewayLifecycle
     this.context = null;
   }
 
-  /**
-   * Whether an interactive permission prompt can be shown.
-   *
-   * Returns false when no context is active. Otherwise resolves true when the
-   * caller has UI of its own, or is a registered subagent (whose asks are
-   * forwarded to the parent's UI).
-   */
   canConfirm(): boolean {
     if (this.context === null) return false;
     return (
-      this.context.hasUI ||
-      isSubagentExecutionContext(this.context, this.deps.subagentSessionsDir, this.deps.registry)
+      this.context.hasUI || isSubagentExecutionContext(this.context, this.deps.subagentSessionsDir, this.deps.registry)
     );
   }
 

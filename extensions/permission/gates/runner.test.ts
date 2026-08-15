@@ -6,8 +6,6 @@ import { EXTENSION_TAG } from "#src/prompting/denial-messages";
 import { makeDenialDescriptor, makeDescriptor, makeGateRunner } from "#test/helpers/gate-fixtures";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 
-// ── GateRunner — descriptor path ───────────────────────────────────────────
-
 describe("GateRunner — descriptor path", () => {
   it("returns allow and emits policy_allow when policy is allow", async () => {
     const { runner, deps } = makeGateRunner();
@@ -132,7 +130,7 @@ describe("GateRunner — descriptor path", () => {
       resolveResult: makeCheckResult({ state: "ask", matchedPattern: "*" }),
       prompt: vi.fn().mockResolvedValue({ approved: true, state: "approved_for_session" }),
     });
-    const approval = SessionApproval.multiple("external_directory", ["/outside/a/*", "/outside/b/*"]);
+    const approval = SessionApproval.multiple("path", ["/outside/a/*", "/outside/b/*"]);
     const descriptor = makeDescriptor({ sessionApproval: approval });
     const result = await runner.run(descriptor, null, "tc-1");
     expect(result).toEqual({ action: "allow", toolCallApproved: true });
@@ -166,24 +164,6 @@ describe("GateRunner — descriptor path", () => {
       expect.objectContaining({
         result: "deny",
         resolution: "confirmation_unavailable",
-      }),
-    );
-  });
-
-  it("emits auto_approved resolution when decision has autoApproved flag", async () => {
-    const { runner, deps } = makeGateRunner({
-      resolveResult: makeCheckResult({ state: "ask", matchedPattern: "*" }),
-      prompt: vi.fn().mockResolvedValue({
-        approved: true,
-        state: "approved",
-        autoApproved: true,
-      }),
-    });
-    const result = await runner.run(makeDescriptor(), null, "tc-1");
-    expect(result).toEqual({ action: "allow", toolCallApproved: true });
-    expect(deps.reporter.emitDecision).toHaveBeenCalledWith(
-      expect.objectContaining({
-        resolution: "auto_approved",
       }),
     );
   });
@@ -273,7 +253,6 @@ describe("GateRunner — descriptor path", () => {
       resolveResult: makeCheckResult({ state: "ask", matchedPattern: "*" }),
       prompt: vi.fn().mockResolvedValue({ approved: true, state: "approved_for_session" }),
     });
-    // No sessionApproval on descriptor
     await runner.run(makeDescriptor(), null, "tc-1");
     expect(deps.recordSessionApproval).not.toHaveBeenCalled();
   });
@@ -335,8 +314,6 @@ describe("GateRunner — descriptor path", () => {
     });
   });
 });
-
-// ── GateRunner.run — null and bypass dispatch ──────────────────────────────
 
 describe("GateRunner.run — null and bypass dispatch", () => {
   it("returns allow for a null gate", async () => {

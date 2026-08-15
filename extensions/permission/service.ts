@@ -35,22 +35,14 @@ export {
 export type { GatePrompter } from "./prompting/gate-prompter";
 export type { PermissionCheckResult, PermissionState, ToolInputFormatter };
 
-/** Process-global key for the service slot. */
 const SERVICE_KEY = Symbol.for("@gotgenes/pi-permission-system:service");
 
-/**
- * Public interface exposed to other extensions via `getPermissionsService()`.
- *
- * Mirrors the simplified RPC signature — surface + optional value + optional
- * agent name — and delegates to `PermissionManager.checkPermission()` with
- * current session rules internally.
- */
 export interface PermissionsService {
   /**
    * Query the permission policy for a surface and value.
    *
    * @param surface   - Permission surface: "bash", "read", "mcp", "skill",
-   *                    "external_directory", etc.
+   *                    "path", etc.
    * @param value     - The value to evaluate: command string, skill name, path,
    *                    or MCP target such as `server:tool`/`server`. Omit or
    *                    pass `undefined` for a surface-level query.
@@ -79,7 +71,7 @@ export interface PermissionsService {
    * Register a custom access-intent extractor for a specific tool name.
    *
    * The extractor declares the filesystem path a tool will access so the
-   * cross-cutting `path` and `external_directory` gates can see it. Use it for
+   * cross-cutting `path` gate can see it. Use it for
    * tools whose path lives under a non-standard key — built-in file tools and
    * any tool exposing `input.path` (plus MCP via `input.arguments.path`) are
    * already covered by convention without registration.
@@ -122,10 +114,6 @@ export function publishPermissionsService(service: PermissionsService): void {
   (globalThis as Record<symbol, unknown>)[SERVICE_KEY] = service;
 }
 
-/**
- * Retrieve the published `PermissionsService`, or `undefined` if the
- * permission-system extension has not loaded (or has been unloaded).
- */
 export function getPermissionsService(): PermissionsService | undefined {
   return (globalThis as Record<symbol, unknown>)[SERVICE_KEY] as PermissionsService | undefined;
 }
@@ -151,13 +139,4 @@ export function unpublishPermissionsService(service: PermissionsService): void {
   delete (globalThis as Record<symbol, unknown>)[SERVICE_KEY];
 }
 
-/**
- * Install a custom `GatePrompter` that the local `GateRunner` will use
- * instead of the upstream permission dialog. See
- * `./gate-prompter-registry.ts` for the registry semantics.
- *
- * Local fork: this is a new export — the upstream package does not expose
- * a prompter swap. The companion local extension under
- * `extensions/pi-permission-ui/` is the intended consumer.
- */
 export { setGatePrompter } from "./prompting/gate-prompter-registry";

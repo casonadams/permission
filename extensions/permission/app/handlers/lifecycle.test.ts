@@ -6,14 +6,11 @@ import type { ServiceLifecycle } from "#src/integrations/service-lifecycle";
 import { makeCtx } from "#test/helpers/handler-fixtures";
 import { makeLogger, makeRealResolver, makeRealSession } from "#test/helpers/session-fixtures";
 
-// ── status stub ────────────────────────────────────────────────────────────
 vi.mock("../status", () => ({
   PERMISSION_SYSTEM_STATUS_KEY: "permission-system",
   syncPermissionSystemStatus: vi.fn(),
   getPermissionSystemStatus: vi.fn(),
 }));
-
-// ── helpers ────────────────────────────────────────────────────────────────
 
 function makeSetup(opts?: { configIssues?: string[] }) {
   const { session, permissionManager, sessionRules, forwarding, configStore } = makeRealSession();
@@ -25,8 +22,6 @@ function makeSetup(opts?: { configIssues?: string[] }) {
     activate: vi.fn<ServiceLifecycle["activate"]>(),
     teardown: vi.fn<ServiceLifecycle["teardown"]>(),
   };
-  // Use a session-independent logger so assertions verify direct injection,
-  // not reach-through to session.logger.
   const logger = makeLogger();
   const handler = new SessionLifecycleHandler({ session, resolver, serviceLifecycle, logger });
   return {
@@ -40,8 +35,6 @@ function makeSetup(opts?: { configIssues?: string[] }) {
     serviceLifecycle,
   };
 }
-
-// ── handleSessionStart ─────────────────────────────────────────────────────
 
 describe("handleSessionStart", () => {
   it("refreshes config with ctx", async () => {
@@ -88,21 +81,21 @@ describe("handleSessionStart", () => {
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
-  it("writes lifecycle.reload debug log when reason is reload", async () => {
+  it("writes lifecycle.reload review log when reason is reload", async () => {
     const ctx = makeCtx({ cwd: "/proj" });
     const { handler, logger } = makeSetup();
     await handler.handleSessionStart({ reason: "reload" }, ctx);
-    expect(logger.debug).toHaveBeenCalledWith("lifecycle.reload", {
+    expect(logger.review).toHaveBeenCalledWith("lifecycle.reload", {
       triggeredBy: "session_start",
       reason: "reload",
       cwd: "/proj",
     });
   });
 
-  it("does not write lifecycle.reload debug log for non-reload reasons", async () => {
+  it("does not write lifecycle.reload review log for non-reload reasons", async () => {
     const { handler, logger } = makeSetup();
     await handler.handleSessionStart({ reason: "startup" }, makeCtx());
-    expect(logger.debug).not.toHaveBeenCalled();
+    expect(logger.review).not.toHaveBeenCalled();
   });
 
   it("activates the service for the session with ctx", async () => {
@@ -126,8 +119,6 @@ describe("handleSessionStart", () => {
   });
 });
 
-// ── handleResourcesDiscover ────────────────────────────────────────────────
-
 describe("handleResourcesDiscover", () => {
   it("does nothing when reason is not reload", async () => {
     const { handler, session } = makeSetup();
@@ -143,12 +134,12 @@ describe("handleResourcesDiscover", () => {
     expect(spy).toHaveBeenCalledOnce();
   });
 
-  it("writes lifecycle.reload debug log on reload", async () => {
+  it("writes lifecycle.reload review log on reload", async () => {
     const ctx = makeCtx({ cwd: "/proj" });
     const { handler, session, logger } = makeSetup();
     session.activate(ctx);
     await handler.handleResourcesDiscover({ reason: "reload" });
-    expect(logger.debug).toHaveBeenCalledWith("lifecycle.reload", {
+    expect(logger.review).toHaveBeenCalledWith("lifecycle.reload", {
       triggeredBy: "resources_discover",
       reason: "reload",
       cwd: "/proj",
@@ -158,15 +149,13 @@ describe("handleResourcesDiscover", () => {
   it("logs cwd as null when runtimeContext is null on reload", async () => {
     const { handler, logger } = makeSetup();
     await handler.handleResourcesDiscover({ reason: "reload" });
-    expect(logger.debug).toHaveBeenCalledWith("lifecycle.reload", {
+    expect(logger.review).toHaveBeenCalledWith("lifecycle.reload", {
       triggeredBy: "resources_discover",
       reason: "reload",
       cwd: null,
     });
   });
 });
-
-// ── handleSessionShutdown ──────────────────────────────────────────────────
 
 describe("handleSessionShutdown", () => {
   it("clears UI status when runtime context is present", async () => {

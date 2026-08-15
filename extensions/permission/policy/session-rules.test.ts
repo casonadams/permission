@@ -5,8 +5,6 @@ import { SessionApproval } from "#src/policy/session-approval";
 import type { SessionApprovalRecorder } from "#src/policy/session-approval-recorder";
 import { deriveApprovalPattern, SessionRules } from "#src/policy/session-rules";
 
-// ── SessionRules ───────────────────────────────────────────────────────────
-
 describe("SessionRules", () => {
   describe("getRuleset", () => {
     it("returns an empty ruleset initially", () => {
@@ -16,10 +14,10 @@ describe("SessionRules", () => {
 
     it("returns a ruleset containing approved rules", () => {
       const rules = new SessionRules();
-      rules.approve("external_directory", "/other/project/*");
+      rules.approve("path", "/other/project/*");
       expect(rules.getRuleset()).toEqual([
         {
-          surface: "external_directory",
+          surface: "path",
           pattern: "/other/project/*",
           action: "allow",
           layer: "session",
@@ -30,7 +28,7 @@ describe("SessionRules", () => {
 
     it("returns a defensive copy — mutations do not affect internal state", () => {
       const rules = new SessionRules();
-      rules.approve("external_directory", "/other/project/*");
+      rules.approve("path", "/other/project/*");
       const copy = rules.getRuleset();
       copy.push({
         surface: "bash",
@@ -43,8 +41,8 @@ describe("SessionRules", () => {
 
     it("accumulates multiple approved patterns", () => {
       const rules = new SessionRules();
-      rules.approve("external_directory", "/project-a/*");
-      rules.approve("external_directory", "/project-b/*");
+      rules.approve("path", "/project-a/*");
+      rules.approve("path", "/project-b/*");
       expect(rules.getRuleset()).toHaveLength(2);
     });
   });
@@ -52,17 +50,17 @@ describe("SessionRules", () => {
   describe("clear", () => {
     it("removes all session rules", () => {
       const rules = new SessionRules();
-      rules.approve("external_directory", "/other/project/*");
-      rules.approve("external_directory", "/another/path/*");
+      rules.approve("path", "/other/project/*");
+      rules.approve("path", "/another/path/*");
       rules.clear();
       expect(rules.getRuleset()).toEqual([]);
     });
 
     it("allows new approvals after clearing", () => {
       const rules = new SessionRules();
-      rules.approve("external_directory", "/old/path/*");
+      rules.approve("path", "/old/path/*");
       rules.clear();
-      rules.approve("external_directory", "/new/path/*");
+      rules.approve("path", "/new/path/*");
       expect(rules.getRuleset()).toHaveLength(1);
       expect(rules.getRuleset()[0].pattern).toBe("/new/path/*");
     });
@@ -90,7 +88,7 @@ describe("SessionRules", () => {
 
     it("records a multi-pattern approval as one rule per pattern", () => {
       const rules = new SessionRules();
-      rules.recordSessionApproval(SessionApproval.multiple("external_directory", ["/outside/a/*", "/outside/b/*"]));
+      rules.recordSessionApproval(SessionApproval.multiple("path", ["/outside/a/*", "/outside/b/*"]));
       expect(rules.getRuleset()).toHaveLength(2);
       expect(rules.getRuleset()[0].pattern).toBe("/outside/a/*");
       expect(rules.getRuleset()[1].pattern).toBe("/outside/b/*");
@@ -98,15 +96,15 @@ describe("SessionRules", () => {
 
     it("records each rule with the correct surface", () => {
       const rules = new SessionRules();
-      rules.recordSessionApproval(SessionApproval.multiple("external_directory", ["/outside/a/*", "/outside/b/*"]));
+      rules.recordSessionApproval(SessionApproval.multiple("path", ["/outside/a/*", "/outside/b/*"]));
       for (const rule of rules.getRuleset()) {
-        expect(rule.surface).toBe("external_directory");
+        expect(rule.surface).toBe("path");
       }
     });
 
     it("records nothing for an empty patterns list", () => {
       const rules = new SessionRules();
-      rules.recordSessionApproval(SessionApproval.multiple("external_directory", []));
+      rules.recordSessionApproval(SessionApproval.multiple("path", []));
       expect(rules.getRuleset()).toEqual([]);
     });
   });
@@ -114,62 +112,58 @@ describe("SessionRules", () => {
   describe("evaluate() integration", () => {
     it("returns allow for a path under an approved directory", () => {
       const session = new SessionRules();
-      session.approve("external_directory", "/other/project/*");
-      const result = evaluate("external_directory", "/other/project/src/foo.ts", session.getRuleset());
+      session.approve("path", "/other/project/*");
+      const result = evaluate("path", "/other/project/src/foo.ts", session.getRuleset());
       expect(result.action).toBe("allow");
     });
 
     it("returns ask (default) for a path outside approved directories", () => {
       const session = new SessionRules();
-      session.approve("external_directory", "/other/project/*");
-      const result = evaluate("external_directory", "/other/unrelated/file.ts", session.getRuleset());
-      // No rule matches — evaluate returns synthetic rule with default action "ask"
+      session.approve("path", "/other/project/*");
+      const result = evaluate("path", "/other/unrelated/file.ts", session.getRuleset());
       expect(result.action).toBe("ask");
     });
 
     it("does not match a sibling directory that shares a string prefix", () => {
       const session = new SessionRules();
-      session.approve("external_directory", "/other/project/*");
-      const result = evaluate("external_directory", "/other/project-b/foo.ts", session.getRuleset());
+      session.approve("path", "/other/project/*");
+      const result = evaluate("path", "/other/project-b/foo.ts", session.getRuleset());
       expect(result.action).toBe("ask");
     });
 
     it("matches the directory itself (trailing slash)", () => {
       const session = new SessionRules();
-      session.approve("external_directory", "/other/project/src/*");
-      // The * in wildcardMatch maps to .* which matches zero chars — so /src/ is covered.
-      const result = evaluate("external_directory", "/other/project/src/", session.getRuleset());
+      session.approve("path", "/other/project/src/*");
+      const result = evaluate("path", "/other/project/src/", session.getRuleset());
       expect(result.action).toBe("allow");
     });
 
     it("handles multiple approved directories", () => {
       const session = new SessionRules();
-      session.approve("external_directory", "/project-a/*");
-      session.approve("external_directory", "/project-b/*");
-      expect(evaluate("external_directory", "/project-a/foo.ts", session.getRuleset()).action).toBe("allow");
-      expect(evaluate("external_directory", "/project-b/bar.ts", session.getRuleset()).action).toBe("allow");
-      expect(evaluate("external_directory", "/project-c/baz.ts", session.getRuleset()).action).toBe("ask");
+      session.approve("path", "/project-a/*");
+      session.approve("path", "/project-b/*");
+      expect(evaluate("path", "/project-a/foo.ts", session.getRuleset()).action).toBe("allow");
+      expect(evaluate("path", "/project-b/bar.ts", session.getRuleset()).action).toBe("allow");
+      expect(evaluate("path", "/project-c/baz.ts", session.getRuleset()).action).toBe("ask");
     });
 
     it("does not match a different surface", () => {
       const session = new SessionRules();
-      session.approve("external_directory", "/other/project/*");
+      session.approve("path", "/other/project/*");
       const result = evaluate("bash", "/other/project/foo.ts", session.getRuleset());
       expect(result.action).toBe("ask");
     });
 
     it("returns allow after clearing and re-approving", () => {
       const session = new SessionRules();
-      session.approve("external_directory", "/old/project/*");
+      session.approve("path", "/old/project/*");
       session.clear();
-      session.approve("external_directory", "/new/project/*");
-      expect(evaluate("external_directory", "/old/project/file.ts", session.getRuleset()).action).toBe("ask");
-      expect(evaluate("external_directory", "/new/project/file.ts", session.getRuleset()).action).toBe("allow");
+      session.approve("path", "/new/project/*");
+      expect(evaluate("path", "/old/project/file.ts", session.getRuleset()).action).toBe("ask");
+      expect(evaluate("path", "/new/project/file.ts", session.getRuleset()).action).toBe("allow");
     });
   });
 });
-
-// ── deriveApprovalPattern ──────────────────────────────────────────────────
 
 describe("deriveApprovalPattern", () => {
   it("returns parent directory glob for a file path", () => {
@@ -181,7 +175,6 @@ describe("deriveApprovalPattern", () => {
   });
 
   it("returns parent directory glob for a directory-like path without trailing separator", () => {
-    // Cannot distinguish dir from file — dirname is the safe choice
     expect(deriveApprovalPattern("/other/project/src")).toBe("/other/project/*");
   });
 
@@ -196,14 +189,14 @@ describe("deriveApprovalPattern", () => {
   it("produces a pattern that matches paths under the approved directory", () => {
     const pattern = deriveApprovalPattern("/other/project/src/foo.ts");
     const session = new SessionRules();
-    session.approve("external_directory", pattern);
-    expect(evaluate("external_directory", "/other/project/src/bar.ts", session.getRuleset()).action).toBe("allow");
+    session.approve("path", pattern);
+    expect(evaluate("path", "/other/project/src/bar.ts", session.getRuleset()).action).toBe("allow");
   });
 
   it("produces a pattern that does not match sibling directories", () => {
     const pattern = deriveApprovalPattern("/other/project/src/foo.ts");
     const session = new SessionRules();
-    session.approve("external_directory", pattern);
-    expect(evaluate("external_directory", "/other/project/lib/bar.ts", session.getRuleset()).action).toBe("ask");
+    session.approve("path", pattern);
+    expect(evaluate("path", "/other/project/lib/bar.ts", session.getRuleset()).action).toBe("ask");
   });
 });

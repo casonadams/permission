@@ -1,3 +1,4 @@
+import { canonicalNormalizePathForComparison } from "#src/paths/path-utils";
 import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
 import { SessionApproval } from "#src/policy/session-approval";
 import { deriveApprovalPattern } from "#src/policy/session-rules";
@@ -9,21 +10,7 @@ import type { GateResult } from "./descriptor";
 import { formatPathAskPrompt } from "./path";
 import type { ToolCallContext } from "./types";
 
-/**
- * Build a pure descriptor for the cross-cutting path permission gate (bash).
- *
- * Reads path-rule candidates from the injected `BashProgram` (the broader
- * `path`-rule filter, accepting dot-files and relative paths). Each candidate
- * pairs the raw token with cd-aware policy values; the gate evaluates those
- * values against the `path` permission surface and returns the most
- * restrictive result, while prompts, logs, and session approvals use the raw
- * token.
- *
- * Returns `null` when the gate does not apply (tool is not bash, no command,
- * no tokens extracted, or all tokens evaluate to `allow`).
- * Returns a `GateBypass` when all tokens are session-covered.
- * Returns a `GateDescriptor` for the most restrictive token needing a check.
- */
+// eslint-disable-next-line complexity -- Linear checks keep candidate precedence auditable.
 export function describeBashPathGate(
   tcc: ToolCallContext,
   bashProgram: BashProgram | null,
@@ -38,15 +25,17 @@ export function describeBashPathGate(
   const restriction = choosePathRestriction(analysis.uncovered);
   if (!restriction) return null;
 
-  // Tokens with no explicit `path` rule and that resolve inside the
-  // working directory are allowed by default. Tokens that resolve
-  // outside cwd still prompt under the `path` surface.
   if (restriction.check.matchedPattern === undefined && tcc.cwd) {
-    const isExternal = (bashProgram?.externalPaths(tcc.cwd) ?? []).includes(restriction.token);
+    const cwd = tcc.cwd;
+    const externalPaths = bashProgram?.externalPaths(cwd) ?? [];
+    const candidate = input.candidates.find(({ token }) => token === restriction.token);
+    const isExternal = candidate?.policyValues.some((value) =>
+      externalPaths.includes(canonicalNormalizePathForComparison(value, cwd)),
+    );
     if (!isExternal) return null;
   }
 
-  return buildBashPathDescriptor(tcc, input.command, restriction, tcc.cwd);
+  return buildBashPathDescriptor({ tcc, command: input.command, restriction, cwd: tcc.cwd });
 }
 
 type BashPathInput = { command: string; candidates: BashPathRuleCandidate[]; tokens: string[] };
@@ -85,8 +74,11 @@ function updatePathCandidateAnalysis(args: {
   tcc: ToolCallContext;
   resolver: ScopedPermissionResolver;
 }): PathCandidateAnalysis {
-  const check = args.resolver.resolvePathPolicy(args.candidate.policyValues, args.tcc.agentName ?? undefined);
-  if (isDefaultPathAllow(check)) return { ...args.analysis, allSessionCovered: false };
+  const resolvedCheck = args.resolver.resolvePathPolicy(args.candidate.policyValues, args.tcc.agentName ?? undefined);
+  const check: PermissionCheckResult =
+    resolvedCheck.matchedPattern === undefined && resolvedCheck.source !== "session"
+      ? { ...resolvedCheck, state: "ask", source: "special" }
+      : resolvedCheck;
   return {
     allSessionCovered: args.analysis.allSessionCovered && check.source === "session",
     uncovered: appendUncoveredPath(args.analysis.uncovered, args.candidate.token, check),
@@ -99,10 +91,6 @@ function appendUncoveredPath(
   check: PermissionCheckResult,
 ): PathRestriction[] {
   return check.state === "deny" || check.state === "ask" ? [...uncovered, { token, check }] : uncovered;
-}
-
-function isDefaultPathAllow(check: PermissionCheckResult): boolean {
-  return check.matchedPattern === undefined && check.source !== "session";
 }
 
 function choosePathRestriction(uncovered: PathRestriction[]): PathRestriction | null {
@@ -129,12 +117,13 @@ function buildBashPathBypass(tcc: ToolCallContext, input: BashPathInput): GateRe
   };
 }
 
-function buildBashPathDescriptor(
-  tcc: ToolCallContext,
-  command: string,
-  restriction: PathRestriction,
-  cwd: string | undefined,
-): GateResult {
+function buildBashPathDescriptor(args: {
+  tcc: ToolCallContext;
+  command: string;
+  restriction: PathRestriction;
+  cwd: string | undefined;
+}): GateResult {
+  const { tcc, command, restriction, cwd } = args;
   const message = formatPathAskPrompt(tcc.toolName, restriction.token, tcc.agentName ?? undefined);
   return {
     surface: "path",
@@ -154,6 +143,8 @@ function buildBashPathDescriptor(
       toolCallId: tcc.toolCallId,
       toolName: tcc.toolName,
       command,
+      promptSurface: "path",
+      promptValue: restriction.token,
     },
     logContext: {
       source: "tool_call",

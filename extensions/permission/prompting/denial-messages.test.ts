@@ -8,8 +8,6 @@ import {
   formatUserDeniedReason,
 } from "#src/prompting/denial-messages";
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
 function toolCheck(toolName: string, overrides: Partial<PermissionCheckResult> = {}): PermissionCheckResult {
   return {
     toolName,
@@ -35,15 +33,11 @@ function toolCtx(check: PermissionCheckResult, agentName?: string): Extract<Deni
   return { kind: "tool", check, agentName };
 }
 
-// ── EXTENSION_TAG ──────────────────────────────────────────────────────────
-
 describe("EXTENSION_TAG", () => {
   test("is [pi-permission-system]", () => {
     expect(EXTENSION_TAG).toBe("[pi-permission-system]");
   });
 });
-
-// ── formatDenyReason ───────────────────────────────────────────────────────
 
 describe("formatDenyReason", () => {
   describe("tool context", () => {
@@ -189,64 +183,6 @@ describe("formatDenyReason", () => {
     });
   });
 
-  describe("external_directory context", () => {
-    test("without agent", () => {
-      expect(
-        formatDenyReason({
-          kind: "external_directory",
-          toolName: "read",
-          pathValue: "/etc/passwd",
-          cwd: "/project",
-        }),
-      ).toBe(
-        "[pi-permission-system] Current agent is not permitted to run tool 'read' for path '/etc/passwd' outside working directory '/project'.",
-      );
-    });
-
-    test("with agent", () => {
-      expect(
-        formatDenyReason({
-          kind: "external_directory",
-          toolName: "read",
-          pathValue: "/etc/passwd",
-          cwd: "/project",
-          agentName: "sec-agent",
-        }),
-      ).toBe(
-        "[pi-permission-system] Agent 'sec-agent' is not permitted to run tool 'read' for path '/etc/passwd' outside working directory '/project'.",
-      );
-    });
-  });
-
-  describe("bash_external_directory context", () => {
-    test("single path without agent", () => {
-      expect(
-        formatDenyReason({
-          kind: "bash_external_directory",
-          command: "cat /etc/hosts",
-          externalPaths: ["/etc/hosts"],
-          cwd: "/project",
-        }),
-      ).toBe(
-        "[pi-permission-system] Current agent is not permitted to run bash command 'cat /etc/hosts' which references path(s) outside working directory '/project': /etc/hosts.",
-      );
-    });
-
-    test("multiple paths with agent", () => {
-      expect(
-        formatDenyReason({
-          kind: "bash_external_directory",
-          command: "cp /etc/hosts /tmp/out",
-          externalPaths: ["/etc/hosts", "/tmp/out"],
-          cwd: "/project",
-          agentName: "my-agent",
-        }),
-      ).toBe(
-        "[pi-permission-system] Agent 'my-agent' is not permitted to run bash command 'cp /etc/hosts /tmp/out' which references path(s) outside working directory '/project': /etc/hosts, /tmp/out.",
-      );
-    });
-  });
-
   describe("bash_path context", () => {
     test("without agent", () => {
       expect(
@@ -319,8 +255,6 @@ describe("formatDenyReason", () => {
   });
 });
 
-// ── formatUnavailableReason ────────────────────────────────────────────────
-
 describe("formatUnavailableReason", () => {
   test("generic tool", () => {
     expect(formatUnavailableReason(toolCtx(toolCheck("write")))).toBe(
@@ -348,32 +282,6 @@ describe("formatUnavailableReason", () => {
         pathValue: "/etc/passwd",
       }),
     ).toBe("[pi-permission-system] Accessing '/etc/passwd' requires approval, but no interactive UI is available.");
-  });
-
-  test("external_directory", () => {
-    expect(
-      formatUnavailableReason({
-        kind: "external_directory",
-        toolName: "read",
-        pathValue: "/etc/passwd",
-        cwd: "/project",
-      }),
-    ).toBe(
-      "[pi-permission-system] Accessing '/etc/passwd' outside the working directory requires approval, but no interactive UI is available.",
-    );
-  });
-
-  test("bash_external_directory", () => {
-    expect(
-      formatUnavailableReason({
-        kind: "bash_external_directory",
-        command: "cat /etc/hosts",
-        externalPaths: ["/etc/hosts"],
-        cwd: "/project",
-      }),
-    ).toBe(
-      "[pi-permission-system] Bash command 'cat /etc/hosts' references path(s) outside the working directory and requires approval, but no interactive UI is available.",
-    );
   });
 
   test("bash_path", () => {
@@ -407,8 +315,6 @@ describe("formatUnavailableReason", () => {
     ).toBe("[pi-permission-system] Accessing skill 'librarian' requires approval, but no interactive UI is available.");
   });
 });
-
-// ── formatUserDeniedReason ─────────────────────────────────────────────────
 
 describe("formatUserDeniedReason", () => {
   describe("tool context", () => {
@@ -451,64 +357,6 @@ describe("formatUserDeniedReason", () => {
     test("with reason", () => {
       expect(formatUserDeniedReason({ kind: "path", toolName: "read", pathValue: "/etc/passwd" }, "sensitive")).toBe(
         "[pi-permission-system] User denied access to path '/etc/passwd'. Reason: sensitive.",
-      );
-    });
-  });
-
-  describe("external_directory context", () => {
-    test("without reason", () => {
-      expect(
-        formatUserDeniedReason({
-          kind: "external_directory",
-          toolName: "edit",
-          pathValue: "/etc/hosts",
-          cwd: "/project",
-        }),
-      ).toBe("[pi-permission-system] User denied external directory access for tool 'edit' path '/etc/hosts'.");
-    });
-
-    test("with reason", () => {
-      expect(
-        formatUserDeniedReason(
-          {
-            kind: "external_directory",
-            toolName: "edit",
-            pathValue: "/etc/hosts",
-            cwd: "/project",
-          },
-          "too risky",
-        ),
-      ).toBe(
-        "[pi-permission-system] User denied external directory access for tool 'edit' path '/etc/hosts'. Reason: too risky.",
-      );
-    });
-  });
-
-  describe("bash_external_directory context", () => {
-    test("without reason", () => {
-      expect(
-        formatUserDeniedReason({
-          kind: "bash_external_directory",
-          command: "rm /etc/hosts",
-          externalPaths: ["/etc/hosts"],
-          cwd: "/project",
-        }),
-      ).toBe("[pi-permission-system] User denied external directory access for bash command 'rm /etc/hosts'.");
-    });
-
-    test("with reason", () => {
-      expect(
-        formatUserDeniedReason(
-          {
-            kind: "bash_external_directory",
-            command: "rm /etc/hosts",
-            externalPaths: ["/etc/hosts"],
-            cwd: "/project",
-          },
-          "dangerous",
-        ),
-      ).toBe(
-        "[pi-permission-system] User denied external directory access for bash command 'rm /etc/hosts'. Reason: dangerous.",
       );
     });
   });

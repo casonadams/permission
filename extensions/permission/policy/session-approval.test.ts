@@ -26,27 +26,27 @@ describe("SessionApproval", () => {
 
   describe("multiple", () => {
     it("stores surface and all patterns", () => {
-      const approval = SessionApproval.multiple("external_directory", ["/outside/a/*", "/outside/b/*"]);
-      expect(approval.surface).toBe("external_directory");
+      const approval = SessionApproval.multiple("path", ["/outside/a/*", "/outside/b/*"]);
+      expect(approval.surface).toBe("path");
       expect(approval.patterns).toEqual(["/outside/a/*", "/outside/b/*"]);
     });
 
     it("representativePattern returns the first pattern", () => {
-      const approval = SessionApproval.multiple("external_directory", ["/outside/a/*", "/outside/b/*"]);
+      const approval = SessionApproval.multiple("path", ["/outside/a/*", "/outside/b/*"]);
       expect(approval.representativePattern).toBe("/outside/a/*");
     });
 
     it("toGateApproval returns { surface, pattern } using the first pattern", () => {
-      const approval = SessionApproval.multiple("external_directory", ["/outside/a/*", "/outside/b/*"]);
+      const approval = SessionApproval.multiple("path", ["/outside/a/*", "/outside/b/*"]);
       expect(approval.toGateApproval()).toEqual({
-        surface: "external_directory",
+        surface: "path",
         pattern: "/outside/a/*",
       });
     });
 
     it("defensive copy — mutating the source array does not affect patterns", () => {
       const source = ["/outside/a/*", "/outside/b/*"];
-      const approval = SessionApproval.multiple("external_directory", source);
+      const approval = SessionApproval.multiple("path", source);
       source.push("/outside/c/*");
       expect(approval.patterns).toEqual(["/outside/a/*", "/outside/b/*"]);
     });
@@ -54,12 +54,12 @@ describe("SessionApproval", () => {
 
   describe("empty patterns (degenerate case)", () => {
     it("representativePattern returns undefined", () => {
-      const approval = SessionApproval.multiple("external_directory", []);
+      const approval = SessionApproval.multiple("path", []);
       expect(approval.representativePattern).toBeUndefined();
     });
 
     it("toGateApproval returns undefined", () => {
-      const approval = SessionApproval.multiple("external_directory", []);
+      const approval = SessionApproval.multiple("path", []);
       expect(approval.toGateApproval()).toBeUndefined();
     });
   });
