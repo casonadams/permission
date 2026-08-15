@@ -62,6 +62,8 @@ minimal policy:
 
 The `$schema` field is optional and is used only for editor completion.
 
+Reload Pi after changing a policy with `/reload`. Restart Pi after installing or updating the package.
+
 ## Rules
 
 Pi's built-in tool surfaces are `read`, `write`, `edit`, `bash`, `grep`, `find`,
@@ -91,6 +93,42 @@ Each key under `permission` is a surface:
   overridden by a tool rule.
 - Paths outside the working directory with no explicit `path` rule default to
   `ask`. Add rules such as `"/tmp/*": "allow"` for trusted external directories.
+
+### Path rules
+
+Use the `path` surface for file protection that should apply regardless of
+which tool accesses the path. A trailing `/*` matches both the directory
+itself and everything below it, so one rule covers listing a directory and
+reading or writing its contents:
+
+```json
+"path": {
+  "/opt/example/docs/*": "allow",
+  "*.env*": { "action": "deny", "reason": "secrets" }
+}
+```
+
+Patterns are matched against normalized paths. `~` and `$HOME` are expanded,
+and relative paths are also checked in their working-directory form. Put
+specific exceptions after broad rules because the last matching pattern wins:
+
+```json
+"path": {
+  "~/.pi/agent/*": "allow",
+  "~/.pi/agent/auth.json": { "action": "deny", "reason": "credentials" },
+  "~/.pi/agent/mcp.json": { "action": "deny", "reason": "credentials" }
+}
+```
+
+A path denial is a mandatory gate: an `allow` rule for `read`, `bash`, or
+another tool cannot override it.
+
+### Bash rules
+
+Bash patterns match the full command, not just the executable. Keep the broad
+`"*": "ask"` rule first, then add narrowly scoped commands such as
+`"git status": "allow"` or `"git diff*": "allow"`. Bash commands that contain
+file paths are also checked by the cross-cutting `path` surface.
 
 ## MCP
 
