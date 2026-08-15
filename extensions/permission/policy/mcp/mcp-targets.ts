@@ -1,14 +1,12 @@
 import { getNonEmptyString, toRecord } from "../../shared/common";
 import { parseQualifiedMcpToolName } from "./mcp-qualified-target";
-import { McpTargetList } from "./mcp-target-list";
 
 export { parseQualifiedMcpToolName } from "./mcp-qualified-target";
-export { McpTargetList } from "./mcp-target-list";
 
 function addDerivedMcpServerTargets(
   toolName: string,
   configuredServerNames: readonly string[],
-  targets: McpTargetList,
+  targets: Set<string>,
 ): void {
   const trimmedToolName = toolName.trim();
   if (!trimmedToolName) {
@@ -39,7 +37,7 @@ function deriveMcpServerTargets(
 interface McpToolTargetContext {
   serverHint: string | null;
   configuredServerNames: readonly string[];
-  targets: McpTargetList;
+  targets: Set<string>;
 }
 
 function pushMcpToolPermissionTargets(rawReference: string, ctx: McpToolTargetContext): void {
@@ -72,7 +70,7 @@ function resolveMcpTool(rawReference: string, qualified: { server: string; tool:
   return qualified ? qualified.tool : rawReference;
 }
 
-function addResolvedMcpServerTargets(server: string, tool: string, targets: McpTargetList): void {
+function addResolvedMcpServerTargets(server: string, tool: string, targets: Set<string>): void {
   targets.add(`${server}_${tool}`);
   targets.add(`${server}:${tool}`);
   targets.add(server);
@@ -88,7 +86,7 @@ type McpTargetInput = {
 
 export function createMcpPermissionTargets(input: unknown, configuredServerNames: readonly string[] = []): string[] {
   const values = readMcpTargetInput(input);
-  const targets = new McpTargetList();
+  const targets = new Set<string>();
   const resolver = createMcpTargetResolvers(values, configuredServerNames, targets).find((entry) => entry.value);
   if (!resolver?.value) return buildMcpStatusTargets(targets);
   return resolver.build(resolver.value);
@@ -99,7 +97,7 @@ type McpTargetResolver = { value: string | null; build: (value: string) => strin
 function createMcpTargetResolvers(
   values: McpTargetInput,
   configuredServerNames: readonly string[],
-  targets: McpTargetList,
+  targets: Set<string>,
 ): McpTargetResolver[] {
   const toolArgs = { server: values.server, configuredServerNames, targets };
   return [
@@ -126,7 +124,7 @@ type BuildMcpToolTargetsArgs = {
   tool: string;
   server: string | null;
   configuredServerNames: readonly string[];
-  targets: McpTargetList;
+  targets: Set<string>;
   fallback: string;
 };
 
@@ -137,35 +135,35 @@ function buildMcpToolTargets(args: BuildMcpToolTargetsArgs): string[] {
     targets: args.targets,
   });
   args.targets.add(args.fallback);
-  return args.targets.toArray();
+  return [...args.targets];
 }
 
-function buildMcpConnectTargets(connect: string, targets: McpTargetList): string[] {
+function buildMcpConnectTargets(connect: string, targets: Set<string>): string[] {
   targets.add(`mcp_connect_${connect}`);
   targets.add(connect);
   targets.add("mcp_connect");
-  return targets.toArray();
+  return [...targets];
 }
 
-function buildMcpSearchTargets(search: string, server: string | null, targets: McpTargetList): string[] {
+function buildMcpSearchTargets(search: string, server: string | null, targets: Set<string>): string[] {
   if (server) addMcpServerTargets(server, targets);
   targets.add(search);
   targets.add("mcp_search");
-  return targets.toArray();
+  return [...targets];
 }
 
-function buildMcpServerTargets(server: string, targets: McpTargetList, fallback: string): string[] {
+function buildMcpServerTargets(server: string, targets: Set<string>, fallback: string): string[] {
   addMcpServerTargets(server, targets);
   targets.add(fallback);
-  return targets.toArray();
+  return [...targets];
 }
 
-function addMcpServerTargets(server: string, targets: McpTargetList): void {
+function addMcpServerTargets(server: string, targets: Set<string>): void {
   targets.add(`mcp_server_${server}`);
   targets.add(server);
 }
 
-function buildMcpStatusTargets(targets: McpTargetList): string[] {
+function buildMcpStatusTargets(targets: Set<string>): string[] {
   targets.add("mcp_status");
-  return targets.toArray();
+  return [...targets];
 }

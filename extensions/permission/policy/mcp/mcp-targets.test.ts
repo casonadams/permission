@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMcpPermissionTargets, McpTargetList, parseQualifiedMcpToolName } from "#src/policy/mcp/mcp-targets";
+import { createMcpPermissionTargets, parseQualifiedMcpToolName } from "#src/policy/mcp/mcp-targets";
 
 describe("parseQualifiedMcpToolName", () => {
   it("returns server and tool for a valid qualified name", () => {
@@ -154,55 +154,6 @@ describe("createMcpPermissionTargets", () => {
       const exaSearchIdx = targets.indexOf("exa_search");
       expect(exaSearchIdx).toBeGreaterThanOrEqual(0);
       expect(mcpCallIdx).toBeGreaterThan(exaSearchIdx);
-    });
-  });
-});
-
-describe("McpTargetList", () => {
-  describe("add", () => {
-    it("ignores null", () => {
-      const list = new McpTargetList();
-      list.add(null);
-      expect(list.toArray()).toEqual([]);
-    });
-
-    it("ignores empty string", () => {
-      const list = new McpTargetList();
-      list.add("");
-      expect(list.toArray()).toEqual([]);
-    });
-
-    it("appends a new value", () => {
-      const list = new McpTargetList();
-      list.add("exa");
-      expect(list.toArray()).toEqual(["exa"]);
-    });
-
-    it("dedups repeated values", () => {
-      const list = new McpTargetList();
-      list.add("exa");
-      list.add("exa");
-      expect(list.toArray()).toEqual(["exa"]);
-    });
-
-    it("preserves first-insertion order across a mix of values", () => {
-      const list = new McpTargetList();
-      list.add("exa_search");
-      list.add("exa:search");
-      list.add("exa");
-      list.add("exa_search");
-      list.add("mcp_call");
-      expect(list.toArray()).toEqual(["exa_search", "exa:search", "exa", "mcp_call"]);
-    });
-  });
-
-  describe("toArray", () => {
-    it("returns an independent copy that does not mutate the list", () => {
-      const list = new McpTargetList();
-      list.add("exa");
-      const first = list.toArray();
-      first.push("mutated");
-      expect(list.toArray()).toEqual(["exa"]);
     });
   });
 });
