@@ -104,6 +104,14 @@ describe("describePathGate", () => {
     });
   });
 
+  it("formats the prompt as path access using the tool as context", () => {
+    const resolver = makeResolver(makeCheckResult({ state: "ask", matchedPattern: "*.env" }));
+    const result = describePathGate(makeTcc(), resolver) as GateDescriptor;
+    expect(result.promptDetails.message).toBe(
+      "Current agent requested access to path '.env' using tool 'read'. Allow this path access?",
+    );
+  });
+
   it("descriptor decision uses surface 'path' and the file path as value", () => {
     const resolver = makeResolver(makeCheckResult({ state: "deny", matchedPattern: "*.env" }));
     const result = describePathGate(makeTcc(), resolver) as GateDescriptor;

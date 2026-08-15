@@ -97,7 +97,7 @@ export function describePathGate(
 
 export function formatPathAskPrompt(toolName: string, pathValue: string, agentName?: string): string {
   const subject = agentName ? `Agent '${agentName}'` : "Current agent";
-  return `${subject} requested tool '${toolName}' for path '${pathValue}'. Allow this path access?`;
+  return `${subject} requested access to path '${pathValue}' using tool '${toolName}'. Allow this path access?`;
 }
 
 export function formatPathOutsideCwdAskPrompt(args: {
@@ -107,5 +107,5 @@ export function formatPathOutsideCwdAskPrompt(args: {
   agentName?: string;
 }): string {
   const subject = args.agentName ? `Agent '${args.agentName}'` : "Current agent";
-  return `${subject} requested tool '${args.toolName}' for path '${args.pathValue}' outside working directory '${args.cwd}'. Allow this path access?`;
+  return `${subject} requested access to path '${args.pathValue}' using tool '${args.toolName}' outside working directory '${args.cwd}'. Allow this path access?`;
 }
