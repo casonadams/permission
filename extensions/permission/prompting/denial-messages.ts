@@ -1,4 +1,5 @@
 import type { BashCommandContext, PermissionCheckResult } from "../policy/types";
+import { formatBashPathDenyBody, formatPathDenyBody } from "./path-denial-messages";
 
 export const EXTENSION_TAG = "[permission]";
 
@@ -9,12 +10,16 @@ type PathDenialContext = AgentNamed & {
   toolName: string;
   pathValue: string;
   cwd?: string;
+  matchedPattern?: string;
+  reason?: string;
 };
 type BashPathDenialContext = AgentNamed & {
   kind: "bash_path";
   command: string;
   pathValue: string;
   cwd?: string;
+  matchedPattern?: string;
+  reason?: string;
 };
 type SkillReadDenialContext = AgentNamed & { kind: "skill_read"; skillName: string; readPath: string };
 type SkillInputDenialContext = AgentNamed & { kind: "skill_input"; skillName: string };
@@ -55,14 +60,8 @@ type DenialBodyBuilders = {
 
 const denyBodyBuilders: DenialBodyBuilders = {
   tool: buildToolDenyBody,
-  path: (ctx) =>
-    ctx.cwd
-      ? `${subject(ctx.agentName)} is not permitted to run tool '${ctx.toolName}' for path '${ctx.pathValue}' outside working directory '${ctx.cwd}'.`
-      : `${subject(ctx.agentName)} is not permitted to access path '${ctx.pathValue}' via tool '${ctx.toolName}'.`,
-  bash_path: (ctx) =>
-    ctx.cwd
-      ? `${subject(ctx.agentName)} is not permitted to run bash command '${ctx.command}' which references path '${ctx.pathValue}' outside working directory '${ctx.cwd}'.`
-      : `${subject(ctx.agentName)} is not permitted to access path '${ctx.pathValue}' via tool 'bash'.`,
+  path: formatPathDenyBody,
+  bash_path: formatBashPathDenyBody,
   skill_read: (ctx) =>
     `${subject(ctx.agentName)} is not permitted to access skill '${ctx.skillName}' via '${ctx.readPath}'.`,
   skill_input: (ctx) => `${subject(ctx.agentName)} is not permitted to access skill '${ctx.skillName}'.`,

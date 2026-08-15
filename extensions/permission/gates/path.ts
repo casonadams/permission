@@ -72,6 +72,8 @@ export function describePathGate(
       toolName: tcc.toolName,
       pathValue: filePath,
       cwd: pathIsExternal ? tcc.cwd : undefined,
+      matchedPattern: check.matchedPattern,
+      reason: check.reason,
       agentName,
     },
     sessionApproval: SessionApproval.single("path", pattern),

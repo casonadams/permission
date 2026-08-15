@@ -119,6 +119,8 @@ function buildBashPathDescriptor(args: {
       command,
       pathValue: restriction.token,
       cwd,
+      matchedPattern: restriction.check.matchedPattern,
+      reason: restriction.check.reason,
       agentName: tcc.agentName ?? undefined,
     },
     sessionApproval: SessionApproval.single("path", deriveApprovalPattern(restriction.token)),

@@ -100,6 +100,9 @@ describe("describePathGate", () => {
       kind: "path",
       toolName: "read",
       pathValue: ".env",
+      cwd: undefined,
+      matchedPattern: "*.env",
+      reason: undefined,
       agentName: undefined,
     });
   });
