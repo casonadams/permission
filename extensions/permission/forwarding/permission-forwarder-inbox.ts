@@ -109,7 +109,7 @@ async function respondToForwardedRequest(
   params: ProcessForwardedRequestParams,
 ): Promise<void> {
   const responsePath = join(params.location.responsesDir, `${params.request.id}.json`);
-  const decision = await resolveForwardedDecision(state, params);
+  const decision = await promptForForwardedDecision(state, params);
   writeForwardedResponse(state, {
     location: params.location,
     responsePath,
@@ -117,13 +117,6 @@ async function respondToForwardedRequest(
     currentSessionId: params.currentSessionId,
   });
   safeDeleteFile(state.logger, params.requestPath, `${params.location.label} forwarded permission request`);
-}
-
-function resolveForwardedDecision(
-  state: PermissionForwarderState,
-  params: ProcessForwardedRequestParams,
-): Promise<PermissionPromptDecision> {
-  return promptForForwardedDecision(state, params);
 }
 
 async function promptForForwardedDecision(

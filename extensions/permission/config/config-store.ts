@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { normalize } from "node:path";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { ReviewLogger } from "../integrations/session-logger";
-import { loadAndMergeConfigs } from "./config-loader";
+import { collectLegacyConfigIssues } from "./config-loader";
 import {
   getGlobalConfigPath,
   getLegacyExtensionConfigPath,
@@ -13,22 +13,19 @@ import { buildResolvedConfigLogEntry } from "./config-reporter";
 import { EXTENSION_ROOT } from "./extension-config";
 import type { ResolvedPolicyPaths } from "./policy-loader";
 
-export interface ConfigReader {
-  current(): unknown;
-}
-
-export interface SessionConfigStore extends ConfigReader {
+export interface SessionConfigStore {
   refresh(ctx?: ExtensionContext): void;
   logResolvedPaths(cwd?: string): void;
 }
 
-export interface ResolvedPolicyPathProvider {
+export interface ConfigPolicyProvider {
+  getConfigIssues(): string[];
   getResolvedPolicyPaths(): ResolvedPolicyPaths;
 }
 
 export interface ConfigStoreDeps {
   agentDir: string;
-  policyPaths: ResolvedPolicyPathProvider;
+  policyPaths: ConfigPolicyProvider;
   logger: ReviewLogger;
 }
 
@@ -37,14 +34,12 @@ export class ConfigStore implements SessionConfigStore {
 
   constructor(private readonly deps: ConfigStoreDeps) {}
 
-  current(): unknown {
-    return {};
-  }
-
   refresh(ctx?: ExtensionContext): void {
-    const cwd = ctx?.cwd ?? null;
-    const mergeResult = loadAndMergeConfigs(this.deps.agentDir, cwd ?? "", EXTENSION_ROOT);
-    const warning = this.updateConfigWarning(mergeResult.issues, ctx);
+    const issues = [
+      ...collectLegacyConfigIssues(this.deps.agentDir, ctx?.cwd ?? "", EXTENSION_ROOT),
+      ...this.deps.policyPaths.getConfigIssues(),
+    ];
+    const warning = this.updateConfigWarning(issues, ctx);
     if (warning === undefined) {
       this.deps.logger.review("config.loaded", { warning: null });
     }

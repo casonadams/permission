@@ -11,7 +11,6 @@ import { SessionRules } from "#src/policy/session-rules";
 import type { PermissionCheckResult, PermissionState } from "#src/policy/types";
 import type { PromptingGatewayLifecycle } from "#src/prompting/prompting-gateway";
 import type { SessionConfigStore } from "../../config/config-store";
-import { DEFAULT_EXTENSION_CONFIG } from "../../config/extension-config";
 
 export function makePaths(overrides: Partial<ExtensionPaths> = {}): ExtensionPaths {
   return {
@@ -34,9 +33,6 @@ export function makeLogger(): SessionLogger {
 
 export function makeConfigStore(overrides: Partial<SessionConfigStore> = {}): SessionConfigStore {
   return {
-    current:
-      overrides.current ??
-      vi.fn<() => typeof DEFAULT_EXTENSION_CONFIG>().mockReturnValue({ ...DEFAULT_EXTENSION_CONFIG }),
     refresh: overrides.refresh ?? vi.fn<(ctx?: ExtensionContext) => void>(),
     logResolvedPaths: overrides.logResolvedPaths ?? vi.fn<() => void>(),
   };

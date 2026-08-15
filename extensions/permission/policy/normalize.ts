@@ -1,4 +1,5 @@
 import { isDenyWithReason, isPermissionState } from "../shared/common";
+import { isPatternMap } from "./permission-merge";
 import type { Rule, Ruleset } from "./rule";
 import type { FlatPermissionConfig, PatternValue } from "./types";
 
@@ -27,11 +28,6 @@ export function normalizeFlatConfig(permission: FlatPermissionConfig): Ruleset {
 /** Push the shorthand string rule when it is a valid {@link PermissionState}. */
 function pushStringRule(rules: Rule[], surface: string, value: string): void {
   if (isPermissionState(value)) rules.push({ surface, pattern: "*", action: value, origin: "builtin" });
-}
-
-/** True when `value` is a non-null pattern→action map. */
-function isPatternMap(value: FlatPermissionConfig[string]): value is Record<string, PatternValue> {
-  return typeof value === "object" && value !== null;
 }
 
 /** Push one {@link Rule} per valid pattern→action entry in a surface map. */

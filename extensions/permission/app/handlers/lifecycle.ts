@@ -34,8 +34,8 @@ export class SessionLifecycleHandler {
   }
 
   handleSessionStart(event: SessionStartPayload, ctx: ExtensionContext): Promise<void> {
-    this.session.refreshConfig(ctx);
     this.session.resetForNewSession(ctx);
+    this.session.refreshConfig(ctx);
     this.session.logResolvedConfigPaths();
 
     const agentName = this.session.resolveAgentName(ctx);

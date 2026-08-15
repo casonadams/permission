@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockLoadAndMergeConfigs, mockBuildResolvedConfigLogEntry, mockExistsSync } = vi.hoisted(() => ({
-  mockLoadAndMergeConfigs: vi.fn(),
+const { mockCollectLegacyConfigIssues, mockBuildResolvedConfigLogEntry, mockExistsSync } = vi.hoisted(() => ({
+  mockCollectLegacyConfigIssues: vi.fn(),
   mockBuildResolvedConfigLogEntry: vi.fn(),
   mockExistsSync: vi.fn<(path: string) => boolean>(),
 }));
 
 vi.mock("./config-loader", () => ({
-  loadAndMergeConfigs: mockLoadAndMergeConfigs,
+  collectLegacyConfigIssues: mockCollectLegacyConfigIssues,
 }));
 
 vi.mock("./config-reporter", () => ({
@@ -37,6 +37,7 @@ function makeCtx(overrides: Partial<ExtensionContext> = {}): ExtensionContext {
 
 function makePolicyPathProvider() {
   return {
+    getConfigIssues: vi.fn().mockReturnValue([]),
     getResolvedPolicyPaths: vi.fn().mockReturnValue({
       globalConfig: "/test/agent/permission.json",
       projectConfig: "/test/project/.pi/agent/permission.json",
@@ -59,49 +60,45 @@ function makeStore(policyProvider = makePolicyPathProvider()): {
 
 describe("ConfigStore", () => {
   beforeEach(() => {
-    mockLoadAndMergeConfigs.mockReset().mockReturnValue({ merged: {}, issues: [] });
+    mockCollectLegacyConfigIssues.mockReset().mockReturnValue([]);
     mockBuildResolvedConfigLogEntry.mockReset().mockReturnValue({ resolved: true });
     mockExistsSync.mockReset().mockReturnValue(false);
   });
 
-  describe("current()", () => {
-    it("returns an empty object before any refresh", () => {
-      const { store } = makeStore();
-      expect(store.current()).toEqual({});
-    });
-  });
-
   describe("refresh()", () => {
-    it("uses the passed ctx cwd for loadAndMergeConfigs", () => {
+    it("uses the passed ctx cwd to collect legacy config issues", () => {
       const { store } = makeStore();
       store.refresh(makeCtx({ cwd: "/my/project" }));
-      expect(mockLoadAndMergeConfigs).toHaveBeenCalledWith("/test/agent", "/my/project", expect.any(String));
+      expect(mockCollectLegacyConfigIssues).toHaveBeenCalledWith("/test/agent", "/my/project", expect.any(String));
     });
 
     it("uses empty string cwd when no ctx is provided", () => {
       const { store } = makeStore();
       store.refresh();
-      expect(mockLoadAndMergeConfigs).toHaveBeenCalledWith("/test/agent", "", expect.any(String));
+      expect(mockCollectLegacyConfigIssues).toHaveBeenCalledWith("/test/agent", "", expect.any(String));
     });
 
     it("sets a warning when issues are present", () => {
       const { store } = makeStore();
       const ctx = makeCtx({ hasUI: false });
-      mockLoadAndMergeConfigs.mockReturnValue({
-        merged: {},
-        issues: ["legacy config detected"],
-      });
+      mockCollectLegacyConfigIssues.mockReturnValue(["legacy config detected"]);
       store.refresh(ctx);
+    });
+
+    it("includes issues from the policy provider", () => {
+      const mockNotify = vi.fn();
+      const provider = makePolicyPathProvider();
+      provider.getConfigIssues.mockReturnValue(["invalid active config"]);
+      const { store } = makeStore(provider);
+      store.refresh(makeCtx({ hasUI: true, ui: { notify: mockNotify } as never }));
+      expect(mockNotify).toHaveBeenCalledWith("invalid active config", "warning");
     });
 
     it("notifies UI when a new warning appears and hasUI is true", () => {
       const mockNotify = vi.fn();
       const { store } = makeStore();
       const ctx = makeCtx({ hasUI: true, ui: { notify: mockNotify } as never });
-      mockLoadAndMergeConfigs.mockReturnValue({
-        merged: {},
-        issues: ["new warning"],
-      });
+      mockCollectLegacyConfigIssues.mockReturnValue(["new warning"]);
       store.refresh(ctx);
       expect(mockNotify).toHaveBeenCalledWith("new warning", "warning");
     });
@@ -110,10 +107,7 @@ describe("ConfigStore", () => {
       const mockNotify = vi.fn();
       const { store } = makeStore();
       const ctx = makeCtx({ hasUI: true, ui: { notify: mockNotify } as never });
-      mockLoadAndMergeConfigs.mockReturnValue({
-        merged: {},
-        issues: ["persistent warning"],
-      });
+      mockCollectLegacyConfigIssues.mockReturnValue(["persistent warning"]);
       store.refresh(ctx);
       store.refresh(ctx);
       expect(mockNotify).toHaveBeenCalledTimes(1);
@@ -123,11 +117,11 @@ describe("ConfigStore", () => {
       const mockNotify = vi.fn();
       const { store } = makeStore();
       const ctxWithUI = makeCtx({ hasUI: true, ui: { notify: mockNotify } as never });
-      mockLoadAndMergeConfigs.mockReturnValue({ merged: {}, issues: ["warning"] });
+      mockCollectLegacyConfigIssues.mockReturnValue(["warning"]);
       store.refresh(ctxWithUI);
-      mockLoadAndMergeConfigs.mockReturnValue({ merged: {}, issues: [] });
+      mockCollectLegacyConfigIssues.mockReturnValue([]);
       store.refresh();
-      mockLoadAndMergeConfigs.mockReturnValue({ merged: {}, issues: ["warning"] });
+      mockCollectLegacyConfigIssues.mockReturnValue(["warning"]);
       store.refresh(ctxWithUI);
       expect(mockNotify).toHaveBeenCalledTimes(2);
     });

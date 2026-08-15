@@ -43,13 +43,6 @@ export type RequestLocationPath = {
   path: string;
 };
 
-export type ForwardedDecisionResponse = {
-  request: ForwardedPermissionRequest;
-  location: PermissionForwardingLocation;
-  responsePath: string;
-  decision: PermissionPromptDecision;
-};
-
 export type ForwardedResponseWrite = {
   location: PermissionForwardingLocation;
   responsePath: string;

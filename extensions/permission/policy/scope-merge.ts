@@ -1,4 +1,4 @@
-import { mergeFlatPermissions } from "#src/policy/permission-merge";
+import { getPatternMaps, mergeFlatPermissions } from "#src/policy/permission-merge";
 import type { RuleOrigin } from "#src/policy/rule";
 import type { FlatPermissionConfig, PatternValue, ScopeConfig } from "#src/policy/types";
 
@@ -32,10 +32,9 @@ export function mergeScopesWithOrigins(scopes: readonly (readonly [RuleOrigin, S
     if (!scope.permission) continue;
 
     for (const [surface, value] of Object.entries(scope.permission)) {
-      const baseVal = mergedPermission[surface];
+      const patternMaps = getPatternMaps(mergedPermission[surface], value);
 
-      if (bothPatternMaps(baseVal, value))
-        recordShallowMerge({ origins, surface, value: value as Record<string, PatternValue>, scopeName });
+      if (patternMaps) recordShallowMerge({ origins, surface, value: patternMaps[1], scopeName });
       else origins.set(surface, replacementOrigins(value, scopeName));
     }
 
@@ -43,11 +42,6 @@ export function mergeScopesWithOrigins(scopes: readonly (readonly [RuleOrigin, S
   }
 
   return { mergedPermission, origins };
-}
-
-/** True when both values are non-null pattern maps (shallow-mergeable). */
-function bothPatternMaps(baseVal: FlatPermissionConfig[string], value: FlatPermissionConfig[string]): boolean {
-  return typeof baseVal === "object" && baseVal !== null && typeof value === "object" && value !== null;
 }
 
 /** Attribute each incoming pattern to this scope, preserving lower-scope origins. */

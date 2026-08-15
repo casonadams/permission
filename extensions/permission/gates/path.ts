@@ -40,7 +40,7 @@ export function describePathGate(
     isPiInfrastructureRead({
       toolName: tcc.toolName,
       normalizedPath: canonicalNormalizePathForComparison(filePath, tcc.cwd),
-      infrastructureDirs: [...infraDirs],
+      infrastructureDirs: infraDirs,
       cwd: tcc.cwd,
     })
   ) {

@@ -48,10 +48,12 @@ function makeCheckResult(
 // ── tests ──────────────────────────────────────────────────────────────────
 
 describe("describeToolGate", () => {
-  it("returns descriptor with tool name as surface for standard tools", () => {
-    const desc = describeToolGate(makeTcc({ toolName: "read" }), makeCheckResult("ask"), makeFormatter());
+  it("returns a prechecked descriptor for standard tools", () => {
+    const check = makeCheckResult("ask");
+    const desc = describeToolGate(makeTcc({ toolName: "read" }), check, makeFormatter());
     expect(desc.surface).toBe("read");
     expect(desc.decision.surface).toBe("read");
+    expect(desc.preCheck).toBe(check);
   });
 
   it("returns descriptor with tool name as decision value for standard tools", () => {

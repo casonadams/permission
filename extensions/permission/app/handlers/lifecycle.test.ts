@@ -105,7 +105,7 @@ describe("handleSessionStart", () => {
     expect(serviceLifecycle.activate).toHaveBeenCalledWith(ctx);
   });
 
-  it("calls refreshConfig before resetForNewSession", async () => {
+  it("configures the session before refreshing config diagnostics", async () => {
     const callOrder: string[] = [];
     const { handler, session, configStore } = makeSetup();
     vi.spyOn(configStore, "refresh").mockImplementation(() => {
@@ -115,7 +115,7 @@ describe("handleSessionStart", () => {
       callOrder.push("resetForNewSession");
     });
     await handler.handleSessionStart({ reason: "startup" }, makeCtx());
-    expect(callOrder).toEqual(["refreshConfig", "resetForNewSession"]);
+    expect(callOrder).toEqual(["resetForNewSession", "refreshConfig"]);
   });
 });
 

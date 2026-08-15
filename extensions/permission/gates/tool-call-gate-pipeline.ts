@@ -17,7 +17,7 @@ import type { GateOutcome, ToolCallContext } from "./types";
 
 export interface ToolCallGateInputs {
   getActiveSkillEntries(): SkillPromptEntry[];
-  getInfrastructureReadDirs(): string[];
+  getInfrastructureReadDirs(): readonly string[];
 }
 
 type GateProducer = () => GateResult | Promise<GateResult>;
@@ -32,21 +32,19 @@ export interface ToolCallGatePipelineDeps {
 export class ToolCallGatePipeline {
   private readonly resolver: ScopedPermissionResolver;
   private readonly inputs: ToolCallGateInputs;
-  private readonly customFormatters?: ToolInputFormatterLookup;
+  private readonly formatter: ToolPreviewFormatter;
   private readonly customExtractors?: ToolAccessExtractorLookup;
 
   constructor(deps: ToolCallGatePipelineDeps) {
     this.resolver = deps.resolver;
     this.inputs = deps.inputs;
-    this.customFormatters = deps.customFormatters;
+    this.formatter = new ToolPreviewFormatter(DEFAULT_TOOL_PREVIEW_OPTIONS, deps.customFormatters);
     this.customExtractors = deps.customExtractors;
   }
 
   async evaluate(tcc: ToolCallContext, runner: GateRunner): Promise<GateOutcome> {
     const command = getNonEmptyString(toRecord(tcc.input).command);
     const bashProgram = tcc.toolName === "bash" && command ? await BashProgram.parse(command) : null;
-
-    const formatter = new ToolPreviewFormatter(DEFAULT_TOOL_PREVIEW_OPTIONS, this.customFormatters);
 
     const infraDirs = this.inputs.getInfrastructureReadDirs();
 
@@ -56,9 +54,7 @@ export class ToolCallGatePipeline {
       () => describeBashPathGate(tcc, bashProgram, this.resolver),
       () => {
         const toolCheck = this.resolveToolCheck(tcc, command, bashProgram);
-        const toolDescriptor = describeToolGate(tcc, toolCheck, formatter);
-        toolDescriptor.preCheck = toolCheck;
-        return toolDescriptor;
+        return describeToolGate(tcc, toolCheck, this.formatter);
       },
     ];
 

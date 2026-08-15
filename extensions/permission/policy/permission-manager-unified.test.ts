@@ -3,45 +3,18 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it, test } from "vitest";
 import { PermissionManager, type ScopedPermissionManager } from "#src/policy/permission-manager";
-import type { Rule, Ruleset } from "#src/policy/rule";
-import { createManager, createManagerWithProject } from "#test/helpers/manager-harness";
+import type { Ruleset } from "#src/policy/rule";
+import type { PermissionCheckResult, ScopeConfig } from "#src/policy/types";
+import {
+  createManager,
+  createManagerWithProject,
+  makeInMemoryManager,
+  makeManager,
+  makeManagerWithConfig,
+  makeManagerWithScopes,
+  sessionAllow,
+} from "#test/helpers/manager-harness";
 import { getGlobalConfigPath, getProjectConfigPath } from "../config/config-paths";
-
-function makeManager(mcpServerNames: readonly string[] = []): PermissionManager {
-  return new PermissionManager({
-    globalConfigPath: "/nonexistent/config.json",
-    agentsDir: "/nonexistent/agents",
-    mcpServerNames: [...mcpServerNames],
-  });
-}
-
-function makeManagerWithConfig(
-  permission: Record<string, unknown>,
-  mcpServerNames: readonly string[] = [],
-): { manager: PermissionManager; cleanup: () => void } {
-  const baseDir = mkdtempSync(join(tmpdir(), "pm-unified-test-"));
-  const agentsDir = join(baseDir, "agents");
-  mkdirSync(agentsDir, { recursive: true });
-  const globalConfigPath = join(baseDir, "config.json");
-  writeFileSync(globalConfigPath, JSON.stringify({ permission }, null, 2));
-  const manager = new PermissionManager({
-    globalConfigPath,
-    agentsDir,
-    mcpServerNames: [...mcpServerNames],
-  });
-  return {
-    manager,
-    cleanup: () => rmSync(baseDir, { recursive: true, force: true }),
-  };
-}
-
-const sessionAllow = (surface: string, pattern: string): Rule => ({
-  surface,
-  pattern,
-  action: "allow",
-  layer: "session",
-  origin: "session",
-});
 
 describe("checkPermission — session rules", () => {
   it("session rule wins over the universal default (skill)", () => {
@@ -257,33 +230,6 @@ describe("checkPermission — source derivation and matchedPattern", () => {
   });
 });
 
-function makeManagerWithScopes(
-  globalPermission: Record<string, unknown>,
-  projectPermission?: Record<string, unknown>,
-): { manager: PermissionManager; cleanup: () => void } {
-  const baseDir = mkdtempSync(join(tmpdir(), "pm-provenance-test-"));
-  const agentsDir = join(baseDir, "agents");
-  mkdirSync(agentsDir, { recursive: true });
-  const globalConfigPath = join(baseDir, "global-config.json");
-  writeFileSync(globalConfigPath, JSON.stringify({ permission: globalPermission }, null, 2));
-
-  let projectGlobalConfigPath: string | undefined;
-  if (projectPermission !== undefined) {
-    projectGlobalConfigPath = join(baseDir, "project-config.json");
-    writeFileSync(projectGlobalConfigPath, JSON.stringify({ permission: projectPermission }, null, 2));
-  }
-
-  const manager = new PermissionManager({
-    globalConfigPath,
-    agentsDir,
-    projectGlobalConfigPath,
-  });
-  return {
-    manager,
-    cleanup: () => rmSync(baseDir, { recursive: true, force: true }),
-  };
-}
-
 describe("checkPermission — rule origin provenance", () => {
   it("single-scope global: config rule has origin 'global'", () => {
     const { manager, cleanup } = makeManagerWithScopes({ read: "allow" });
@@ -429,51 +375,6 @@ describe("checkPermission — rule origin provenance", () => {
     expect(result.origin).toBe("builtin");
   });
 });
-
-import type { ResolvedPolicyPaths } from "#src/config/policy-loader";
-import type { PolicyLoader } from "#src/policy/permission-manager";
-import type { PermissionCheckResult, ScopeConfig } from "#src/policy/types";
-
-function createInMemoryPolicyLoader(
-  scopes: {
-    global?: ScopeConfig;
-    project?: ScopeConfig;
-    agent?: Record<string, ScopeConfig>;
-    projectAgent?: Record<string, ScopeConfig>;
-  } = {},
-  mcpServerNames: readonly string[] = [],
-): PolicyLoader {
-  const issues: string[] = [];
-  return {
-    loadGlobalConfig: () => scopes.global ?? ({} as const),
-    loadProjectConfig: () => scopes.project ?? ({} as const),
-
-    loadAgentConfig: (name?: string) => (name && scopes.agent?.[name]) || {},
-    loadProjectAgentConfig: (name?: string) => (name && scopes.projectAgent?.[name]) || {},
-    getConfiguredMcpServerNames: () => mcpServerNames,
-    getCacheStamp: () => "in-memory",
-    getConfigIssues: () => issues,
-    getResolvedPolicyPaths: (): ResolvedPolicyPaths => ({
-      globalConfigPath: "/in-memory/config.json",
-      globalConfigExists: true,
-      projectConfigPath: null,
-      projectConfigExists: false,
-      agentsDir: "/in-memory/agents",
-      agentsDirExists: false,
-      projectAgentsDir: null,
-      projectAgentsDirExists: false,
-    }),
-  };
-}
-
-function makeInMemoryManager(
-  scopes: Parameters<typeof createInMemoryPolicyLoader>[0] = {},
-  mcpServerNames: readonly string[] = [],
-): PermissionManager {
-  return new PermissionManager({
-    policyLoader: createInMemoryPolicyLoader(scopes, mcpServerNames),
-  });
-}
 
 describe("PermissionManager with in-memory PolicyLoader", () => {
   describe("universal fallback", () => {

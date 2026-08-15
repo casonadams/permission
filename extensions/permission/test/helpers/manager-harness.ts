@@ -8,7 +8,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { PermissionManager } from "#src/policy/permission-manager";
+import type { ResolvedPolicyPaths } from "#src/config/policy-loader";
+import { PermissionManager, type PolicyLoader } from "#src/policy/permission-manager";
+import type { Rule } from "#src/policy/rule";
 import type { ScopeConfig } from "#src/policy/types";
 
 export type CreateManagerOptions = {
@@ -16,12 +18,12 @@ export type CreateManagerOptions = {
 };
 
 export type CreateManagerWithProjectOptions = CreateManagerOptions & {
-  projectConfig?: ScopeConfig;
+  projectConfig?: unknown;
   projectAgentFiles?: Record<string, string>;
 };
 
 export function createManager(
-  config: ScopeConfig,
+  config: unknown,
   agentFiles: Record<string, string> = {},
   options: CreateManagerOptions = {},
 ) {
@@ -60,7 +62,7 @@ type ProjectHarnessPaths = {
 };
 
 export function createManagerWithProject(
-  config: ScopeConfig,
+  config: unknown,
   agentFiles: Record<string, string> = {},
   options: CreateManagerWithProjectOptions = {},
 ) {
@@ -97,7 +99,7 @@ function createProjectHarnessPaths(): ProjectHarnessPaths {
 
 function writeProjectHarnessFiles(args: {
   paths: ProjectHarnessPaths;
-  config: ScopeConfig;
+  config: unknown;
   agentFiles: Record<string, string>;
   options: CreateManagerWithProjectOptions;
 }): void {
@@ -109,7 +111,7 @@ function writeProjectHarnessFiles(args: {
   writeAgentFiles(args.paths.projectAgentsDir, args.options.projectAgentFiles ?? {});
 }
 
-function writeJsonConfig(path: string, config: ScopeConfig): void {
+function writeJsonConfig(path: string, config: unknown): void {
   writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }
 
@@ -117,4 +119,67 @@ function writeAgentFiles(directory: string, files: Record<string, string>): void
   for (const [name, content] of Object.entries(files)) {
     writeFileSync(join(directory, `${name}.md`), content, "utf8");
   }
+}
+
+export function makeManager(mcpServerNames: readonly string[] = []): PermissionManager {
+  return new PermissionManager({
+    globalConfigPath: "/nonexistent/config.json",
+    agentsDir: "/nonexistent/agents",
+    mcpServerNames,
+  });
+}
+
+export function makeManagerWithConfig(permission: Record<string, unknown>, mcpServerNames: readonly string[] = []) {
+  return createManager({ permission }, {}, { mcpServerNames });
+}
+
+export function makeManagerWithScopes(
+  globalPermission: Record<string, unknown>,
+  projectPermission?: Record<string, unknown>,
+) {
+  return createManagerWithProject(
+    { permission: globalPermission },
+    {},
+    { projectConfig: projectPermission === undefined ? undefined : { permission: projectPermission } },
+  );
+}
+
+export function sessionAllow(surface: string, pattern: string): Rule {
+  return { surface, pattern, action: "allow", layer: "session", origin: "session" };
+}
+
+type InMemoryScopes = {
+  global?: ScopeConfig;
+  project?: ScopeConfig;
+  agent?: Record<string, ScopeConfig>;
+  projectAgent?: Record<string, ScopeConfig>;
+};
+
+export function makeInMemoryManager(
+  scopes: InMemoryScopes = {},
+  mcpServerNames: readonly string[] = [],
+): PermissionManager {
+  return new PermissionManager({ policyLoader: createInMemoryPolicyLoader(scopes, mcpServerNames) });
+}
+
+function createInMemoryPolicyLoader(scopes: InMemoryScopes, mcpServerNames: readonly string[]): PolicyLoader {
+  return {
+    loadGlobalConfig: () => scopes.global ?? {},
+    loadProjectConfig: () => scopes.project ?? {},
+    loadAgentConfig: (name?: string) => (name ? (scopes.agent?.[name] ?? {}) : {}),
+    loadProjectAgentConfig: (name?: string) => (name ? (scopes.projectAgent?.[name] ?? {}) : {}),
+    getConfiguredMcpServerNames: () => mcpServerNames,
+    getCacheStamp: () => "in-memory",
+    getConfigIssues: () => [],
+    getResolvedPolicyPaths: (): ResolvedPolicyPaths => ({
+      globalConfigPath: "/in-memory/config.json",
+      globalConfigExists: true,
+      projectConfigPath: null,
+      projectConfigExists: false,
+      agentsDir: "/in-memory/agents",
+      agentsDirExists: false,
+      projectAgentsDir: null,
+      projectAgentsDirExists: false,
+    }),
+  };
 }

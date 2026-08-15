@@ -50,6 +50,7 @@ export function describeToolGate(
   return {
     surface: tcc.toolName,
     input: tcc.input,
+    preCheck: check,
     denialContext: {
       kind: "tool",
       check,

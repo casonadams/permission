@@ -1,11 +1,10 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { stripJsonComments } from "./config-json-comments";
-import { loadAndMergeConfigs, loadUnifiedConfig } from "./config-loader";
-import { mergeUnifiedConfigs } from "./config-merge";
+import { collectLegacyConfigIssues, loadUnifiedConfig } from "./config-loader";
 import { getGlobalConfigPath, getProjectConfigPath } from "./config-paths";
 
 describe("stripJsonComments", () => {
@@ -273,80 +272,14 @@ describe("loadUnifiedConfig", () => {
   });
 });
 
-describe("mergeUnifiedConfigs", () => {
-  it("deep-merges permission objects so project overrides global per-key", () => {
-    const merged = mergeUnifiedConfigs(
-      {
-        permission: {
-          "*": "ask",
-          read: "allow",
-          bash: { "git status": "allow" },
-        },
-      },
-      {
-        permission: {
-          "*": "allow",
-          bash: { "rm -rf *": "deny" },
-        },
-      },
-    );
-
-    expect(merged.permission).toEqual({
-      "*": "allow",
-      read: "allow",
-      bash: { "git status": "allow", "rm -rf *": "deny" },
-    });
-  });
-
-  it("string permission value in override replaces base string for same key", () => {
-    const merged = mergeUnifiedConfigs({ permission: { read: "ask" } }, { permission: { read: "allow" } });
-    expect(merged.permission).toEqual({ read: "allow" });
-  });
-
-  it("object replaces string when override uses object for same surface", () => {
-    const merged = mergeUnifiedConfigs(
-      { permission: { bash: "ask" } },
-      { permission: { bash: { "*": "allow", "rm -rf *": "deny" } } },
-    );
-    expect(merged.permission).toEqual({
-      bash: { "*": "allow", "rm -rf *": "deny" },
-    });
-  });
-
-  it("string replaces object when override uses string for same surface", () => {
-    const merged = mergeUnifiedConfigs(
-      { permission: { bash: { "git *": "allow" } } },
-      { permission: { bash: "deny" } },
-    );
-    expect(merged.permission).toEqual({ bash: "deny" });
-  });
-
-  it("returns base unchanged when override is empty", () => {
-    const base = { permission: { read: "allow" as const } };
-    const merged = mergeUnifiedConfigs(base, {});
-    expect(merged.permission).toEqual({ read: "allow" });
-  });
-
-  it("returns override unchanged when base is empty", () => {
-    const override = { permission: { bash: { "rm -rf *": "deny" as const } } };
-    const merged = mergeUnifiedConfigs({}, override);
-    expect(merged.permission).toEqual({ bash: { "rm -rf *": "deny" } });
-  });
-
-  it("does not set undefined keys in the merged result", () => {
-    const merged = mergeUnifiedConfigs({ permission: { "*": "allow" } }, { permission: { bash: "deny" } });
-    expect(merged.permission).toBeDefined();
-  });
-});
-
-describe("loadAndMergeConfigs", () => {
+describe("collectLegacyConfigIssues", () => {
   let tempDir: string;
   let agentDir: string;
   let cwd: string;
   let extensionRoot: string;
 
   beforeEach(() => {
-    tempDir = mkdtempSync(join(tmpdir(), "config-merge-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "config-issues-test-"));
     agentDir = join(tempDir, "agent");
     cwd = join(tempDir, "project");
     extensionRoot = join(tempDir, "ext");
@@ -356,86 +289,37 @@ describe("loadAndMergeConfigs", () => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  function writeGlobal(content: Record<string, unknown>): void {
-    const path = getGlobalConfigPath(agentDir);
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, JSON.stringify(content));
-  }
-
-  function writeProject(content: Record<string, unknown>): void {
-    const path = getProjectConfigPath(cwd);
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, JSON.stringify(content));
-  }
-
-  function writeLegacyGlobalPolicy(content: Record<string, unknown>): void {
+  function writeLegacyGlobalPolicy(content: string): void {
     mkdirSync(agentDir, { recursive: true });
-    writeFileSync(join(agentDir, "pi-permissions.jsonc"), JSON.stringify(content));
+    writeFileSync(join(agentDir, "pi-permissions.jsonc"), content);
   }
 
-  function writeLegacyProjectPolicy(content: Record<string, unknown>): void {
+  function writeLegacyProjectPolicy(content: string): void {
     const dir = join(cwd, ".pi", "agent");
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "pi-permissions.jsonc"), JSON.stringify(content));
+    writeFileSync(join(dir, "pi-permissions.jsonc"), content);
   }
 
-  it("merges global and project new-layout configs", () => {
-    writeGlobal({
-      permission: { "*": "ask", read: "allow" },
-    });
-    writeProject({
-      permission: { "*": "allow", write: "deny" },
-    });
+  it("detects legacy global policy and reports parse issues", () => {
+    writeLegacyGlobalPolicy("not valid json");
 
-    const result = loadAndMergeConfigs(agentDir, cwd, extensionRoot);
-    expect(result.issues).toEqual([]);
-    expect(result.merged.permission).toEqual({
-      "*": "allow",
-      read: "allow",
-      write: "deny",
-    });
+    const issues = collectLegacyConfigIssues(agentDir, cwd, extensionRoot);
+    expect(issues).toHaveLength(2);
+    expect(issues[0]).toContain("pi-permissions.jsonc");
+    expect(issues[0]).toContain(getGlobalConfigPath(agentDir));
+    expect(issues[1]).toContain("Failed to read config");
   });
 
-  it("detects legacy global policy and emits migration issue", () => {
-    writeLegacyGlobalPolicy({
-      defaultPolicy: { tools: "allow" },
-      tools: { read: "allow" },
-    });
+  it("detects legacy project policy", () => {
+    writeLegacyProjectPolicy(JSON.stringify({ bash: { "git status": "allow" } }));
 
-    const result = loadAndMergeConfigs(agentDir, cwd, extensionRoot);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0]).toContain("pi-permissions.jsonc");
-    expect(result.issues[0]).toContain(getGlobalConfigPath(agentDir));
-    expect(result.merged.permission).toBeUndefined();
+    const issues = collectLegacyConfigIssues(agentDir, cwd, extensionRoot);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain(".pi/agent/pi-permissions.jsonc");
+    expect(issues[0]).toContain(getProjectConfigPath(cwd));
   });
 
-  it("detects legacy project policy and emits migration issue", () => {
-    writeLegacyProjectPolicy({
-      bash: { "git status": "allow" },
-    });
-
-    const result = loadAndMergeConfigs(agentDir, cwd, extensionRoot);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0]).toContain(".pi/agent/pi-permissions.jsonc");
-    expect(result.issues[0]).toContain(getProjectConfigPath(cwd));
-    expect(result.merged.permission).toBeUndefined();
-  });
-
-  it("emits no issues when no legacy files exist and no new files exist", () => {
-    const result = loadAndMergeConfigs(agentDir, cwd, extensionRoot);
-    expect(result.issues).toEqual([]);
-  });
-
-  it("new-layout config takes precedence over legacy config at same scope", () => {
-    writeGlobal({
-      permission: { "*": "deny" },
-    });
-    writeLegacyGlobalPolicy({
-      permission: { "*": "allow" },
-    });
-
-    const result = loadAndMergeConfigs(agentDir, cwd, extensionRoot);
-    expect(result.merged.permission).toEqual({ "*": "deny" });
-    expect(result.issues.some((i) => i.includes("pi-permissions.jsonc"))).toBe(true);
+  it("returns no issues when no config files exist", () => {
+    expect(collectLegacyConfigIssues(agentDir, cwd, extensionRoot)).toEqual([]);
   });
 });
