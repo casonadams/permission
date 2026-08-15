@@ -1,66 +1,30 @@
 import { describe, expect, it } from "vitest";
-
 import { SessionApproval } from "#src/policy/session-approval";
 
 describe("SessionApproval", () => {
-  describe("single", () => {
-    it("stores surface and one pattern", () => {
-      const approval = SessionApproval.single("bash", "git *");
-      expect(approval.surface).toBe("bash");
-      expect(approval.patterns).toEqual(["git *"]);
-    });
+  it("creates a single-pattern gate approval", () => {
+    const approval = SessionApproval.single("bash", "git *");
 
-    it("representativePattern returns the pattern", () => {
-      const approval = SessionApproval.single("bash", "git *");
-      expect(approval.representativePattern).toBe("git *");
-    });
-
-    it("toGateApproval returns { surface, pattern }", () => {
-      const approval = SessionApproval.single("bash", "git *");
-      expect(approval.toGateApproval()).toEqual({
-        surface: "bash",
-        pattern: "git *",
-      });
-    });
+    expect(approval.surface).toBe("bash");
+    expect(approval.patterns).toEqual(["git *"]);
+    expect(approval.representativePattern).toBe("git *");
+    expect(approval.toGateApproval()).toEqual({ surface: "bash", pattern: "git *" });
   });
 
-  describe("multiple", () => {
-    it("stores surface and all patterns", () => {
-      const approval = SessionApproval.multiple("path", ["/outside/a/*", "/outside/b/*"]);
-      expect(approval.surface).toBe("path");
-      expect(approval.patterns).toEqual(["/outside/a/*", "/outside/b/*"]);
-    });
+  it("copies multiple patterns and uses the first for the gate", () => {
+    const source = ["/outside/a/*", "/outside/b/*"];
+    const approval = SessionApproval.multiple("path", source);
+    source.push("/outside/c/*");
 
-    it("representativePattern returns the first pattern", () => {
-      const approval = SessionApproval.multiple("path", ["/outside/a/*", "/outside/b/*"]);
-      expect(approval.representativePattern).toBe("/outside/a/*");
-    });
-
-    it("toGateApproval returns { surface, pattern } using the first pattern", () => {
-      const approval = SessionApproval.multiple("path", ["/outside/a/*", "/outside/b/*"]);
-      expect(approval.toGateApproval()).toEqual({
-        surface: "path",
-        pattern: "/outside/a/*",
-      });
-    });
-
-    it("defensive copy — mutating the source array does not affect patterns", () => {
-      const source = ["/outside/a/*", "/outside/b/*"];
-      const approval = SessionApproval.multiple("path", source);
-      source.push("/outside/c/*");
-      expect(approval.patterns).toEqual(["/outside/a/*", "/outside/b/*"]);
-    });
+    expect(approval.surface).toBe("path");
+    expect(approval.patterns).toEqual(["/outside/a/*", "/outside/b/*"]);
+    expect(approval.representativePattern).toBe("/outside/a/*");
+    expect(approval.toGateApproval()).toEqual({ surface: "path", pattern: "/outside/a/*" });
   });
 
-  describe("empty patterns (degenerate case)", () => {
-    it("representativePattern returns undefined", () => {
-      const approval = SessionApproval.multiple("path", []);
-      expect(approval.representativePattern).toBeUndefined();
-    });
-
-    it("toGateApproval returns undefined", () => {
-      const approval = SessionApproval.multiple("path", []);
-      expect(approval.toGateApproval()).toBeUndefined();
-    });
+  it("does not create a gate approval without patterns", () => {
+    const approval = SessionApproval.multiple("path", []);
+    expect(approval.representativePattern).toBeUndefined();
+    expect(approval.toGateApproval()).toBeUndefined();
   });
 });

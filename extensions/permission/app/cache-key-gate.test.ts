@@ -1,84 +1,38 @@
 import { describe, expect, it, vi } from "vitest";
-
 import { CacheKeyGate } from "#src/app/cache-key-gate";
 
 describe("CacheKeyGate", () => {
-  describe("runIfChanged", () => {
-    it("runs the effect and returns its value when the key is new (null previous)", () => {
-      const gate = new CacheKeyGate();
-      const effect = vi.fn(() => "result");
+  it("runs once per key and returns the effect result", () => {
+    const gate = new CacheKeyGate();
+    const effect = vi.fn((value: number) => value);
 
-      const result = gate.runIfChanged("key-a", effect);
-
-      expect(effect).toHaveBeenCalledOnce();
-      expect(result).toBe("result");
-    });
-
-    it("commits the key so a second call with the same key skips the effect", () => {
-      const gate = new CacheKeyGate();
-      const effect = vi.fn(() => "result");
-
-      gate.runIfChanged("key-a", effect);
-      const result = gate.runIfChanged("key-a", effect);
-
-      expect(effect).toHaveBeenCalledOnce();
-      expect(result).toBeUndefined();
-    });
-
-    it("runs the effect when the key changes", () => {
-      const gate = new CacheKeyGate();
-      const effect = vi.fn((n: number) => n);
-
-      gate.runIfChanged("key-a", () => effect(1));
-      const result = gate.runIfChanged("key-b", () => effect(2));
-
-      expect(effect).toHaveBeenCalledTimes(2);
-      expect(result).toBe(2);
-    });
-
-    it("returns undefined when the key is unchanged", () => {
-      const gate = new CacheKeyGate();
-      gate.runIfChanged("key-a", vi.fn());
-
-      const result = gate.runIfChanged("key-a", vi.fn());
-
-      expect(result).toBeUndefined();
-    });
-
-    it("does not commit the key if the effect throws", () => {
-      const gate = new CacheKeyGate();
-      const throwing = vi.fn(() => {
-        throw new Error("oops");
-      });
-      const fallback = vi.fn(() => "ok");
-
-      expect(() => gate.runIfChanged("key-a", throwing)).toThrow("oops");
-
-      gate.runIfChanged("key-a", fallback);
-      expect(fallback).toHaveBeenCalledOnce();
-    });
+    expect(gate.runIfChanged("key-a", () => effect(1))).toBe(1);
+    expect(gate.runIfChanged("key-a", () => effect(2))).toBeUndefined();
+    expect(gate.runIfChanged("key-b", () => effect(3))).toBe(3);
+    expect(effect).toHaveBeenCalledTimes(2);
   });
 
-  describe("reset", () => {
-    it("re-arms the gate so the same key runs again on the next call", () => {
-      const gate = new CacheKeyGate();
-      const effect = vi.fn(() => "ok");
+  it("does not cache a key when the effect throws", () => {
+    const gate = new CacheKeyGate();
+    expect(() =>
+      gate.runIfChanged("key-a", () => {
+        throw new Error("oops");
+      }),
+    ).toThrow("oops");
 
-      gate.runIfChanged("key-a", effect);
-      gate.reset();
-      gate.runIfChanged("key-a", effect);
+    const effect = vi.fn();
+    gate.runIfChanged("key-a", effect);
+    expect(effect).toHaveBeenCalledOnce();
+  });
 
-      expect(effect).toHaveBeenCalledTimes(2);
-    });
+  it("runs a cached key again after reset", () => {
+    const gate = new CacheKeyGate();
+    const effect = vi.fn();
 
-    it("is idempotent when called on a fresh gate", () => {
-      const gate = new CacheKeyGate();
-      gate.reset();
-      const effect = vi.fn(() => "ok");
+    gate.runIfChanged("key-a", effect);
+    gate.reset();
+    gate.runIfChanged("key-a", effect);
 
-      gate.runIfChanged("key-a", effect);
-
-      expect(effect).toHaveBeenCalledOnce();
-    });
+    expect(effect).toHaveBeenCalledTimes(2);
   });
 });

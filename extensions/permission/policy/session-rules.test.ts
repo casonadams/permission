@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { evaluate } from "#src/policy/rule";
 import { SessionApproval } from "#src/policy/session-approval";
-import type { SessionApprovalRecorder } from "#src/policy/session-rules";
 import { deriveApprovalPattern, SessionRules } from "#src/policy/session-rules";
 
 describe("SessionRules", () => {
@@ -67,11 +66,6 @@ describe("SessionRules", () => {
   });
 
   describe("recordSessionApproval", () => {
-    it("satisfies the SessionApprovalRecorder interface", () => {
-      const rules: SessionApprovalRecorder = new SessionRules();
-      expect(typeof rules.recordSessionApproval).toBe("function");
-    });
-
     it("records a single-pattern approval as one rule", () => {
       const rules = new SessionRules();
       rules.recordSessionApproval(SessionApproval.single("bash", "git *"));
