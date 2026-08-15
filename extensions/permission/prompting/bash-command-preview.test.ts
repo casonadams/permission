@@ -13,6 +13,9 @@ describe("formatBashCommandPreview", () => {
       ["test \\", "  --file config.json ||", "echo missing"].join("\n"),
     );
     expect(formatBashCommandPreview('printf "hi"; echo "hello"')).toBe('printf "hi";\necho "hello"');
+    expect(formatBashCommandPreview("cat file | grep foo")).toBe("cat file |\ngrep foo");
+    expect(formatBashCommandPreview("cat file |& head")).toBe("cat file |&\nhead");
+    expect(formatBashCommandPreview("npm start & sleep 1")).toBe("npm start &\nsleep 1");
   });
 
   test("keeps a flag value with its flag", () => {

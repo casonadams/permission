@@ -1,6 +1,11 @@
 import { tokenizeBashCommand } from "./bash-command-tokenizer";
 
 const CONTROL_OPERATORS = new Set(["&&", "||", "|", "|&", ";", "&"]);
+const TRAILING_OPERATORS = new Set(["&&", "||", "|", "|&", "&", ";"]);
+const TRAILING_OPERATOR_SUFFIXES = [" &&", " ||", " |", " |&", " &", ";"];
+
+// Shfmt's `BinCmdOperator` set: &&, ||, |, |&. We also keep & and ; trailing
+// to match shfmt's default (no -bn) handling of statement separators.
 
 type PreviewPart = { text: string; operator: boolean; indented: boolean };
 type TokenKind = "operator" | "flag" | "word";
@@ -52,7 +57,7 @@ function pushOperator(parts: PreviewPart[], operator: string): void {
 }
 
 function isTrailingOperator(value: string): boolean {
-  return value === "&&" || value === "||" || value === ";";
+  return TRAILING_OPERATORS.has(value);
 }
 
 function flushWords(words: string[], parts: PreviewPart[]): string[] {
@@ -69,7 +74,7 @@ function renderPart(part: PreviewPart, continued: boolean): string {
 }
 
 function endsWithTrailingOperator(value: string): boolean {
-  return value.endsWith(" &&") || value.endsWith(" ||") || value.endsWith(";");
+  return TRAILING_OPERATOR_SUFFIXES.some((suffix) => value.endsWith(suffix));
 }
 
 function isFlag(token: string): boolean {
