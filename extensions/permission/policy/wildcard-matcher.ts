@@ -22,7 +22,15 @@ function escapeRegExp(value: string): string {
 }
 
 function applyTrailingWildcardOptional(escaped: string): string {
-  return escaped.endsWith(" .*") ? `${escaped.slice(0, -3)}( .*)?` : escaped;
+  if (escaped.endsWith(" .*")) {
+    return `${escaped.slice(0, -3)}( .*)?`;
+  }
+
+  if (escaped.endsWith("/.*") && escaped.length > 3) {
+    return `${escaped.slice(0, -3)}(?:/.*)?`;
+  }
+
+  return escaped;
 }
 
 export function compileWildcardPattern<TState>(

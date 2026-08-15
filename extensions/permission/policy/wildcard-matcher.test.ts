@@ -246,6 +246,18 @@ describe("wildcardMatch", () => {
       expect(wildcardMatch("git *", "npm install")).toBe(false);
     });
 
+    test("trailing path wildcard matches the directory itself", () => {
+      expect(wildcardMatch("/workspace/docs/*", "/workspace/docs")).toBe(true);
+    });
+
+    test("trailing path wildcard matches descendants", () => {
+      expect(wildcardMatch("/workspace/docs/*", "/workspace/docs/security.md")).toBe(true);
+    });
+
+    test("trailing path wildcard does not match a sibling directory", () => {
+      expect(wildcardMatch("/workspace/docs/*", "/workspace/docs-old")).toBe(false);
+    });
+
     test("'git status *' matches bare 'git status'", () => {
       expect(wildcardMatch("git status *", "git status")).toBe(true);
     });
