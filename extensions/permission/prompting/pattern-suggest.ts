@@ -66,7 +66,28 @@ export function suggestMcpPattern(target: string): string {
  * label is truncated.
  */
 function buildSessionLabel(pattern: string): string {
-  return `Session: ${pattern}`;
+  return `Session: ${truncateSessionPattern(pattern, SESSION_LABEL_MAX_LENGTH)}`;
+}
+
+const SESSION_LABEL_MAX_LENGTH = 50;
+const SESSION_LABEL_ELLIPSIS = "\u2026";
+
+/**
+ * Cap the pattern portion of the session-approval label so it stays one line
+ * in the option list. Truncates at the last whitespace or wildcard boundary
+ * before the limit so the visible fragment is still a valid pattern prefix.
+ * The full pattern is preserved on the suggestion for the audit log.
+ */
+function truncateSessionPattern(pattern: string, maxLength: number): string {
+  if (pattern.length <= maxLength) return pattern;
+  const cut = findTruncationBoundary(pattern, maxLength);
+  return `${pattern.slice(0, cut)}${SESSION_LABEL_ELLIPSIS}`;
+}
+
+function findTruncationBoundary(pattern: string, maxLength: number): number {
+  const slice = pattern.slice(0, maxLength);
+  const lastWildcard = Math.max(slice.lastIndexOf("*"), slice.lastIndexOf(" "));
+  return lastWildcard > 0 ? lastWildcard : maxLength;
 }
 
 /**

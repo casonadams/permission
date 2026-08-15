@@ -200,5 +200,13 @@ describe("suggestSessionPattern", () => {
       const result = suggestSessionPattern("edit", "*");
       expect(result.label).toBe("Session: *");
     });
+
+    it("truncates a long skill label at the limit, preserving the full pattern", () => {
+      const result = suggestSessionPattern("skill", "my-very-long-skill-name-that-keeps-going-and-going-for-a-while");
+      expect(result.pattern.length).toBeGreaterThan(50);
+      expect(result.label.length).toBeLessThanOrEqual(60);
+      expect(result.label.endsWith("\u2026")).toBe(true);
+      expect(result.label).toContain("Session: ");
+    });
   });
 });
