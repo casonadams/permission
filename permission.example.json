@@ -1,18 +1,23 @@
 {
   "$schema": "https://raw.githubusercontent.com/casonadams/permission/main/schemas/permissions.schema.json",
   "permission": {
-    "*": "allow",
+    "*": "ask",
+    "read": "allow",
+    "write": "allow",
+    "edit": "allow",
+    "grep": "allow",
+    "find": "allow",
+    "ls": "allow",
     "path": {
-      "*": "allow",
-      "*.env": { "action": "deny", "reason": "secrets" },
-      "*.env.*": { "action": "deny", "reason": "secrets" },
+      "/tmp/*": "allow",
+      "*.env*": "deny",
       "*.env.example": "allow",
-      "~/.ssh/*": { "action": "deny", "reason": "secrets" }
+      "~/.ssh/*": "deny"
     },
     "bash": {
       "*": "ask",
       "git status": "allow",
-      "git diff": "allow",
+      "git diff*": "allow",
       "git log *": "allow",
       "rm -rf *": { "action": "deny", "reason": "destructive" },
       "sudo *": "ask"
