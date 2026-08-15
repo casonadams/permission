@@ -129,6 +129,7 @@ function buildBashPathDescriptor(args: {
       toolCallId: tcc.toolCallId,
       toolName: tcc.toolName,
       command,
+      path: restriction.token,
       promptSurface: "path",
       promptValue: restriction.token,
     },

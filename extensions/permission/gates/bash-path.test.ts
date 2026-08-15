@@ -79,6 +79,7 @@ describe("describeBashPathGate", () => {
       pathValue: ".env",
     });
     expect(result.promptDetails.message).toContain(".env");
+    expect(result.promptDetails.path).toBe(".env");
   });
 
   it("descriptor decision uses surface 'path'", async () => {
