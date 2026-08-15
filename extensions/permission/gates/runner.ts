@@ -21,7 +21,6 @@ export interface GateRunnerDeps {
   recorder: SessionApprovalRecorder;
   defaultPrompter: GatePrompter;
   reporter: DecisionReporter;
-  onApproval?: (descriptor: GateDescriptor, check: PermissionCheckResult) => void;
 }
 
 type DescriptorRunContext = { descriptor: GateDescriptor; agentName: string | null; toolCallId: string };
@@ -59,18 +58,7 @@ export class GateRunner {
     const applied = await this.applyDescriptorGate(ctx, check);
     this.emitGateDecision(ctx, check, applied);
     this.recordSessionApproval(ctx.descriptor, applied.gateResult);
-    this.notifyApproval(ctx, check, applied);
     return toGateOutcome(applied.gateResult, check.state === "ask");
-  }
-
-  private notifyApproval(
-    ctx: DescriptorRunContext,
-    check: PermissionCheckResult,
-    applied: AppliedDescriptorGate,
-  ): void {
-    if (check.state === "ask" && applied.gateResult.action === "allow") {
-      this.deps.onApproval?.(ctx.descriptor, check);
-    }
   }
 
   private resolveDescriptorCheck(ctx: DescriptorRunContext): PermissionCheckResult {

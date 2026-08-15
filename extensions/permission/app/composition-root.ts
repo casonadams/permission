@@ -1,7 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { isSubagentExecutionContext } from "../forwarding/subagents/subagent-context";
 import { subscribeSubagentLifecycle } from "../forwarding/subagents/subagent-lifecycle-events";
-import type { GateDescriptor } from "../gates/descriptor";
 import { GateRunner } from "../gates/runner";
 import { SkillInputGatePipeline } from "../gates/skill-input-gate-pipeline";
 import { ToolCallGatePipeline } from "../gates/tool-call-gate-pipeline";
@@ -10,10 +9,8 @@ import { emitDecisionEvent } from "../integrations/permission-events";
 import { LocalPermissionsService } from "../integrations/permissions-service";
 import { PermissionServiceLifecycle } from "../integrations/service-lifecycle";
 import { PermissionResolver } from "../policy/permission-resolver";
-import type { PermissionCheckResult } from "../policy/types";
 import { requestPermissionDecisionFromUi } from "../prompting/permission-dialog";
 import { installLocalPrompter } from "../ui/prompter.ts";
-import { sendApprovalGuidance } from "./approval-guidance";
 import { createRuntime, type Runtime, registerCommand } from "./composition-runtime";
 import { AgentPrepHandler } from "./handlers/before-agent-start";
 import { SessionLifecycleHandler } from "./handlers/lifecycle";
@@ -36,13 +33,7 @@ function registerHandlers(pi: ExtensionAPI, runtime: Runtime): void {
     serviceLifecycle: createServiceLifecycle(pi, runtime),
     notifier: runtime.notifier,
   });
-  const gates = createGateHandler({
-    runtime,
-    resolver,
-    pi,
-    toolRegistry,
-    onApproval: (descriptor, check) => sendApprovalGuidance(pi, descriptor, check),
-  });
+  const gates = createGateHandler({ runtime, resolver, pi, toolRegistry });
   const agentPrep = new AgentPrepHandler(runtime.session, resolver, toolRegistry);
   pi.on("session_start", (event, ctx) => lifecycle.handleSessionStart(event, ctx));
   pi.on("resources_discover", (event) => lifecycle.handleResourcesDiscover(event));
@@ -79,19 +70,12 @@ function createGateHandler(args: {
   resolver: PermissionResolver;
   pi: ExtensionAPI;
   toolRegistry: ReturnType<typeof createToolRegistry>;
-  onApproval: (descriptor: GateDescriptor, check: PermissionCheckResult) => void;
 }): PermissionGateHandler {
-  const { runtime, resolver, pi, toolRegistry, onApproval } = args;
+  const { runtime, resolver, pi, toolRegistry } = args;
   const reporter = {
     emitDecision: (event: Parameters<typeof emitDecisionEvent>[1]) => emitDecisionEvent(pi.events, event),
   };
-  const runner = new GateRunner({
-    resolver,
-    recorder: runtime.rules,
-    defaultPrompter: runtime.gateway,
-    reporter,
-    onApproval,
-  });
+  const runner = new GateRunner({ resolver, recorder: runtime.rules, defaultPrompter: runtime.gateway, reporter });
   return new PermissionGateHandler({
     session: runtime.session,
     toolRegistry,

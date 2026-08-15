@@ -204,15 +204,6 @@ describe("subagent registry sharing across factory instances", () => {
 
     const result = (await firePromise) as { block?: true };
     expect(result.block).toBeUndefined();
-    expect(childPi.sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        customType: "permission-guidance",
-        content: expect.stringContaining('"/var/'),
-        display: true,
-      }),
-      { deliverAs: "steer" },
-    );
-
     rmSync(childCwd, { recursive: true, force: true });
     rmSync(externalDir, { recursive: true, force: true });
   });
