@@ -1,23 +1,21 @@
 import type { ConfigReader } from "../config/config-store";
 import { emitUiPromptEvent, type PermissionEventBus } from "../integrations/permission-events";
 import type { ReviewLogger } from "../integrations/session-logger";
-import { createAutoApprovedPermissionDecision, type PermissionPromptDecision } from "./permission-dialog";
+import type { PermissionPromptDecision } from "./permission-dialog";
 import type { PromptPermissionDetails } from "./permission-prompter";
 import { buildDirectUiPrompt } from "./permission-ui-prompt";
-import { shouldAutoApprovePermissionState } from "./yolo-mode";
 
 export type PromptAuditDeps = {
   config: ConfigReader;
   logger: ReviewLogger;
 };
 
+/** Auto-approval has been removed; this hook is preserved for callers. */
 export function maybeAutoApprovePrompt(
-  details: PromptPermissionDetails,
-  deps: PromptAuditDeps,
+  _details: PromptPermissionDetails,
+  _deps: PromptAuditDeps,
 ): PermissionPromptDecision | null {
-  if (!shouldAutoApprovePermissionState("ask", deps.config.current())) return null;
-  deps.logger.review("permission_request.auto_approved", buildReviewLogDetails(details));
-  return createAutoApprovedPermissionDecision();
+  return null;
 }
 
 export function recordPromptWaiting(

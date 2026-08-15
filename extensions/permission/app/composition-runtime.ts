@@ -43,14 +43,12 @@ export type Runtime = Core & {
 
 export function createRuntime(pi: ExtensionAPI): Runtime {
   const core = createCore();
-  const state: { config?: ConfigStore; session?: PermissionSession } = {};
-  const logger = createLogger(core, state);
+  const state: { session?: PermissionSession } = {};
+  const logger = createLogger(core.paths.globalLogsDir, state);
   const config = new ConfigStore({ agentDir: core.agentDir, policyPaths: core.manager, logger });
-  state.config = config;
-  const forwarder = createForwarder({ pi, core, config, logger });
-  const prompter = new PermissionPrompter({ config, logger, events: pi.events, forwarder });
+  const forwarder = createForwarder({ pi, core, logger });
+  const prompter = new PermissionPrompter({ logger, events: pi.events, forwarder });
   const gateway = new PromptingGateway({
-    config,
     subagentSessionsDir: core.paths.subagentSessionsDir,
     registry: core.registries.subagents,
     prompter,
@@ -80,25 +78,16 @@ function createCore(): Core {
   };
 }
 
-function createLogger(
-  core: Core,
-  state: { config?: ConfigStore; session?: PermissionSession },
-): PermissionSessionLogger {
+function createLogger(globalLogsDir: string, state: { session?: PermissionSession }): PermissionSessionLogger {
   return new PermissionSessionLogger({
-    globalLogsDir: core.paths.globalLogsDir,
-    getConfig: () => readConfig(state),
+    globalLogsDir,
     notify: (message) => state.session?.notify(message),
   });
-}
-
-function readConfig(state: { config?: ConfigStore }) {
-  return state.config?.current() ?? { debugLog: false, permissionReviewLog: false, yoloMode: false };
 }
 
 function createForwarder(args: {
   pi: ExtensionAPI;
   core: Core;
-  config: ConfigStore;
   logger: PermissionSessionLogger;
 }): PermissionForwarder {
   const deps: PermissionForwarderDeps = {
@@ -109,16 +98,20 @@ function createForwarder(args: {
     logger: args.logger,
     requestPermissionDecisionFromUi: (params) =>
       requestPermissionDecisionFromUi(params.ui, params.title, params.message, params.options),
-    config: args.config,
   };
   return new PermissionForwarder(deps);
 }
 
 export function registerCommand(pi: ExtensionAPI, runtime: Runtime): void {
   registerPermissionSystemCommand(pi, {
-    config: runtime.config,
     configPath: getGlobalConfigPath(runtime.agentDir),
     getActiveAgentConfigRules: () =>
       runtime.manager.getComposedConfigRules(runtime.session.lastKnownActiveAgentName ?? undefined),
+    summarizeConfig: () => summarizeActiveRules(runtime),
   });
+}
+
+function summarizeActiveRules(runtime: Runtime): string {
+  const rules = runtime.manager.getComposedConfigRules(runtime.session.lastKnownActiveAgentName ?? undefined);
+  return rules.map((r) => `${r.surface}:${r.pattern} ${r.action}`).join("; ");
 }

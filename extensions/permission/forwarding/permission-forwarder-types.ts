@@ -12,7 +12,6 @@ import type {
   PermissionPromptDecision,
   RequestPermissionOptions,
 } from "#src/prompting/permission-dialog";
-import type { ConfigReader } from "../config/config-store";
 
 export interface ForwarderContext {
   hasUI: boolean;
@@ -101,7 +100,6 @@ export interface PermissionForwarderDeps {
   events?: PermissionEventBus;
   logger: DebugReviewLogger;
   requestPermissionDecisionFromUi: PermissionDecisionRequester;
-  config: ConfigReader;
 }
 
 export interface ApprovalRequester {

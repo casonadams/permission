@@ -40,5 +40,4 @@ function logPermissionForwardingIssue(args: PermissionForwardingLogIssue): void 
       ? { message: args.message }
       : { message: args.message, error: formatUnknownErrorMessage(args.error) };
   args.logger?.review(args.event, details);
-  args.logger?.debug(args.event, details);
 }

@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/casonadams/permission/main/schemas/permissions.schema.json",
   "title": "Permission Extension Configuration",
-  "description": "Unified config file combining runtime knobs and flat permission policy for the permission extension.",
-  "markdownDescription": "Unified config file combining runtime knobs and flat permission policy for the [permission](https://github.com/casonadams/permission) extension.\n\nPlace at `~/.pi/agent/permission.json` (global) or `<project>/.pi/agent/permission.json` (project).",
+  "description": "Permission policy for the permission extension.",
+  "markdownDescription": "Permission policy for the [permission](https://github.com/casonadams/permission) extension.\n\nPlace at `~/.pi/agent/permission.json` (global) or `<project>/.pi/agent/permission.json` (project).",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -11,49 +11,9 @@
       "description": "JSON Schema URI for editor autocomplete and validation.",
       "type": "string"
     },
-    "debugLog": {
-      "description": "Write verbose permission-system diagnostics to the extension logs directory.",
-      "markdownDescription": "Write verbose permission-system diagnostics to `logs/pi-permission-system-debug.jsonl` under the extension config directory.",
-      "type": "boolean",
-      "default": false
-    },
-    "permissionReviewLog": {
-      "description": "Write permission request and decision audit events to the extension logs directory.",
-      "markdownDescription": "Write permission request and decision audit events to `logs/pi-permission-system-permission-review.jsonl` under the extension config directory.",
-      "type": "boolean",
-      "default": true
-    },
-    "yoloMode": {
-      "description": "Auto-approve ask-state permission checks, including subagent approval forwarding.",
-      "markdownDescription": "Auto-approve `ask`-state permission checks, including subagent approval forwarding.\n\n⚠️ **Use with caution** — this disables all interactive confirmation prompts.",
-      "type": "boolean",
-      "default": false
-    },
-    "toolInputPreviewMaxLength": {
-      "description": "Maximum character length of the inline-JSON tool-input preview shown in permission prompts. Omit to use the default (200). Set to a large value to disable truncation.",
-      "markdownDescription": "Maximum character length of the inline-JSON tool-input preview shown in permission prompts.\n\nOmit to use the default (200). Set to a large value (e.g. `10000`) to effectively disable truncation and see the full input.",
-      "type": "integer",
-      "minimum": 1
-    },
-    "toolTextSummaryMaxLength": {
-      "description": "Maximum character length of inline pattern/path summaries (e.g. grep patterns, find globs, ls paths) in permission prompts. Omit to use the default (80).",
-      "markdownDescription": "Maximum character length of inline pattern/path summaries (e.g. grep patterns, find globs, ls paths) shown in permission prompts.\n\nOmit to use the default (80). Increase this when working with long regexes or deep paths that are being cut off.",
-      "type": "integer",
-      "minimum": 1
-    },
-    "piInfrastructureReadPaths": {
-      "description": "Additional directories to auto-allow for reads as Pi infrastructure, bypassing the external_directory gate. Supports ~ expansion and wildcard patterns (* and ?).",
-      "markdownDescription": "Additional directories to auto-allow for reads as Pi infrastructure, bypassing the `external_directory` gate.\n\nThe extension auto-discovers the global node_modules root (walks up from the extension's install path; falls back to `npm root -g` from a dev checkout), Pi's own install directory (via the coding-agent `getPackageDir()` API), `agentDir`, `agentDir/git`, and project-local `.pi/npm/` and `.pi/git/`. Add entries here for edge cases where auto-discovery is insufficient (e.g. custom `npmCommand` pointing to pnpm).\n\nSupports `~`/`$HOME` expansion. Entries may be plain directory prefixes or wildcard patterns using `*` (matches any characters, including `/`) and `?` (matches exactly one character). `**` and `*` are equivalent — both cross directory boundaries.\n\nOn Windows, matching is case-insensitive and tolerant of either path separator.",
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      },
-      "default": []
-    },
     "permission": {
       "description": "Flat permission policy. Each key is a surface name; values are a PermissionState string (catch-all) or a pattern→action map.",
-      "markdownDescription": "Flat permission policy.\n\nEach top-level key is a surface name:\n- `\"*\"` — universal fallback (replaces `defaultPolicy.tools` from the legacy format)\n- Tool names (`read`, `write`, `bash`, `mcp`, `skill`, `external_directory`, `path`, etc.)\n\nA **string** value is shorthand for `{ \"*\": action }` (surface-level catch-all).\nAn **object** value maps wildcard patterns to actions — last matching pattern wins.\n\nFor built-in file tools (`read`, `write`, `edit`, `find`, `grep`, `ls`), patterns are matched against the file path from `input.path`. For example, `\"read\": { \"*\": \"allow\", \"*.env\": \"deny\" }` allows reads but denies `.env` files.\n\nWhen Pi's current working directory is known, relative path inputs also match their cwd-normalized absolute form, so `src/App.jsx` can match both `src/*` and `/workspace/project/*`. Bash path tokens use the effective directory after literal `cd` commands for this matching; non-literal `cd \"$DIR\"` style commands remain conservative.\n\nThe `path` surface is a cross-cutting gate that applies to **all** file access: Pi tools, bash commands, MCP calls (via `input.arguments.path`), and extension tools (via `input.path` or a registered access extractor). A `path` deny cannot be overridden by a per-tool allow. Use it to protect sensitive files (`.env`, `~/.ssh/*`) from all path-aware tools at once.\n\n**Merge order (lowest → highest precedence):** global → project → per-agent frontmatter.",
+      "markdownDescription": "Flat permission policy.\n\nEach top-level key is a surface name:\n- `\"*\"` — universal fallback (replaces `defaultPolicy.tools` from the legacy format)\n- Tool names (`read`, `write`, `bash`, `mcp`, `skill`, `path`, etc.)\n\nA **string** value is shorthand for `{ \"*\": action }` (surface-level catch-all).\nAn **object** value maps wildcard patterns to actions — last matching pattern wins.\n\nFor built-in file tools (`read`, `write`, `edit`, `find`, `grep`, `ls`), patterns are matched against the file path from `input.path`. For example, `\"read\": { \"*\": \"allow\", \"*.env\": \"deny\" }` allows reads but denies `.env` files.\n\nWhen Pi's current working directory is known, relative path inputs also match their cwd-normalized absolute form, so `src/App.jsx` can match both `src/*` and `/workspace/project/*`. Bash path tokens use the effective directory after literal `cd` commands for this matching; non-literal `cd \"$DIR\"` style commands remain conservative.\n\nThe `path` surface is a cross-cutting gate that applies to **all** file access: Pi tools, bash commands, MCP calls (via `input.arguments.path`), and extension tools (via `input.path` or a registered access extractor). Paths outside the working directory that have no explicit `path` rule default to `ask`. Use `path` to allow specific external directories (e.g. `\"path\": { \"/tmp/*\": \"allow\" }`) or to protect sensitive files (`.env`, `~/.ssh/*`) from all path-aware tools at once.\n\n**Merge order (lowest → highest precedence):** global → project → per-agent frontmatter.",
       "type": "object",
       "propertyNames": {
         "description": "A surface name or the universal fallback key '*'.",
@@ -74,7 +34,7 @@
       },
       "examples": [
         {
-          "*": "ask",
+          "*": "allow",
           "path": {
             "*": "allow",
             "*.env": "deny",
@@ -91,8 +51,7 @@
             "git diff": "allow"
           },
           "mcp": { "*": "ask", "mcp_status": "allow", "exa:*": "allow" },
-          "skill": { "*": "ask", "librarian": "allow" },
-          "external_directory": "ask"
+          "skill": { "*": "ask", "librarian": "allow" }
         }
       ]
     }
@@ -143,7 +102,7 @@
       "properties": {
         "action": {
           "const": "deny",
-          "description": "The permission decision \u2014 must be \"deny\"."
+          "description": "The permission decision — must be \"deny\"."
         },
         "reason": {
           "type": "string",

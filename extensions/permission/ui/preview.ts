@@ -89,14 +89,9 @@ function skillName(toolName: string, input: ToolInput): string {
   return readString(input, "skillName") || (toolName === "skill" ? readString(input, "name") : "");
 }
 
-function isExternalDirectoryPrompt(input: ToolInput): boolean {
-  return readString(input, "promptSurface") === "external_directory";
-}
-
 /**
  * Ordered most to least specific: the reason a call is gated outweighs the tool
- * it came through, so a read or bash command reaching outside the working
- * directory is titled by that boundary rather than by the tool.
+ * it came through.
  */
 const SUBJECT_RESOLVERS: Array<(toolName: string, input: ToolInput) => TitledSubject | null> = [
   (toolName, input) => ({ label: "Skill", subject: skillName(toolName, input) }),
@@ -125,9 +120,6 @@ function titledSubject(toolName: string, input: ToolInput): TitledSubject | null
 export function toolTitle(toolName: string, input: unknown): string {
   if (looksLikeWebhook(toolName, input)) {
     return `Webhook: ${mcpTarget(input as ToolInput) || toolName}`;
-  }
-  if (isExternalDirectoryPrompt(input as ToolInput)) {
-    return `External ${toolName}`;
   }
   const titled = titledSubject(toolName, input as ToolInput);
   if (!titled) return `Tool: ${toolName}`;

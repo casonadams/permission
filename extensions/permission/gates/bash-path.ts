@@ -38,7 +38,15 @@ export function describeBashPathGate(
   const restriction = choosePathRestriction(analysis.uncovered);
   if (!restriction) return null;
 
-  return buildBashPathDescriptor(tcc, input.command, restriction);
+  // Tokens with no explicit `path` rule and that resolve inside the
+  // working directory are allowed by default. Tokens that resolve
+  // outside cwd still prompt under the `path` surface.
+  if (restriction.check.matchedPattern === undefined && tcc.cwd) {
+    const isExternal = (bashProgram?.externalPaths(tcc.cwd) ?? []).includes(restriction.token);
+    if (!isExternal) return null;
+  }
+
+  return buildBashPathDescriptor(tcc, input.command, restriction, tcc.cwd);
 }
 
 type BashPathInput = { command: string; candidates: BashPathRuleCandidate[]; tokens: string[] };
@@ -121,7 +129,12 @@ function buildBashPathBypass(tcc: ToolCallContext, input: BashPathInput): GateRe
   };
 }
 
-function buildBashPathDescriptor(tcc: ToolCallContext, command: string, restriction: PathRestriction): GateResult {
+function buildBashPathDescriptor(
+  tcc: ToolCallContext,
+  command: string,
+  restriction: PathRestriction,
+  cwd: string | undefined,
+): GateResult {
   const message = formatPathAskPrompt(tcc.toolName, restriction.token, tcc.agentName ?? undefined);
   return {
     surface: "path",
@@ -130,6 +143,7 @@ function buildBashPathDescriptor(tcc: ToolCallContext, command: string, restrict
       kind: "bash_path",
       command,
       pathValue: restriction.token,
+      cwd,
       agentName: tcc.agentName ?? undefined,
     },
     sessionApproval: SessionApproval.single("path", deriveApprovalPattern(restriction.token)),

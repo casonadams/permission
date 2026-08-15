@@ -41,7 +41,6 @@ export function makePaths(overrides: Partial<ExtensionPaths> = {}): ExtensionPat
 
 export function makeLogger(): SessionLogger {
   return {
-    debug: vi.fn(),
     review: vi.fn(),
     warn: vi.fn(),
   };

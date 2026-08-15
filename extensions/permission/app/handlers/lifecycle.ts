@@ -58,7 +58,7 @@ export class SessionLifecycleHandler {
     }
 
     if (event.reason === "reload") {
-      this.logger.debug("lifecycle.reload", {
+      this.logger.review("lifecycle.reload", {
         triggeredBy: "session_start",
         reason: event.reason,
         cwd: ctx.cwd,
@@ -79,7 +79,7 @@ export class SessionLifecycleHandler {
     }
 
     this.session.reload();
-    this.logger.debug("lifecycle.reload", {
+    this.logger.review("lifecycle.reload", {
       triggeredBy: "resources_discover",
       reason: event.reason,
       cwd: this.session.getRuntimeContext()?.cwd ?? null,

@@ -5,28 +5,24 @@ export const EXTENSION_TAG = `[${EXTENSION_ID}]`;
 
 type AgentNamed = { agentName?: string };
 type ToolDenialContext = AgentNamed & { kind: "tool"; check: PermissionCheckResult; input?: unknown };
-type PathDenialContext = AgentNamed & { kind: "path"; toolName: string; pathValue: string };
-type ExternalDirectoryDenialContext = AgentNamed & {
-  kind: "external_directory";
+type PathDenialContext = AgentNamed & {
+  kind: "path";
   toolName: string;
   pathValue: string;
-  cwd: string;
+  cwd?: string;
 };
-type BashExternalDirectoryDenialContext = AgentNamed & {
-  kind: "bash_external_directory";
+type BashPathDenialContext = AgentNamed & {
+  kind: "bash_path";
   command: string;
-  externalPaths: string[];
-  cwd: string;
+  pathValue: string;
+  cwd?: string;
 };
-type BashPathDenialContext = AgentNamed & { kind: "bash_path"; command: string; pathValue: string };
 type SkillReadDenialContext = AgentNamed & { kind: "skill_read"; skillName: string; readPath: string };
 type SkillInputDenialContext = AgentNamed & { kind: "skill_input"; skillName: string };
 
 export type DenialContext =
   | ToolDenialContext
   | PathDenialContext
-  | ExternalDirectoryDenialContext
-  | BashExternalDirectoryDenialContext
   | BashPathDenialContext
   | SkillReadDenialContext
   | SkillInputDenialContext;
@@ -59,12 +55,13 @@ type DenialBodyBuilders = {
 const denyBodyBuilders: DenialBodyBuilders = {
   tool: buildToolDenyBody,
   path: (ctx) =>
-    `${subject(ctx.agentName)} is not permitted to access path '${ctx.pathValue}' via tool '${ctx.toolName}'.`,
-  external_directory: (ctx) =>
-    `${subject(ctx.agentName)} is not permitted to run tool '${ctx.toolName}' for path '${ctx.pathValue}' outside working directory '${ctx.cwd}'.`,
-  bash_external_directory: (ctx) =>
-    `${subject(ctx.agentName)} is not permitted to run bash command '${ctx.command}' which references path(s) outside working directory '${ctx.cwd}': ${ctx.externalPaths.join(", ")}.`,
-  bash_path: (ctx) => `${subject(ctx.agentName)} is not permitted to access path '${ctx.pathValue}' via tool 'bash'.`,
+    ctx.cwd
+      ? `${subject(ctx.agentName)} is not permitted to run tool '${ctx.toolName}' for path '${ctx.pathValue}' outside working directory '${ctx.cwd}'.`
+      : `${subject(ctx.agentName)} is not permitted to access path '${ctx.pathValue}' via tool '${ctx.toolName}'.`,
+  bash_path: (ctx) =>
+    ctx.cwd
+      ? `${subject(ctx.agentName)} is not permitted to run bash command '${ctx.command}' which references path '${ctx.pathValue}' outside working directory '${ctx.cwd}'.`
+      : `${subject(ctx.agentName)} is not permitted to access path '${ctx.pathValue}' via tool 'bash'.`,
   skill_read: (ctx) =>
     `${subject(ctx.agentName)} is not permitted to access skill '${ctx.skillName}' via '${ctx.readPath}'.`,
   skill_input: (ctx) => `${subject(ctx.agentName)} is not permitted to access skill '${ctx.skillName}'.`,
@@ -111,13 +108,16 @@ export function matchQualifier(matchedPattern?: string, context?: BashCommandCon
 
 const unavailableBodyBuilders: DenialBodyBuilders = {
   tool: buildToolUnavailableBody,
-  path: (ctx) => `Accessing '${ctx.pathValue}' requires approval, but no interactive UI is available.`,
-  external_directory: (ctx) =>
-    `Accessing '${ctx.pathValue}' outside the working directory requires approval, but no interactive UI is available.`,
-  bash_external_directory: (ctx) =>
-    `Bash command '${ctx.command}' references path(s) outside the working directory and requires approval, but no interactive UI is available.`,
-  bash_path: (ctx) =>
-    `Bash command '${ctx.command}' accesses path '${ctx.pathValue}' which requires approval, but no interactive UI is available.`,
+  path: (ctx) =>
+    ctx.cwd
+      ? `Accessing '${ctx.pathValue}' outside the working directory requires approval, but no interactive UI is available.`
+      : `Accessing '${ctx.pathValue}' requires approval, but no interactive UI is available.`,
+  bash_path: (ctx) => {
+    if (ctx.cwd) {
+      return `Bash command '${ctx.command}' references path '${ctx.pathValue}' outside the working directory and requires approval, but no interactive UI is available.`;
+    }
+    return `Bash command '${ctx.command}' accesses path '${ctx.pathValue}' which requires approval, but no interactive UI is available.`;
+  },
   skill_read: (ctx) => `Accessing skill '${ctx.skillName}' requires approval, but no interactive UI is available.`,
   skill_input: (ctx) => `Accessing skill '${ctx.skillName}' requires approval, but no interactive UI is available.`,
 };
@@ -146,10 +146,10 @@ function buildUserDeniedBodyStart(ctx: DenialContext): string {
 const userDeniedBodyBuilders: DenialBodyBuilders = {
   tool: buildToolUserDeniedBodyStart,
   path: (ctx) => `User denied access to path '${ctx.pathValue}'`,
-  external_directory: (ctx) =>
-    `User denied external directory access for tool '${ctx.toolName}' path '${ctx.pathValue}'`,
-  bash_external_directory: (ctx) => `User denied external directory access for bash command '${ctx.command}'`,
-  bash_path: (ctx) => `User denied path access for bash command '${ctx.command}' (path '${ctx.pathValue}')`,
+  bash_path: (ctx) =>
+    ctx.cwd
+      ? `User denied external path access for bash command '${ctx.command}'`
+      : `User denied path access for bash command '${ctx.command}' (path '${ctx.pathValue}')`,
   skill_read: (ctx) => `User denied access to skill '${ctx.skillName}'`,
   skill_input: (ctx) => `User denied access to skill '${ctx.skillName}'`,
 };

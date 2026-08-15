@@ -29,7 +29,6 @@ export class PermissionForwarder implements ApprovalRequester, InboxProcessor {
       events: deps.events,
       logger: deps.logger,
       requestPermissionDecisionFromUi: deps.requestPermissionDecisionFromUi,
-      config: deps.config,
     };
   }
 

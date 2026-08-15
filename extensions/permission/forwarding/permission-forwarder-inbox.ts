@@ -1,7 +1,6 @@
 import { join } from "node:path";
 import { emitUiPromptEvent } from "#src/integrations/permission-events";
-import { createAutoApprovedPermissionDecision, type PermissionPromptDecision } from "#src/prompting/permission-dialog";
-import { shouldAutoApprovePermissionState } from "#src/prompting/yolo-mode";
+import type { PermissionPromptDecision } from "#src/prompting/permission-dialog";
 import {
   cleanupPermissionForwardingLocationIfEmpty,
   ensureDirectoryExists,
@@ -141,12 +140,7 @@ function maybeAutoApprove(params: {
   location: ProcessableInbox["location"];
   requestPath: string;
 }): ForwardedDecisionResponse | null {
-  const decision = shouldAutoApprovePermissionState("ask", params.state.config.current())
-    ? createAutoApprovedPermissionDecision()
-    : null;
-  return decision
-    ? { request: params.request, location: params.location, responsePath: params.requestPath, decision }
-    : null;
+  return null;
 }
 
 async function promptForForwardedDecision(

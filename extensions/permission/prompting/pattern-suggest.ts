@@ -100,7 +100,6 @@ const PATTERN_BUILDERS: Record<string, (value: string) => string> = {
   bash: suggestBashPattern,
   mcp: suggestMcpPattern,
   skill: (value) => value,
-  external_directory: deriveApprovalPattern,
   path: deriveApprovalPattern,
 };
 

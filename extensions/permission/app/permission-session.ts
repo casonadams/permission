@@ -1,13 +1,12 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CacheKeyGate } from "#src/app/cache-key-gate";
 import type { SessionConfigStore } from "../config/config-store";
-import type { PermissionSystemExtensionConfig } from "../config/extension-config";
 import type { ForwardingController } from "../forwarding/forwarding-manager";
 import type { ToolCallGateInputs } from "../gates/tool-call-gate-pipeline";
 import type { ScopedPermissionManager } from "../policy/permission-manager";
 import type { SessionRules } from "../policy/session-rules";
 import type { PromptingGatewayLifecycle } from "../prompting/prompting-gateway";
-import { resolveToolPreviewLimits, type ToolPreviewFormatterOptions } from "../prompting/tool-preview-formatter";
+import { DEFAULT_TOOL_PREVIEW_OPTIONS, type ToolPreviewFormatterOptions } from "../prompting/tool-preview-formatter";
 import { getActiveAgentName, getActiveAgentNameFromSystemPrompt } from "./active-agent";
 import type { ExtensionPaths } from "./extension-paths";
 import type { SkillPromptEntry } from "./skill-prompt-sanitizer";
@@ -109,15 +108,11 @@ export class PermissionSession implements ToolCallGateInputs {
     this.deps.configStore.logResolvedPaths(this.context?.cwd);
   }
 
-  get config(): PermissionSystemExtensionConfig {
-    return this.deps.configStore.current();
-  }
-
   getInfrastructureReadDirs(): string[] {
-    return [...this.deps.paths.piInfrastructureDirs, ...(this.config.piInfrastructureReadPaths ?? [])];
+    return [...this.deps.paths.piInfrastructureDirs];
   }
 
   getToolPreviewLimits(): ToolPreviewFormatterOptions {
-    return resolveToolPreviewLimits(this.config);
+    return DEFAULT_TOOL_PREVIEW_OPTIONS;
   }
 }

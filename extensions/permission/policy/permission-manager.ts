@@ -5,7 +5,6 @@ import { normalizeFlatConfig } from "./normalize";
 import { buildCheckResult } from "./permission-check-result";
 import { getUniversalFallback, getUniversalFallbackOrigin } from "./permission-defaults";
 import type { PermissionManagerOptions, ScopedPermissionManager } from "./permission-manager-types";
-import { SPECIAL_PERMISSION_KEYS } from "./permission-surfaces";
 import type { Rule, RuleOrigin, Ruleset } from "./rule";
 import { evaluate } from "./rule";
 import { mergeScopesWithOrigins } from "./scope-merge";
@@ -142,11 +141,6 @@ export class PermissionManager implements ScopedPermissionManager {
   getToolPermission(toolName: string, agentName?: string): PermissionState {
     const { composedRules } = this.resolvePermissions(agentName);
     const normalizedToolName = toolName.trim();
-
-    // Special surfaces (external_directory): evaluate directly by surface name.
-    if (SPECIAL_PERMISSION_KEYS.has(normalizedToolName)) {
-      return evaluate(normalizedToolName, "*", composedRules).action;
-    }
 
     // Bash, MCP, skill: evaluate with "*" value — the per-surface catch-all
     // (or universal default) handles this correctly.

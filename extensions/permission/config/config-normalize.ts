@@ -1,27 +1,7 @@
 import type { FlatPermissionConfig, PatternValue } from "../policy/types";
-import {
-  isDenyWithReason,
-  isPermissionState,
-  normalizeOptionalPositiveInt,
-  normalizeOptionalStringArray,
-  toRecord,
-} from "../shared/common";
-import {
-  BOOLEAN_CONFIG_KEYS,
-  type BooleanConfigKey,
-  NUMBER_CONFIG_KEYS,
-  type NumberConfigKey,
-  STRING_ARRAY_CONFIG_KEYS,
-  type StringArrayConfigKey,
-} from "./config-keys";
+import { isDenyWithReason, isPermissionState, toRecord } from "../shared/common";
 
 export interface UnifiedPermissionConfig {
-  debugLog?: boolean;
-  permissionReviewLog?: boolean;
-  yoloMode?: boolean;
-  toolInputPreviewMaxLength?: number;
-  toolTextSummaryMaxLength?: number;
-  piInfrastructureReadPaths?: string[];
   permission?: FlatPermissionConfig;
 }
 
@@ -30,34 +10,12 @@ export interface UnifiedConfigLoadResult {
   issues: string[];
 }
 
-function normalizeOptionalBoolean(value: unknown): boolean | undefined {
-  return typeof value === "boolean" ? value : undefined;
-}
-
 export function normalizeUnifiedConfig(raw: unknown): UnifiedConfigLoadResult {
   const record = toRecord(raw);
   const config: UnifiedPermissionConfig = {};
   const issues: string[] = [];
-  for (const key of BOOLEAN_CONFIG_KEYS) addBooleanConfig(config, key, record[key]);
-  for (const key of NUMBER_CONFIG_KEYS) addPositiveIntConfig(config, key, record[key]);
-  for (const key of STRING_ARRAY_CONFIG_KEYS) addStringArrayConfig(config, key, record[key]);
   addPermissionConfig(config, record.permission, issues);
   return { config, issues };
-}
-
-function addBooleanConfig(config: UnifiedPermissionConfig, key: BooleanConfigKey, raw: unknown): void {
-  const value = normalizeOptionalBoolean(raw);
-  if (value !== undefined) config[key] = value;
-}
-
-function addPositiveIntConfig(config: UnifiedPermissionConfig, key: NumberConfigKey, raw: unknown): void {
-  const value = normalizeOptionalPositiveInt(raw);
-  if (value !== undefined) config[key] = value;
-}
-
-function addStringArrayConfig(config: UnifiedPermissionConfig, key: StringArrayConfigKey, raw: unknown): void {
-  const value = normalizeOptionalStringArray(raw);
-  if (value !== undefined) config[key] = value;
 }
 
 function addPermissionConfig(config: UnifiedPermissionConfig, raw: unknown, issues: string[]): void {

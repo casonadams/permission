@@ -3,14 +3,16 @@ import type { ToolAccessExtractorLookup } from "#src/integrations/tool-access-ex
 import type { ToolInputFormatterLookup } from "#src/integrations/tool-input-formatter-registry";
 import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
 import type { PermissionCheckResult } from "#src/policy/types";
-import { ToolPreviewFormatter, type ToolPreviewFormatterOptions } from "#src/prompting/tool-preview-formatter";
+import {
+  DEFAULT_TOOL_PREVIEW_OPTIONS,
+  ToolPreviewFormatter,
+  type ToolPreviewFormatterOptions,
+} from "#src/prompting/tool-preview-formatter";
 import { getNonEmptyString, toRecord } from "#src/shared/common";
 import { resolveBashCommandCheck } from "./bash-command";
-import { describeBashExternalDirectoryGate } from "./bash-external-directory";
 import { describeBashPathGate } from "./bash-path";
 import { BashProgram } from "./bash-program";
 import type { GateResult } from "./descriptor";
-import { describeExternalDirectoryGate } from "./external-directory";
 import { describePathGate } from "./path";
 import type { GateRunner } from "./runner";
 import { describeSkillReadGate } from "./skill-read";
@@ -20,9 +22,6 @@ import type { GateOutcome, ToolCallContext } from "./types";
 /**
  * Narrow interface the pipeline needs from its session-side dependency.
  *
- * The three query methods needed to assemble gate inputs.
- * The resolver is injected separately as a constructor parameter.
- *
  * `PermissionSession` satisfies this structurally at the construction call
  * site; no `implements` clause is needed and would create a layer-inversion
  * import from the domain module into the handler layer.
@@ -30,7 +29,7 @@ import type { GateOutcome, ToolCallContext } from "./types";
 export interface ToolCallGateInputs {
   /** Active skill prompt entries for the skill-read gate. */
   getActiveSkillEntries(): SkillPromptEntry[];
-  /** Combined infrastructure read directories (static + config-derived). */
+  /** Combined infrastructure read directories (static). */
   getInfrastructureReadDirs(): string[];
   /** Resolved tool-preview formatter options from the current config. */
   getToolPreviewLimits(): ToolPreviewFormatterOptions;
@@ -81,9 +80,7 @@ export class ToolCallGatePipeline {
 
     const gateProducers: GateProducer[] = [
       () => describeSkillReadGate(tcc, () => this.inputs.getActiveSkillEntries()),
-      () => describePathGate(tcc, this.resolver, this.customExtractors),
-      () => describeExternalDirectoryGate(tcc, infraDirs, this.customExtractors),
-      () => describeBashExternalDirectoryGate(tcc, bashProgram, this.resolver),
+      () => describePathGate(tcc, this.resolver, this.customExtractors, infraDirs),
       () => describeBashPathGate(tcc, bashProgram, this.resolver),
       () => {
         const toolCheck = this.resolveToolCheck(tcc, command, bashProgram);

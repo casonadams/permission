@@ -1,11 +1,8 @@
-import { existsSync, mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname, normalize } from "node:path";
-import type { ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { syncPermissionSystemStatus } from "../app/status";
-import type { DebugReviewLogger } from "../integrations/session-logger";
-import { MODAL_BOOLEAN_CONFIG_KEYS } from "./config-keys";
-import { loadAndMergeConfigs, loadUnifiedConfig } from "./config-loader";
-import type { UnifiedPermissionConfig } from "./config-normalize";
+import { existsSync } from "node:fs";
+import { normalize } from "node:path";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ReviewLogger } from "../integrations/session-logger";
+import { loadAndMergeConfigs } from "./config-loader";
 import {
   getGlobalConfigPath,
   getLegacyExtensionConfigPath,
@@ -13,25 +10,16 @@ import {
   getLegacyProjectPolicyPath,
 } from "./config-paths";
 import { buildResolvedConfigLogEntry } from "./config-reporter";
-import {
-  DEFAULT_EXTENSION_CONFIG,
-  EXTENSION_ROOT,
-  normalizePermissionSystemConfig,
-  type PermissionSystemExtensionConfig,
-} from "./extension-config";
+import { EXTENSION_ROOT } from "./extension-config";
 import type { ResolvedPolicyPaths } from "./policy-loader";
 
 export interface ConfigReader {
-  current(): PermissionSystemExtensionConfig;
+  current(): unknown;
 }
 
 export interface SessionConfigStore extends ConfigReader {
   refresh(ctx?: ExtensionContext): void;
   logResolvedPaths(cwd?: string): void;
-}
-
-export interface CommandConfigStore extends ConfigReader {
-  save(next: PermissionSystemExtensionConfig, ctx: ExtensionCommandContext): void;
 }
 
 export interface ResolvedPolicyPathProvider {
@@ -41,40 +29,25 @@ export interface ResolvedPolicyPathProvider {
 export interface ConfigStoreDeps {
   agentDir: string;
   policyPaths: ResolvedPolicyPathProvider;
-  logger: DebugReviewLogger;
+  logger: ReviewLogger;
 }
 
-function syncStatusIfAvailable(ctx: ExtensionContext | undefined, config: PermissionSystemExtensionConfig): void {
-  if (ctx?.hasUI) syncPermissionSystemStatus(ctx, config);
-}
-
-function modalBooleanConfigDetails(config: PermissionSystemExtensionConfig): Record<string, boolean> {
-  const details: Record<string, boolean> = {};
-  for (const key of MODAL_BOOLEAN_CONFIG_KEYS) {
-    details[key] = config[key];
-  }
-  return details;
-}
-
-export class ConfigStore implements SessionConfigStore, CommandConfigStore {
-  private config: PermissionSystemExtensionConfig = { ...DEFAULT_EXTENSION_CONFIG };
+export class ConfigStore implements SessionConfigStore {
   private lastConfigWarning: string | null = null;
 
   constructor(private readonly deps: ConfigStoreDeps) {}
 
-  current(): PermissionSystemExtensionConfig {
-    return this.config;
+  current(): unknown {
+    return {};
   }
 
   refresh(ctx?: ExtensionContext): void {
     const cwd = ctx?.cwd ?? null;
     const mergeResult = loadAndMergeConfigs(this.deps.agentDir, cwd ?? "", EXTENSION_ROOT);
-    const runtimeConfig = normalizePermissionSystemConfig(mergeResult.merged);
-    this.config = runtimeConfig;
-
-    syncStatusIfAvailable(ctx, runtimeConfig);
     const warning = this.updateConfigWarning(mergeResult.issues, ctx);
-    this.logLoadedConfig(runtimeConfig, warning);
+    if (warning === undefined) {
+      this.deps.logger.review("config.loaded", { warning: null });
+    }
   }
 
   private updateConfigWarning(issues: readonly string[], ctx?: ExtensionContext): string | undefined {
@@ -90,47 +63,6 @@ export class ConfigStore implements SessionConfigStore, CommandConfigStore {
       ctx?.ui.notify(warning, "warning");
     }
     return warning;
-  }
-
-  private logLoadedConfig(runtimeConfig: PermissionSystemExtensionConfig, warning: string | undefined): void {
-    this.deps.logger.debug("config.loaded", {
-      warning: warning ?? null,
-      ...modalBooleanConfigDetails(runtimeConfig),
-    });
-  }
-
-  // Called via the CommandConfigStore interface from config-modal.ts — fallow cannot trace through interfaces.
-  // fallow-ignore-next-line unused-class-member
-  save(next: PermissionSystemExtensionConfig, ctx: ExtensionCommandContext): void {
-    const normalized = normalizePermissionSystemConfig(next);
-    const globalPath = getGlobalConfigPath(this.deps.agentDir);
-
-    const existing = loadUnifiedConfig(globalPath);
-    const merged: UnifiedPermissionConfig = { ...existing.config, ...modalBooleanConfigDetails(normalized) };
-
-    const tmpPath = `${globalPath}.tmp`;
-    try {
-      mkdirSync(dirname(globalPath), { recursive: true });
-      writeFileSync(tmpPath, `${JSON.stringify(merged, null, 2)}\n`, "utf-8");
-      renameSync(tmpPath, globalPath);
-    } catch (error) {
-      try {
-        if (existsSync(tmpPath)) {
-          unlinkSync(tmpPath);
-        }
-      } catch {
-        // Ignore cleanup failures.
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      ctx.ui.notify(`Failed to save permission-system config at '${globalPath}': ${message}`, "error");
-      return;
-    }
-
-    this.config = normalized;
-    syncPermissionSystemStatus(ctx, normalized);
-    this.lastConfigWarning = null;
-
-    this.deps.logger.debug("config.saved", modalBooleanConfigDetails(normalized));
   }
 
   logResolvedPaths(cwd?: string): void {
@@ -149,6 +81,5 @@ export class ConfigStore implements SessionConfigStore, CommandConfigStore {
       legacyExtensionConfigDetected,
     });
     this.deps.logger.review("config.resolved", entry as unknown as Record<string, unknown>);
-    this.deps.logger.debug("config.resolved", entry as unknown as Record<string, unknown>);
   }
 }

@@ -1,4 +1,3 @@
-import type { PermissionSystemExtensionConfig } from "../config/extension-config";
 import type { ToolInputFormatterLookup } from "../integrations/tool-input-formatter-registry";
 import { SEARCH_PATH_TOOLS } from "../policy/permission-surfaces";
 import type { PermissionCheckResult } from "../policy/types";
@@ -26,22 +25,15 @@ export interface ToolPreviewFormatterOptions {
   toolInputLogPreviewMaxLength: number;
 }
 
-type ConfigurablePreviewLimits = Pick<
-  PermissionSystemExtensionConfig,
-  "toolInputPreviewMaxLength" | "toolTextSummaryMaxLength"
->;
-
 /**
- * Resolve `ToolPreviewFormatterOptions` from a config object, falling back to
- * the built-in defaults for any field that is absent.
+ * The default preview limits used when no config override is supplied.
+ * Mirrored as module-level constants in `tool-input-preview.ts`.
  */
-export function resolveToolPreviewLimits(config: ConfigurablePreviewLimits): ToolPreviewFormatterOptions {
-  return {
-    toolInputPreviewMaxLength: config.toolInputPreviewMaxLength ?? TOOL_INPUT_PREVIEW_MAX_LENGTH,
-    toolTextSummaryMaxLength: config.toolTextSummaryMaxLength ?? TOOL_TEXT_SUMMARY_MAX_LENGTH,
-    toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
-  };
-}
+export const DEFAULT_TOOL_PREVIEW_OPTIONS: ToolPreviewFormatterOptions = {
+  toolInputPreviewMaxLength: TOOL_INPUT_PREVIEW_MAX_LENGTH,
+  toolTextSummaryMaxLength: TOOL_TEXT_SUMMARY_MAX_LENGTH,
+  toolInputLogPreviewMaxLength: TOOL_INPUT_LOG_PREVIEW_MAX_LENGTH,
+};
 
 /**
  * Formats tool inputs for permission prompts and review logs.

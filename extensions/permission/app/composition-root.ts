@@ -10,7 +10,6 @@ import { LocalPermissionsService } from "../integrations/permissions-service";
 import { PermissionServiceLifecycle } from "../integrations/service-lifecycle";
 import { PermissionResolver } from "../policy/permission-resolver";
 import { requestPermissionDecisionFromUi } from "../prompting/permission-dialog";
-import { canResolveAskPermissionRequest } from "../prompting/yolo-mode";
 import { installLocalPrompter } from "../ui/prompter.ts";
 import { createRuntime, type Runtime, registerCommand } from "./composition-runtime";
 import { AgentPrepHandler } from "./handlers/before-agent-start";
@@ -109,9 +108,5 @@ function installPromptDispatcher(pi: ExtensionAPI, runtime: Runtime): void {
 
 function canResolvePrompt(ctx: ExtensionContext, runtime: Runtime): boolean {
   if (ctx.hasUI) return true;
-  return canResolveAskPermissionRequest({
-    config: runtime.config.current(),
-    hasUI: false,
-    isSubagent: isSubagentExecutionContext(ctx, runtime.paths.subagentSessionsDir, runtime.registries.subagents),
-  });
+  return isSubagentExecutionContext(ctx, runtime.paths.subagentSessionsDir, runtime.registries.subagents);
 }

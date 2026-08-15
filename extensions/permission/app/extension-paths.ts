@@ -19,9 +19,7 @@ export interface ExtensionPaths {
    * Static Pi infrastructure directories used for external-directory
    * read auto-allow. Computed once from `agentDir`,
    * `discoverGlobalNodeModulesRoot()`, and (when provided) Pi's own
-   * install directory (`getPackageDir()`). Config-based extras
-   * (`piInfrastructureReadPaths`) are read from `runtime.config` at
-   * call time in the handler so they pick up config reloads.
+   * install directory (`getPackageDir()`).
    */
   readonly piInfrastructureDirs: readonly string[];
 }

@@ -1,11 +1,10 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { ConfigReader } from "../config/config-store";
 import type { ApprovalRequester } from "../forwarding/permission-forwarder";
 import { emitUiPromptEvent, type PermissionEventBus } from "../integrations/permission-events";
 import type { ReviewLogger } from "../integrations/session-logger";
 import type { PermissionPromptDecision } from "./permission-dialog";
 import { buildDirectUiPrompt } from "./permission-ui-prompt";
-import { maybeAutoApprovePrompt, recordPromptDecision, recordPromptWaiting } from "./prompt-audit";
+import { recordPromptDecision, recordPromptWaiting } from "./prompt-audit";
 
 export type PermissionReviewSource = "tool_call" | "skill_input" | "skill_read";
 
@@ -38,7 +37,6 @@ export interface PermissionPrompterApi {
 }
 
 export interface PermissionPrompterDeps {
-  config: ConfigReader;
   logger: ReviewLogger;
   events: PermissionEventBus;
   forwarder: ApprovalRequester;
@@ -48,9 +46,6 @@ export class PermissionPrompter implements PermissionPrompterApi {
   constructor(private readonly deps: PermissionPrompterDeps) {}
 
   async prompt(ctx: ExtensionContext, details: PromptPermissionDetails): Promise<PermissionPromptDecision> {
-    const autoDecision = maybeAutoApprovePrompt(details, this.deps);
-    if (autoDecision) return autoDecision;
-
     recordPromptWaiting(details, { logger: this.deps.logger });
 
     // Build the event once. When this session has UI it broadcasts directly;

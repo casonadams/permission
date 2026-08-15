@@ -1,6 +1,6 @@
 import { appendFileSync } from "node:fs";
 
-import { EXTENSION_ID, type PermissionSystemExtensionConfig } from "../config/extension-config";
+import { EXTENSION_ID } from "../config/extension-config";
 
 export function safeJsonStringify(value: unknown): string | undefined {
   const seen = new WeakSet<object>();
@@ -30,26 +30,29 @@ function circularMarker(value: unknown, seen: WeakSet<object>): string | undefin
 }
 
 export interface PermissionSystemLogger {
-  debug: (event: string, details?: Record<string, unknown>) => string | undefined;
+  debug?: (event: string, details?: Record<string, unknown>) => string | undefined;
   review: (event: string, details?: Record<string, unknown>) => string | undefined;
 }
 
 interface PermissionSystemLoggerOptions {
-  getConfig: () => PermissionSystemExtensionConfig;
-  debugLogPath: string;
   reviewLogPath: string;
   ensureLogsDirectory: () => string | undefined;
 }
 
 type LogLine = {
-  stream: "debug" | "review";
   path: string;
   event: string;
   details: Record<string, unknown>;
 };
 
+/**
+ * Build a logger that always writes the audit-trail stream to JSONL.
+ *
+ * The optional `debug` slot stays in the interface for compatibility but is
+ * a no-op; only `review` writes to disk.
+ */
 export function createPermissionSystemLogger(options: PermissionSystemLoggerOptions): PermissionSystemLogger {
-  const { debugLogPath, reviewLogPath, ensureLogsDirectory } = options;
+  const { reviewLogPath, ensureLogsDirectory } = options;
 
   const writeLine = (entry: LogLine): string | undefined => {
     const directoryError = ensureLogsDirectory();
@@ -61,36 +64,22 @@ export function createPermissionSystemLogger(options: PermissionSystemLoggerOpti
       const line = safeJsonStringify({
         timestamp: new Date().toISOString(),
         extension: EXTENSION_ID,
-        stream: entry.stream,
         event: entry.event,
         ...entry.details,
       });
       if (!line) {
-        return `Failed to write permission-system ${entry.stream} log '${entry.path}': event could not be serialized.`;
+        return `Failed to write permission-system review log '${entry.path}': event could not be serialized.`;
       }
       appendFileSync(entry.path, `${line}\n`, "utf-8");
       return undefined;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return `Failed to write permission-system ${entry.stream} log '${entry.path}': ${message}`;
+      return `Failed to write permission-system review log '${entry.path}': ${message}`;
     }
   };
 
-  const debug = (event: string, details: Record<string, unknown> = {}): string | undefined => {
-    if (!options.getConfig().debugLog) {
-      return undefined;
-    }
-
-    return writeLine({ stream: "debug", path: debugLogPath, event, details });
+  return {
+    debug: () => undefined,
+    review: (event, details = {}) => writeLine({ path: reviewLogPath, event, details }),
   };
-
-  const review = (event: string, details: Record<string, unknown> = {}): string | undefined => {
-    if (!options.getConfig().permissionReviewLog) {
-      return undefined;
-    }
-
-    return writeLine({ stream: "review", path: reviewLogPath, event, details });
-  };
-
-  return { debug, review };
 }

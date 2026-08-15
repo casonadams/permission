@@ -4,19 +4,18 @@
     "*": "allow",
     "path": {
       "*": "allow",
-      "*.env": "deny",
-      "*.env.*": "deny",
+      "*.env": { "action": "deny", "reason": "secrets" },
+      "*.env.*": { "action": "deny", "reason": "secrets" },
       "*.env.example": "allow",
-      "~/.ssh/*": "deny"
+      "~/.ssh/*": { "action": "deny", "reason": "secrets" }
     },
     "bash": {
       "*": "ask",
       "git status": "allow",
       "git diff": "allow",
       "git log *": "allow",
-      "rm -rf *": "deny",
+      "rm -rf *": { "action": "deny", "reason": "destructive" },
       "sudo *": "ask"
-    },
-    "external_directory": "ask"
+    }
   }
 }
