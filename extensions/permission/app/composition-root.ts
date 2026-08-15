@@ -13,6 +13,7 @@ import { PermissionResolver } from "../policy/permission-resolver";
 import type { PermissionCheckResult } from "../policy/types";
 import { requestPermissionDecisionFromUi } from "../prompting/permission-dialog";
 import { installLocalPrompter } from "../ui/prompter.ts";
+import { sendApprovalGuidance } from "./approval-guidance";
 import { createRuntime, type Runtime, registerCommand } from "./composition-runtime";
 import { AgentPrepHandler } from "./handlers/before-agent-start";
 import { SessionLifecycleHandler } from "./handlers/lifecycle";
@@ -40,7 +41,7 @@ function registerHandlers(pi: ExtensionAPI, runtime: Runtime): void {
     resolver,
     pi,
     toolRegistry,
-    onApproval: (descriptor, check) => sendApprovedPathNotice(pi, descriptor, check),
+    onApproval: (descriptor, check) => sendApprovalGuidance(pi, descriptor, check),
   });
   const agentPrep = new AgentPrepHandler(runtime.session, resolver, toolRegistry);
   pi.on("session_start", (event, ctx) => lifecycle.handleSessionStart(event, ctx));
@@ -49,30 +50,6 @@ function registerHandlers(pi: ExtensionAPI, runtime: Runtime): void {
   pi.on("before_agent_start", (event, ctx) => agentPrep.handle(event, ctx));
   pi.on("input", (event, ctx) => gates.handleInput(event, ctx));
   pi.on("tool_call", (event, ctx) => gates.handleToolCall(event, ctx));
-}
-
-function sendApprovedPathNotice(pi: ExtensionAPI, descriptor: GateDescriptor, check: PermissionCheckResult): void {
-  const sendMessage = (pi as ExtensionAPI & { sendMessage?: ExtensionAPI["sendMessage"] }).sendMessage;
-  const path = getApprovedExternalPath(descriptor, check);
-  if (!sendMessage || !path) return;
-
-  const normalizedPath = path.replace(/\/$/, "");
-  sendMessage.call(
-    pi,
-    {
-      customType: "permission-path-guidance",
-      content: `To allow this path without prompting in the future, add under "permission.path":\n\n${JSON.stringify(`${normalizedPath}/*`)}: "allow"`,
-      display: true,
-    },
-    { deliverAs: "steer" },
-  );
-}
-
-function getApprovedExternalPath(descriptor: GateDescriptor, check: PermissionCheckResult): string | undefined {
-  if (check.source !== "special") return undefined;
-  if (descriptor.denialContext.kind !== "path" && descriptor.denialContext.kind !== "bash_path") return undefined;
-  if (!descriptor.denialContext.cwd) return undefined;
-  return descriptor.promptDetails.path;
 }
 
 function createServiceLifecycle(pi: ExtensionAPI, runtime: Runtime): PermissionServiceLifecycle {

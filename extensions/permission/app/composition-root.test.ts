@@ -206,7 +206,7 @@ describe("subagent registry sharing across factory instances", () => {
     expect(result.block).toBeUndefined();
     expect(childPi.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        customType: "permission-path-guidance",
+        customType: "permission-guidance",
         content: expect.stringContaining('"/var/'),
         display: true,
       }),
