@@ -33,7 +33,7 @@ export function formatUnavailableReason(ctx: DenialContext): string {
   return withExtensionTag(buildUnavailableBody(ctx));
 }
 export function formatUserDeniedReason(ctx: DenialContext, denialReason?: string): string {
-  return withExtensionTag(buildUserDeniedBody(ctx, denialReason));
+  return buildUserDeniedBody(ctx, denialReason);
 }
 function withExtensionTag(body: string): string {
   return `${EXTENSION_TAG} ${body}`;
@@ -147,10 +147,7 @@ function buildUserDeniedBodyStart(ctx: DenialContext): string {
 const userDeniedBodyBuilders: DenialBodyBuilders = {
   tool: buildToolUserDeniedBodyStart,
   path: (ctx) => `User denied access to path '${ctx.pathValue}'`,
-  bash_path: (ctx) =>
-    ctx.cwd
-      ? `User denied external path access for bash command '${ctx.command}'`
-      : `User denied path access for bash command '${ctx.command}' (path '${ctx.pathValue}')`,
+  bash_path: (ctx) => (ctx.cwd ? `External path denied: '${ctx.pathValue}'` : `Path denied: '${ctx.pathValue}'`),
   skill_read: (ctx) => `User denied access to skill '${ctx.skillName}'`,
   skill_input: (ctx) => `User denied access to skill '${ctx.skillName}'`,
 };

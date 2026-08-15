@@ -281,7 +281,7 @@ describe("GateRunner — descriptor path", () => {
       }
     });
 
-    it("uses denialContext to format userDeniedReason with extension tag", async () => {
+    it("uses denialContext to format userDeniedReason", async () => {
       const { runner } = makeGateRunner({
         resolveResult: makeCheckResult({ state: "ask", matchedPattern: "*" }),
         prompt: vi.fn().mockResolvedValue({
@@ -297,7 +297,7 @@ describe("GateRunner — descriptor path", () => {
       const result = await runner.run(makeDenialDescriptor(ctx), null, "tc-1");
       expect(result.action).toBe("block");
       if (result.action === "block") {
-        expect(result.reason).toContain(EXTENSION_TAG);
+        expect(result.reason).not.toContain(EXTENSION_TAG);
         expect(result.reason).toContain("too risky");
       }
     });

@@ -11,6 +11,7 @@ export interface FakePi {
   getAllTools(): { name: string }[];
   getActiveTools(): string[];
   setActiveTools(names: string[]): void;
+  sendMessage: ReturnType<typeof vi.fn>;
 }
 
 export interface MakeFakePiOptions {
@@ -48,6 +49,7 @@ export function makeFakePi(options: MakeFakePiOptions = {}): FakePi {
       return [...toolNames];
     },
     setActiveTools: vi.fn(),
+    sendMessage: vi.fn(),
     on(event: string, handler: RecordedHandler): void {
       const list = handlers.get(event) ?? [];
       list.push(handler);

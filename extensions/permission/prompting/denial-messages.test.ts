@@ -317,25 +317,23 @@ describe("formatUnavailableReason", () => {
 describe("formatUserDeniedReason", () => {
   describe("tool context", () => {
     test("generic tool without reason", () => {
-      expect(formatUserDeniedReason(toolCtx(toolCheck("write")))).toBe("[permission] User denied tool 'write'.");
+      expect(formatUserDeniedReason(toolCtx(toolCheck("write")))).toBe("User denied tool 'write'.");
     });
 
     test("generic tool with reason", () => {
       expect(formatUserDeniedReason(toolCtx(toolCheck("write")), "too risky")).toBe(
-        "[permission] User denied tool 'write'. Reason: too risky.",
+        "User denied tool 'write'. Reason: too risky.",
       );
     });
 
     test("bash with command", () => {
       expect(formatUserDeniedReason(toolCtx(toolCheck("bash", { command: "ls -la" })))).toBe(
-        "[permission] User denied bash command 'ls -la'.",
+        "User denied bash command 'ls -la'.",
       );
     });
 
     test("MCP target", () => {
-      expect(formatUserDeniedReason(toolCtx(mcpCheck("server:query")))).toBe(
-        "[permission] User denied MCP target 'server:query'.",
-      );
+      expect(formatUserDeniedReason(toolCtx(mcpCheck("server:query")))).toBe("User denied MCP target 'server:query'.");
     });
   });
 
@@ -347,12 +345,12 @@ describe("formatUserDeniedReason", () => {
           toolName: "read",
           pathValue: "/etc/passwd",
         }),
-      ).toBe("[permission] User denied access to path '/etc/passwd'.");
+      ).toBe("User denied access to path '/etc/passwd'.");
     });
 
     test("with reason", () => {
       expect(formatUserDeniedReason({ kind: "path", toolName: "read", pathValue: "/etc/passwd" }, "sensitive")).toBe(
-        "[permission] User denied access to path '/etc/passwd'. Reason: sensitive.",
+        "User denied access to path '/etc/passwd'. Reason: sensitive.",
       );
     });
   });
@@ -365,7 +363,7 @@ describe("formatUserDeniedReason", () => {
           command: "cat /etc/passwd",
           pathValue: "/etc/passwd",
         }),
-      ).toBe("[permission] User denied path access for bash command 'cat /etc/passwd' (path '/etc/passwd').");
+      ).toBe("Path denied: '/etc/passwd'.");
     });
 
     test("with reason", () => {
@@ -378,9 +376,7 @@ describe("formatUserDeniedReason", () => {
           },
           "sensitive",
         ),
-      ).toBe(
-        "[permission] User denied path access for bash command 'cat /etc/passwd' (path '/etc/passwd'). Reason: sensitive.",
-      );
+      ).toBe("Path denied: '/etc/passwd'. Reason: sensitive.");
     });
   });
 
@@ -392,7 +388,7 @@ describe("formatUserDeniedReason", () => {
           skillName: "librarian",
           readPath: "/skills/librarian/SKILL.md",
         }),
-      ).toBe("[permission] User denied access to skill 'librarian'.");
+      ).toBe("User denied access to skill 'librarian'.");
     });
 
     test("with reason", () => {
@@ -405,7 +401,7 @@ describe("formatUserDeniedReason", () => {
           },
           "not needed",
         ),
-      ).toBe("[permission] User denied access to skill 'librarian'. Reason: not needed.");
+      ).toBe("User denied access to skill 'librarian'. Reason: not needed.");
     });
   });
 
@@ -416,7 +412,7 @@ describe("formatUserDeniedReason", () => {
           kind: "skill_input",
           skillName: "librarian",
         }),
-      ).toBe("[permission] User denied access to skill 'librarian'.");
+      ).toBe("User denied access to skill 'librarian'.");
     });
 
     test("with agent and with reason", () => {
@@ -429,7 +425,7 @@ describe("formatUserDeniedReason", () => {
           },
           "not permitted",
         ),
-      ).toBe("[permission] User denied access to skill 'librarian'. Reason: not permitted.");
+      ).toBe("User denied access to skill 'librarian'. Reason: not permitted.");
     });
   });
 });
