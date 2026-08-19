@@ -40,4 +40,12 @@ describe("formatBashCommandPreview", () => {
     expect(formatBashCommandPreview("git status")).toBe("git status");
     expect(formatBashCommandPreview("git status \\\n  --short")).toBe("git status \\\n  --short");
   });
+
+  test("formats operators in multiline previews", () => {
+    expect(
+      formatBashCommandPreview(
+        "set -e\nprintf 'alpha\\n'; printf 'beta\\n' && printf 'gamma\\n' || printf 'fallback\\n'",
+      ),
+    ).toBe("set -e\nprintf 'alpha\\n';\nprintf 'beta\\n' &&\nprintf 'gamma\\n' ||\nprintf 'fallback\\n'");
+  });
 });

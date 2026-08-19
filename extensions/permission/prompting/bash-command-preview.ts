@@ -11,11 +11,21 @@ type PreviewPart = { text: string; operator: boolean; indented: boolean };
 type TokenKind = "operator" | "flag" | "word";
 
 export function formatBashCommandPreview(command: string): string {
-  if (!command || /[\r\n]/.test(command)) return command;
+  if (!command) return command;
+  if (/[\r\n]/.test(command)) {
+    return command
+      .split(/\r?\n/)
+      .map((line) => (hasControlOperator(line) ? formatBashCommandPreview(line) : line))
+      .join("\n");
+  }
 
   const parts = buildPreviewParts(tokenizeBashCommand(command));
   if (parts.length <= 1) return command;
   return parts.map((part, index) => renderPart(part, index < parts.length - 1)).join("\n");
+}
+
+function hasControlOperator(command: string): boolean {
+  return tokenizeBashCommand(command).some((token) => CONTROL_OPERATORS.has(token));
 }
 
 function buildPreviewParts(tokens: string[]): PreviewPart[] {
