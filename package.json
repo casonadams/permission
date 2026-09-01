@@ -1,10 +1,10 @@
 {
   "name": "permission",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Permission enforcement extension for the Pi coding agent.",
   "type": "module",
   "exports": {
-    ".": "./extensions/permission/service.ts"
+    ".": "./extensions/permission/index.ts"
   },
   "imports": {
     "#src/*": "./extensions/permission/*",
@@ -51,18 +51,12 @@
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.79.0",
-    "@earendil-works/pi-tui": ">=0.79.0"
-  },
-  "dependencies": {
-    "tree-sitter-bash": "^0.25.1",
-    "web-tree-sitter": "^0.26.9"
+    "@earendil-works/pi-coding-agent": ">=0.79.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
     "@eslint/js": "^10.0.1",
     "@earendil-works/pi-coding-agent": "0.79.6",
-    "@earendil-works/pi-tui": "0.79.6",
     "@types/node": "^22.15.3",
     "eslint": "^10.4.1",
     "typescript": "^6.0.3",

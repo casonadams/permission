@@ -104,7 +104,7 @@ function normalizeUniversal(value: unknown, issues: string[]): PermissionState |
 }
 
 function normalizeSurfaceRules(surface: string, value: unknown, issues: string[]): PolicyRule[] {
-  if (typeof value === "string") return normalizeStateRule(surface, "*", value, `permission.${surface}`, issues);
+  if (typeof value === "string") return normalizeStateRule(surface, "*", value, issues);
   if (!isPlainRecord(value)) {
     issues.push(`Invalid permission config at 'permission.${surface}': expected allow, deny, ask, or pattern map`);
     return [];
@@ -118,18 +118,14 @@ function normalizeSurfaceRules(surface: string, value: unknown, issues: string[]
 
 function normalizePatternRule(surface: string, pattern: string, action: unknown, issues: string[]): PolicyRule[] {
   if (isPlainRecord(action)) return normalizeDenyObjectRule(surface, pattern, action, issues);
-  return normalizeStateRule(surface, pattern, action, `permission.${surface}.${pattern}`, issues);
+  return normalizeStateRule(surface, pattern, action, issues);
 }
 
-function normalizeStateRule(
-  surface: string,
-  pattern: string,
-  action: unknown,
-  location: string,
-  issues: string[],
-): PolicyRule[] {
+function normalizeStateRule(surface: string, pattern: string, action: unknown, issues: string[]): PolicyRule[] {
   if (!isPermissionState(action)) {
-    issues.push(`Invalid permission config at '${location}': expected allow, deny, ask, or deny object`);
+    issues.push(
+      `Invalid permission config at 'permission.${surface}.${pattern}': expected allow, deny, ask, or deny object`,
+    );
     return [];
   }
   return [{ surface, pattern, state: action }];

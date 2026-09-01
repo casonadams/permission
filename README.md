@@ -25,11 +25,10 @@ Use `git:git@github.com:casonadams/permission.git` instead to clone over SSH.
 ## Configure
 
 Permission policy is loaded from these optional JSON files, from lowest to
-highest precedence:
+highest precedence (later files override earlier ones):
 
 1. `~/.pi/agent/permission.json`
 2. `<project>/.pi/agent/permission.json`
-3. Agent frontmatter
 
 Start with [`permission.example.json`](./permission.example.json), or use this
 minimal policy:
@@ -62,13 +61,14 @@ minimal policy:
 
 The `$schema` field is optional and is used only for editor completion.
 
-Reload Pi after changing a policy with `/reload`. Restart Pi after installing or updating the package.
+Restart Pi after installing or updating the package. Policy files are reloaded
+at the start of each Pi session.
 
 ## Rules
 
-Pi's built-in tool surfaces are `read`, `write`, `edit`, `bash`, `grep`, `find`,
-and `ls`. `path`, `mcp`, and `skill` are permission surfaces rather than
-built-in tools.
+Pi's built-in tool surfaces are `read`, `write`, `edit`, `bash`, `grep`,
+`find`, and `ls`. `path`, `mcp`, and `skill` are permission surfaces rather
+than built-in tools.
 
 Each key under `permission` is a surface:
 
@@ -76,23 +76,28 @@ Each key under `permission` is a surface:
 | --------------------------------------------- | ------------------------------------------------------ |
 | `*`                                           | Fallback for surfaces without a rule                   |
 | `read`, `write`, `edit`, `ls`, `grep`, `find` | Tool path                                              |
-| `bash`                                        | Full command                                           |
-| `mcp`                                         | MCP target                                             |
+| `bash`                                        | Full command (compound commands: each subcommand)      |
+| `mcp`                                         | MCP server or `server:tool` target                     |
 | `skill`                                       | Skill name                                             |
 | `path`                                        | Every detected file path, including bash and MCP paths |
 
 - `allow` permits the action silently.
 - `deny` blocks it, optionally returning a configured reason.
-- `ask` opens an approval prompt.
-- Prompt options stay ordered as Allow, Session, Deny when a session pattern is
-  available.
+- `ask` opens an approval prompt with Allow, Allow for this session, Deny, and
+  Deny with reason. Dismissing the prompt counts as deny. With no interactive
+  UI, every `ask` blocks.
 - A string is shorthand for a catch-all. For example, `"read": "allow"` means
   `"read": { "*": "allow" }`.
 - Last matching pattern wins. Put broad rules before specific exceptions.
-- Every applicable gate must allow the action. A `path` deny cannot be
-  overridden by a tool rule.
-- Paths outside the working directory with no explicit `path` rule default to
-  `ask`. Add rules such as `"/tmp/*": "allow"` for trusted external directories.
+- A call touches several decisions (its tool surface plus the `path` surface).
+  The most restrictive wins: deny beats ask, ask beats allow. A `path` deny
+  cannot be overridden by a tool rule.
+- A path with no matching `path` rule defaults to `allow` inside the working
+  directory and `ask` outside it. Add rules such as `"/tmp/*": "allow"` for
+  trusted external directories.
+- Reads of Pi's own support directories (`~/.pi/agent`, installed extension
+  files, `<project>/.pi/npm`, `<project>/.pi/git`) are permitted without a
+  prompt; writes still follow policy.
 
 ### Path rules
 
@@ -108,9 +113,9 @@ reading or writing its contents:
 }
 ```
 
-Patterns are matched against normalized paths. `~` and `$HOME` are expanded,
-and relative paths are also checked in their working-directory form. Put
-specific exceptions after broad rules because the last matching pattern wins:
+Patterns are matched against normalized absolute paths. `~` and `$HOME` are
+expanded. Put specific exceptions after broad rules because the last matching
+pattern wins:
 
 ```json
 "path": {
@@ -120,36 +125,40 @@ specific exceptions after broad rules because the last matching pattern wins:
 }
 ```
 
-A path denial is a mandatory gate: an `allow` rule for `read`, `bash`, or
-another tool cannot override it.
-
 ### Bash rules
 
-Bash patterns match the full command, not just the executable. Keep the broad
-`"*": "ask"` rule first, then add narrowly scoped commands such as
-`"git status": "allow"` or `"git diff*": "allow"`. Bash commands that contain
-file paths are also checked by the cross-cutting `path` surface.
+Bash patterns match the full subcommand, not just the executable. Compound
+commands (`git add -A && git commit`) are matched one subcommand at a time,
+and every subcommand must be allowed. Environment assignments, wrappers
+(`time`, `nice`, `nohup`, `timeout`, `xargs`, ...), and redirect targets are
+recognized: assignments and redirects are checked against `path`, wrappers
+are skipped before matching.
+
+Fail-closed by design: commands containing command substitution (`$(...)`,
+backticks), process substitution, parentheses, unbalanced quotes, or dangling
+operators always prompt, and a matching `deny` rule still applies to the raw
+command text.
+
+### Session approvals
+
+Choosing **Allow for this session** records an allow rule for that exact
+subcommand, parent directory (paths), or tool. Session approvals are
+in-memory: they end when the session ends or a new session starts.
 
 ## MCP
 
-MCP targets can be matched in underscore or colon form. For a `playwright`
-server:
+MCP patterns match either a whole server or a specific tool:
 
 ```json
 "mcp": {
   "*": "ask",
-  "playwright_browser_snapshot": "allow",
-  "playwright_browser_navigate*": "allow",
-  "playwright_browser_evaluate": { "action": "deny", "reason": "arbitrary page JavaScript" }
+  "playwright": "allow",
+  "playwright:browser_evaluate": { "action": "deny", "reason": "arbitrary page JavaScript" }
 }
 ```
 
-`playwright:*` also matches the server. Prefer `playwright_*` when one rule
-should cover both MCP call styles.
-
-## Inspect
-
-Use `/permission show` to display the effective policy summary, `/permission path` to show the global config path, or `/permission help` for usage.
+`playwright` allows every tool on that server; `playwright:browser_navigate`
+targets one tool.
 
 ## Develop
 
@@ -158,5 +167,4 @@ pnpm install
 pnpm test
 pnpm typecheck
 pnpm lint
-pnpm format
 ```
