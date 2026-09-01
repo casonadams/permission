@@ -27,7 +27,6 @@ interface SegmentAnalysis {
   readonly pathTokens: readonly string[];
 }
 
-const SEPARATORS = new Set(["&&", "||", ";", "|", "&", "\n"]);
 const WRAPPERS = new Set(["time", "nice", "nohup", "command", "builtin", "noglob"]);
 const DURATION_PATTERN = /^\d+(?:\.\d+)?[smhd]?$/;
 const FD_DUP_PATTERN = /^&\d+$/;
@@ -35,7 +34,6 @@ const ASSIGNMENT_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*=/;
 const URL_PATTERN = /^[a-z][a-z0-9+.-]*:\/\//i;
 const REGEX_METACHAR_PATTERN = /\.\*|\.\+|\\\||\\\(|\\\)|\[.*?\]|\^\//;
 const BARE_SLASH_PATTERN = /^\/+$/;
-const SAFE_SYSTEM_PATHS = new Set(["/dev/null", "/dev/stdin", "/dev/stdout", "/dev/stderr"]);
 
 export function analyzeBashCommand(command: string): BashAnalysis {
   const { tokens, suspicious: tokenSuspicious } = tokenize(command);

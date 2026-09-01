@@ -80,7 +80,8 @@ describe("analyzeBashCommand: suspicious constructs force ask", () => {
 
   it("allows plain parameter expansions", () => {
     expect(analyzeBashCommand("cd $PROJECT_DIR && npm test").suspicious).toBe(false);
-    expect(analyzeBashCommand("echo ${HOME}/bin").suspicious).toBe(false);
+    expect(analyzeBashCommand("echo $HOME/bin").suspicious).toBe(false);
+    expect(analyzeBashCommand('echo "$HOME"/bin').suspicious).toBe(false);
   });
 
   it("tolerates heredocs structurally via unmatched body segments", () => {
