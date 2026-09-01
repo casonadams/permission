@@ -300,7 +300,7 @@ function stripAssignments(words: Token[], pathTokens: string[]): void {
 function stripWrappers(words: Token[]): void {
   for (;;) {
     const first = words[0];
-    if (!first || first.kind !== "word" || words.length < 2) return;
+    if (first?.kind !== "word" || words.length < 2) return;
     if (WRAPPERS.has(first.text) && !words[1].raw.startsWith("-")) {
       words.shift();
       continue;
