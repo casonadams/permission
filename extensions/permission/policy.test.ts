@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideValue } from "./match";
+import { decideSurface } from "./match";
 import { buildPolicy, parsePolicyScope, type ScopeRules, stripJsonComments } from "./policy";
 
 const scope = (rules: ScopeRules["rules"], universal?: ScopeRules["universal"]): ScopeRules => ({ rules, universal });
@@ -96,37 +96,50 @@ describe("parsePolicyScope", () => {
 describe("buildPolicy", () => {
   it("returns an ask default with no scopes", () => {
     const policy = buildPolicy(null, null);
-    expect(decideValue(policy.rules, "bash", "anything")).toEqual({ state: "ask" });
+    expect(decideSurface(policy.rules, "bash", ["anything"], "first")).toEqual({ state: "ask" });
   });
 
   it("uses the universal string as the default action", () => {
     const policy = buildPolicy(scope([], "allow"), null);
-    expect(decideValue(policy.rules, "write", "anything")).toEqual({ state: "allow" });
+    expect(decideSurface(policy.rules, "write", ["anything"], "first")).toEqual({ state: "allow" });
   });
 
   it("merges scopes with project winning per pattern", () => {
     const global = scope([{ surface: "bash", pattern: "git *", state: "ask" }]);
     const project = scope([{ surface: "bash", pattern: "git *", state: "allow" }]);
     const policy = buildPolicy(global, project);
-    expect(decideValue(policy.rules, "bash", "git status")).toEqual({ state: "allow" });
+    expect(decideSurface(policy.rules, "bash", ["git status"], "first")).toEqual({
+      state: "allow",
+      matchedPattern: "git *",
+    });
   });
 
   it("appends project-only patterns after shared ones", () => {
     const global = scope([{ surface: "bash", pattern: "git *", state: "allow" }]);
     const project = scope([{ surface: "bash", pattern: "git push*", state: "deny", reason: "no" }]);
     const policy = buildPolicy(global, project);
-    expect(decideValue(policy.rules, "bash", "git push origin")).toEqual({ state: "deny", reason: "no" });
-    expect(decideValue(policy.rules, "bash", "git status")).toEqual({ state: "allow" });
+    expect(decideSurface(policy.rules, "bash", ["git push origin"], "first")).toEqual({
+      state: "deny",
+      reason: "no",
+      matchedPattern: "git push*",
+    });
+    expect(decideSurface(policy.rules, "bash", ["git status"], "first")).toEqual({
+      state: "allow",
+      matchedPattern: "git *",
+    });
   });
 
   it("project universal default overrides global", () => {
     const policy = buildPolicy(scope([], "ask"), scope([], "allow"));
-    expect(decideValue(policy.rules, "write", "x")).toEqual({ state: "allow" });
+    expect(decideSurface(policy.rules, "write", ["x"], "first")).toEqual({ state: "allow", matchedPattern: undefined });
   });
 
   it("expands home patterns at match time", () => {
     const policy = buildPolicy(scope([{ surface: "path", pattern: "~/.ssh/*", state: "deny" }]), null);
-    expect(decideValue(policy.rules, "path", `${process.env.HOME}/.ssh/id_rsa`)).toEqual({ state: "deny" });
+    expect(decideSurface(policy.rules, "path", [`${process.env.HOME}/.ssh/id_rsa`], "any")).toEqual({
+      state: "deny",
+      matchedPattern: "~/.ssh/*",
+    });
   });
 
   it("keeps a valid deny reason through the merge", () => {
@@ -134,6 +147,10 @@ describe("buildPolicy", () => {
       scope([{ surface: "bash", pattern: "rm *", state: "deny", reason: "destructive" }]),
       null,
     );
-    expect(decideValue(policy.rules, "bash", "rm -rf /")).toEqual({ state: "deny", reason: "destructive" });
+    expect(decideSurface(policy.rules, "bash", ["rm -rf /"], "first")).toEqual({
+      state: "deny",
+      reason: "destructive",
+      matchedPattern: "rm *",
+    });
   });
 });

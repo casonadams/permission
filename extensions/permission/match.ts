@@ -8,6 +8,7 @@ export interface PolicyRule {
   readonly pattern: string;
   readonly state: PermissionState;
   readonly reason?: string;
+  readonly synthetic?: boolean;
 }
 
 export interface CompiledRule {
@@ -19,6 +20,8 @@ export interface CompiledRule {
 export interface Decision {
   readonly state: PermissionState;
   readonly reason?: string;
+  /** Undefined when no configured rule matched and only the universal fallback applied. */
+  readonly matchedPattern?: string;
 }
 
 const HOME_PREFIXES = ["~/", "$HOME/"] as const;
@@ -59,13 +62,53 @@ function ruleMatches(compiled: CompiledRule, surface: string, value: string): bo
   return compiled.surfaceRe.test(surface) && compiled.patternRe.test(value);
 }
 
-export function decideValue(rules: readonly CompiledRule[], surface: string, value: string): Decision {
+function lastMatch(rules: readonly CompiledRule[], surface: string, value: string): Decision | null {
   for (let i = rules.length - 1; i >= 0; i--) {
-    if (ruleMatches(rules[i], surface, value)) {
-      return { state: rules[i].rule.state, reason: rules[i].rule.reason };
-    }
+    const compiled = rules[i];
+    if (!ruleMatches(compiled, surface, value)) continue;
+    const { rule } = compiled;
+    return {
+      state: rule.state,
+      reason: rule.reason,
+      matchedPattern: rule.synthetic ? undefined : rule.pattern,
+    };
   }
-  return { state: "ask" };
+  return null;
+}
+
+function lastMatchAny(rules: readonly CompiledRule[], surface: string, values: readonly string[]): Decision | null {
+  for (let i = rules.length - 1; i >= 0; i--) {
+    const compiled = rules[i];
+    if (!values.some((value) => ruleMatches(compiled, surface, value))) continue;
+    const { rule } = compiled;
+    return {
+      state: rule.state,
+      reason: rule.reason,
+      matchedPattern: rule.synthetic ? undefined : rule.pattern,
+    };
+  }
+  return null;
+}
+
+/**
+ * v1-compatible evaluation over a value set. "first" (tool/bash/mcp/skill surfaces)
+ * returns the first value with a real rule match; "any" (path surface) takes the last
+ * rule matching any projection. Both fall back to the universal default state.
+ */
+export function decideSurface(
+  rules: readonly CompiledRule[],
+  surface: string,
+  values: readonly string[],
+  kind: "first" | "any",
+): Decision {
+  if (kind === "any") {
+    return lastMatchAny(rules, surface, values) ?? { state: "ask" };
+  }
+  for (const value of values) {
+    const match = lastMatch(rules, surface, value);
+    if (match && match.matchedPattern !== undefined) return match;
+  }
+  return lastMatch(rules, surface, values[0] ?? "*") ?? { state: "ask" };
 }
 
 export function foldMostRestrictive(decisions: readonly Decision[]): Decision | null {

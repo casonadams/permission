@@ -41,7 +41,7 @@ export function loadPolicy(options: LoadPolicyOptions): LoadPolicyResult {
 export function buildPolicy(global: ScopeRules | null, project: ScopeRules | null): Policy {
   const merged = mergeScopeRules(global?.rules ?? [], project?.rules ?? []);
   const universal = project?.universal ?? global?.universal ?? "ask";
-  const defaultRule: PolicyRule = { surface: "*", pattern: "*", state: universal };
+  const defaultRule: PolicyRule = { surface: "*", pattern: "*", state: universal, synthetic: true };
   return { rules: [defaultRule, ...merged].map(compileRule) };
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compilePattern, decideValue, foldMostRestrictive, type PolicyRule } from "./match";
+import { compilePattern, decideSurface, foldMostRestrictive } from "./match";
 import { buildPolicy } from "./policy";
 
 describe("compilePattern", () => {
@@ -57,24 +57,33 @@ describe("compilePattern", () => {
   });
 });
 
-describe("decideValue", () => {
-  const rules = [
-    { surface: "*", pattern: "*", state: "ask" as const },
-    { surface: "bash", pattern: "git *", state: "allow" as const },
-    { surface: "bash", pattern: "git push*", state: "deny" as const, reason: "no pushes" },
-    { surface: "path", pattern: "/tmp/*", state: "allow" as const },
-  ].map((rule) => rule) as PolicyRule[];
-
-  const policy = buildPolicy({ rules, universal: undefined }, null);
+describe("decideSurface", () => {
+  const policy = buildPolicy(
+    {
+      rules: [
+        { surface: "bash", pattern: "git *", state: "allow" as const },
+        { surface: "bash", pattern: "git push*", state: "deny" as const, reason: "no pushes" },
+      ],
+      universal: "ask",
+    },
+    null,
+  );
 
   it("uses last matching rule (specific after broad)", () => {
-    expect(decideValue(policy.rules, "bash", "git status")).toEqual({ state: "allow" });
-    expect(decideValue(policy.rules, "bash", "git push origin")).toEqual({ state: "deny", reason: "no pushes" });
+    expect(decideSurface(policy.rules, "bash", ["git status"], "first")).toEqual({
+      state: "allow",
+      matchedPattern: "git *",
+    });
+    expect(decideSurface(policy.rules, "bash", ["git push origin"], "first")).toEqual({
+      state: "deny",
+      reason: "no pushes",
+      matchedPattern: "git push*",
+    });
   });
 
-  it("falls back to the universal default for unmatched surfaces and values", () => {
-    expect(decideValue(policy.rules, "bash", "npm test")).toEqual({ state: "ask" });
-    expect(decideValue(policy.rules, "write", "/tmp/x")).toEqual({ state: "ask" });
+  it("falls back to the universal default for unmatched values", () => {
+    expect(decideSurface(policy.rules, "bash", ["npm test"], "first")).toEqual({ state: "ask" });
+    expect(decideSurface(policy.rules, "write", ["/tmp/x"], "first")).toEqual({ state: "ask" });
   });
 
   it("matches surface wildcards", () => {
@@ -82,22 +91,36 @@ describe("decideValue", () => {
       { rules: [{ surface: "*", pattern: "mcp_status", state: "allow" as const }], universal: "ask" },
       null,
     );
-    expect(decideValue(p.rules, "mcp", "mcp_status")).toEqual({ state: "allow" });
+    expect(decideSurface(p.rules, "mcp", ["mcp_status"], "first")).toEqual({
+      state: "allow",
+      matchedPattern: "mcp_status",
+    });
   });
 
-  it("later rules on the same surface override earlier ones", () => {
+  it("'first' takes the first value with a real rule match (projection-friendly)", () => {
+    const p = buildPolicy(
+      { rules: [{ surface: "read", pattern: "src/*", state: "allow" as const }], universal: "ask" },
+      null,
+    );
+    const decision = decideSurface(p.rules, "read", ["/repo/src/App.jsx", "src/App.jsx"], "first");
+    expect(decision.state).toBe("allow");
+    expect(decision.matchedPattern).toBe("src/*");
+  });
+
+  it("'any' takes the last rule matching any projection", () => {
     const p = buildPolicy(
       {
         rules: [
-          { surface: "bash", pattern: "*", state: "ask" as const },
-          { surface: "bash", pattern: "git diff*", state: "allow" as const },
+          { surface: "path", pattern: "*.env*", state: "deny" as const },
+          { surface: "path", pattern: "/tmp/*", state: "allow" as const },
         ],
         universal: "ask",
       },
       null,
     );
-    expect(decideValue(p.rules, "bash", "git diff HEAD")).toEqual({ state: "allow" });
-    expect(decideValue(p.rules, "bash", "rm -rf /")).toEqual({ state: "ask" });
+    expect(decideSurface(p.rules, "path", ["/tmp/out.env"], "any").state).toBe("allow");
+    expect(decideSurface(p.rules, "path", ["/repo/src/.env"], "any").state).toBe("deny");
+    expect(decideSurface(p.rules, "path", ["/var/data/x"], "any")).toEqual({ state: "ask" });
   });
 });
 
