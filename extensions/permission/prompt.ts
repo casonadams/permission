@@ -25,7 +25,18 @@ export async function promptPermission(
   message: string,
   details?: PromptDetails,
 ): Promise<PromptOutcome> {
-  const choice = await ui.select(`${title}\n${message}`, [...OPTIONS]);
+  for (;;) {
+    const choice = await ui.select(`${title}\n${message}`, [...OPTIONS]);
+    const outcome = await handleChoice(choice, ui, details);
+    if (outcome !== null) return outcome;
+  }
+}
+
+async function handleChoice(
+  choice: string | undefined,
+  ui: ExtensionContext["ui"],
+  details?: PromptDetails,
+): Promise<PromptOutcome | null> {
   switch (choice) {
     case "Allow":
       return { approved: true, always: false };
@@ -35,6 +46,7 @@ export async function promptPermission(
       return resolveAlwaysAllow(ui, details?.defaultPattern ?? details?.rawInput);
     case "Deny with reason": {
       const reason = await ui.input("Reason:");
+      if (reason === undefined) return null;
       return { approved: false, reason: formatUserDenial(reason) };
     }
     default:
@@ -42,7 +54,7 @@ export async function promptPermission(
   }
 }
 
-async function resolveEditView(ui: ExtensionContext["ui"], rawInput?: string): Promise<PromptOutcome> {
+async function resolveEditView(ui: ExtensionContext["ui"], rawInput?: string): Promise<PromptOutcome | null> {
   if (!rawInput) {
     return { approved: true, always: false };
   }
@@ -52,12 +64,12 @@ async function resolveEditView(ui: ExtensionContext["ui"], rawInput?: string): P
   }
   const edited = await promptEditor("Edit command / arguments before running:", rawInput);
   if (edited === undefined) {
-    return { approved: false, reason: formatUserDenial() };
+    return null;
   }
   return { approved: true, always: false, editedInput: edited.trim() || rawInput };
 }
 
-async function resolveAlwaysAllow(ui: ExtensionContext["ui"], defaultPattern?: string): Promise<PromptOutcome> {
+async function resolveAlwaysAllow(ui: ExtensionContext["ui"], defaultPattern?: string): Promise<PromptOutcome | null> {
   if (!defaultPattern) {
     return { approved: true, always: true };
   }
@@ -67,7 +79,7 @@ async function resolveAlwaysAllow(ui: ExtensionContext["ui"], defaultPattern?: s
   }
   const edited = await promptEditor("Rule pattern to always allow:", defaultPattern);
   if (edited === undefined) {
-    return { approved: false, reason: formatUserDenial() };
+    return null;
   }
   return { approved: true, always: true, pattern: edited.trim() || defaultPattern };
 }

@@ -129,9 +129,9 @@ describe("permission extension adapter", () => {
     expect(saved.permission.bash["npm *"]).toBe("allow");
   });
 
-  it("cancels 'Always allow' if pattern editor is dismissed", async () => {
+  it("cancels 'Always allow' if pattern editor is dismissed and menu is cancelled", async () => {
     const installed = await setup({ permission: { bash: "ask" } });
-    installed.selections.push("Always allow");
+    installed.selections.push("Always allow", undefined);
     installed.editors.push(undefined);
     expect(await installed.call("npm test")).toEqual({
       block: true,
@@ -141,27 +141,33 @@ describe("permission extension adapter", () => {
     expect(saved.permission.bash).toBe("ask");
   });
 
-  it("allows editing command input via 'Edit / View' and executes mutated input", async () => {
+  it("returns to select menu when editor is dismissed in 'Edit / View'", async () => {
     const installed = await setup({ permission: { bash: "ask" } });
-    installed.selections.push("Edit / View");
-    installed.editors.push("npm run safe");
-
-    const inputObj = { command: "npm run risky" };
-    const res = await installed.handlers.get("tool_call")?.(
-      { toolName: "bash", input: inputObj } as never,
-      {
-        cwd: "/repo",
-        hasUI: true,
-        ui: { select: async () => installed.selections.shift(), editor: async () => installed.editors.shift() },
-      } as never,
-    );
-    expect(res).toBeUndefined();
-    expect(inputObj.command).toBe("npm run safe");
+    installed.selections.push("Edit / View", "Allow");
+    installed.editors.push(undefined);
+    expect(await installed.call("npm test")).toBeUndefined();
+    expect(installed.promptCount()).toBe(2);
   });
 
-  it("cancels execution if 'Edit / View' editor is dismissed", async () => {
+  it("returns to select menu when editor is dismissed in 'Always allow'", async () => {
     const installed = await setup({ permission: { bash: "ask" } });
-    installed.selections.push("Edit / View");
+    installed.selections.push("Always allow", "Allow");
+    installed.editors.push(undefined);
+    expect(await installed.call("npm test")).toBeUndefined();
+    expect(installed.promptCount()).toBe(2);
+  });
+
+  it("returns to select menu when reason input is dismissed in 'Deny with reason'", async () => {
+    const installed = await setup({ permission: { bash: "ask" } });
+    installed.selections.push("Deny with reason", "Allow");
+    installed.inputs.push(undefined);
+    expect(await installed.call("npm test")).toBeUndefined();
+    expect(installed.promptCount()).toBe(2);
+  });
+
+  it("cancels execution if 'Edit / View' editor is dismissed and menu is cancelled", async () => {
+    const installed = await setup({ permission: { bash: "ask" } });
+    installed.selections.push("Edit / View", undefined);
     installed.editors.push(undefined);
     expect(await installed.call("npm test")).toEqual({
       block: true,
