@@ -18,6 +18,7 @@ interface Installed {
   handlers: Map<string, Handler>;
   selections: (string | undefined)[];
   inputs: (string | undefined)[];
+  editors: (string | undefined)[];
   promptCount: () => number;
   notifications: { message: string; level: string }[];
   call(command: string): Promise<unknown>;
@@ -33,6 +34,7 @@ async function setup(permission: Record<string, unknown>): Promise<Installed> {
   } as never);
   const selections: (string | undefined)[] = [];
   const inputs: (string | undefined)[] = [];
+  const editors: (string | undefined)[] = [];
   let promptCount = 0;
   const notifications: { message: string; level: string }[] = [];
   const ctx = {
@@ -44,6 +46,7 @@ async function setup(permission: Record<string, unknown>): Promise<Installed> {
         return selections.shift();
       },
       input: async () => inputs.shift(),
+      editor: async (_title: string, prefill?: string) => (editors.length > 0 ? editors.shift() : prefill),
       notify: async (message: string, level?: string) => {
         notifications.push({ message, level: level ?? "info" });
       },
@@ -54,6 +57,7 @@ async function setup(permission: Record<string, unknown>): Promise<Installed> {
     handlers,
     selections,
     inputs,
+    editors,
     promptCount: () => promptCount,
     notifications,
     call: async (command: string) =>
@@ -111,6 +115,30 @@ describe("permission extension adapter", () => {
 
     const saved = JSON.parse(readFileSync(join(agentDir, "permission.json"), "utf-8"));
     expect(saved.permission.bash["npm test"]).toBe("allow");
+  });
+
+  it("allows editing command pattern before saving on 'Always allow'", async () => {
+    const installed = await setup({ permission: { bash: "ask" } });
+    installed.selections.push("Always allow");
+    installed.editors.push("npm *");
+    expect(await installed.call("npm test")).toBeUndefined();
+    expect(await installed.call("npm run build")).toBeUndefined();
+    expect(installed.promptCount()).toBe(1);
+
+    const saved = JSON.parse(readFileSync(join(agentDir, "permission.json"), "utf-8"));
+    expect(saved.permission.bash["npm *"]).toBe("allow");
+  });
+
+  it("cancels 'Always allow' if pattern editor is dismissed", async () => {
+    const installed = await setup({ permission: { bash: "ask" } });
+    installed.selections.push("Always allow");
+    installed.editors.push(undefined);
+    expect(await installed.call("npm test")).toEqual({
+      block: true,
+      reason: "Permission denied by user. Do not retry this operation without explicit user request.",
+    });
+    const saved = JSON.parse(readFileSync(join(agentDir, "permission.json"), "utf-8"));
+    expect(saved.permission.bash).toBe("ask");
   });
 
   it("denies with custom reason on 'Deny with reason'", async () => {

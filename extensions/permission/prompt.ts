@@ -1,6 +1,8 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-export type PromptOutcome = { approved: true; always: boolean } | { approved: false; reason?: string };
+export type PromptOutcome =
+  | { approved: true; always: boolean; pattern?: string }
+  | { approved: false; reason?: string };
 
 const OPTIONS = ["Allow", "Always allow", "Deny with reason"] as const;
 
@@ -16,13 +18,14 @@ export async function promptPermission(
   ui: ExtensionContext["ui"],
   title: string,
   message: string,
+  defaultPattern?: string,
 ): Promise<PromptOutcome> {
   const choice = await ui.select(`${title}\n${message}`, [...OPTIONS]);
   switch (choice) {
     case "Allow":
       return { approved: true, always: false };
     case "Always allow":
-      return { approved: true, always: true };
+      return resolveAlwaysAllow(ui, defaultPattern);
     case "Deny with reason": {
       const reason = await ui.input("Reason:");
       return { approved: false, reason: formatUserDenial(reason) };
@@ -30,4 +33,19 @@ export async function promptPermission(
     default:
       return { approved: false, reason: formatUserDenial() };
   }
+}
+
+async function resolveAlwaysAllow(ui: ExtensionContext["ui"], defaultPattern?: string): Promise<PromptOutcome> {
+  if (!defaultPattern) {
+    return { approved: true, always: true };
+  }
+  const promptEditor = typeof ui.editor === "function" ? ui.editor.bind(ui) : ui.input?.bind(ui);
+  if (typeof promptEditor !== "function") {
+    return { approved: true, always: true, pattern: defaultPattern };
+  }
+  const edited = await promptEditor("Rule pattern to always allow:", defaultPattern);
+  if (edited === undefined) {
+    return { approved: false, reason: formatUserDenial() };
+  }
+  return { approved: true, always: true, pattern: edited.trim() || defaultPattern };
 }

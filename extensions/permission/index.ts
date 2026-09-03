@@ -46,11 +46,17 @@ export default function permissionExtension(pi: ExtensionAPI): void {
     if (decision.state === "deny") return { block: true, reason: decision.reason ?? DENY_REASON };
     if (!ctx.hasUI) return { block: true, reason: NO_UI_REASON };
 
-    const outcome = await promptPermission(ctx.ui, "Permission required", describeAsk(components));
+    const defaultPattern = sessionDrafts[0]?.pattern;
+    const outcome = await promptPermission(ctx.ui, "Permission required", describeAsk(components), defaultPattern);
     if (!outcome.approved) return { block: true, reason: outcome.reason ?? DENY_REASON };
     if (outcome.always) {
-      sessionRules.push(...sessionDrafts.map((draft) => compileRule({ ...draft, state: "allow" })));
-      persistRules(ctx, targetPolicyPath, sessionDrafts);
+      const pattern = outcome.pattern;
+      const drafts =
+        pattern && sessionDrafts.length > 0
+          ? sessionDrafts.map((draft, i) => (i === 0 ? { ...draft, pattern } : draft))
+          : sessionDrafts;
+      sessionRules.push(...drafts.map((draft) => compileRule({ ...draft, state: "allow" })));
+      persistRules(ctx, targetPolicyPath, drafts);
     }
     return undefined;
   });
@@ -84,9 +90,9 @@ async function handleSkillInput(
   }
 
   const promptMsg = `skill: ${skillName}${decision.reason ? `\n${decision.reason}` : ""}`;
-  const outcome = await promptPermission(ctx.ui, "Permission required", promptMsg);
+  const outcome = await promptPermission(ctx.ui, "Permission required", promptMsg, skillName);
   if (outcome.approved) {
-    if (outcome.always) onAlwaysAllow(skillName);
+    if (outcome.always) onAlwaysAllow(outcome.pattern ?? skillName);
     return { action: "continue" };
   }
   ctx.ui.notify(`Skill '${skillName}' blocked: ${outcome.reason ?? DENY_REASON}`, "warning");
