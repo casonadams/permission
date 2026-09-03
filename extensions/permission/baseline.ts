@@ -1,3 +1,20 @@
+export const BASELINE_TOOL_ALLOW: readonly string[] = [
+  // Core built-in tools (file safety enforced by path surface)
+  "read",
+  "write",
+  "edit",
+  "ls",
+  "grep",
+  "find",
+  // Workflow & interactive tools
+  "skill",
+  "todo",
+  "ask_user_question",
+  "subagent",
+  "Agent",
+  "get_subagent_result",
+];
+
 export const BASELINE_BASH_ALLOW: readonly string[] = [
   // Git read-only inspection
   "git status *",

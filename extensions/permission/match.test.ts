@@ -83,7 +83,7 @@ describe("decideSurface", () => {
 
   it("falls back to the universal default for unmatched values", () => {
     expect(decideSurface(policy.rules, "bash", ["npm test"], "first")).toEqual({ state: "ask" });
-    expect(decideSurface(policy.rules, "write", ["/tmp/x"], "first")).toEqual({ state: "ask" });
+    expect(decideSurface(policy.rules, "custom_tool", ["/tmp/x"], "first")).toEqual({ state: "ask" });
   });
 
   it("matches surface wildcards", () => {

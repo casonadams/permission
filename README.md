@@ -38,12 +38,6 @@ minimal policy:
   "$schema": "https://raw.githubusercontent.com/casonadams/permission/main/schemas/permissions.schema.json",
   "permission": {
     "*": "ask",
-    "read": "allow",
-    "write": "allow",
-    "edit": "allow",
-    "grep": "allow",
-    "find": "allow",
-    "ls": "allow",
     "path": {
       "/tmp/*": "allow",
       "*.env*": { "action": "deny", "reason": "secrets" },
@@ -67,6 +61,12 @@ at the start of each Pi session.
 Pi's built-in tool surfaces are `read`, `write`, `edit`, `bash`, `grep`,
 `find`, and `ls`. `path`, `mcp`, and `skill` are permission surfaces rather
 than built-in tools.
+
+Standard coding and workflow tools (`read`, `write`, `edit`, `ls`, `grep`,
+`find`, `skill`, `todo`, `ask_user_question`, `Agent`, `subagent`) are allowed
+by default: file safety is enforced through the cross-cutting `path` surface
+(which confines actions to the workspace and guards secrets). Explicit rules in
+`permission.json` override these defaults.
 
 Each key under `permission` is a surface:
 

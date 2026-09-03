@@ -188,6 +188,33 @@ describe("buildPolicy", () => {
     // ls is still covered by baseline
     expect(decideSurface(policy.rules, "bash", ["ls -la"], "first").state).toBe("allow");
   });
+
+  it("defaults standard tools to allow under ask policy without explicit config", () => {
+    const policy = buildPolicy(scope([], "ask"), null);
+    for (const tool of ["read", "write", "edit", "ls", "grep", "find", "skill", "todo", "ask_user_question"]) {
+      expect(decideSurface(policy.rules, tool, ["*"], "first").state).toBe("allow");
+    }
+    // Unlisted custom tools still fall back to ask
+    expect(decideSurface(policy.rules, "custom_plugin", ["*"], "first").state).toBe("ask");
+  });
+
+  it("allows user rules to override baseline tool allow", () => {
+    const policy = buildPolicy(
+      scope([
+        { surface: "write", pattern: "*", state: "ask" },
+        { surface: "edit", pattern: "*", state: "deny", reason: "no edits" },
+      ]),
+      null,
+    );
+    expect(decideSurface(policy.rules, "write", ["*"], "first").state).toBe("ask");
+    expect(decideSurface(policy.rules, "edit", ["*"], "first")).toEqual({
+      state: "deny",
+      reason: "no edits",
+      matchedPattern: "*",
+    });
+    // read is still covered by baseline
+    expect(decideSurface(policy.rules, "read", ["*"], "first").state).toBe("allow");
+  });
 });
 
 describe("saveAllowRules", () => {

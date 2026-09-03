@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { BASELINE_BASH_ALLOW } from "./bash-baseline";
+import { BASELINE_BASH_ALLOW, BASELINE_TOOL_ALLOW } from "./baseline";
 import { type CompiledRule, compileRule, type PermissionState, type PolicyRule } from "./match";
 
 export interface Policy {
@@ -44,15 +44,24 @@ export function buildPolicy(global: ScopeRules | null, project: ScopeRules | nul
   const merged = mergeScopeRules(global?.rules ?? [], project?.rules ?? []);
   const universal = project?.universal ?? global?.universal ?? "ask";
   const defaultRule: PolicyRule = { surface: "*", pattern: "*", state: universal, synthetic: true };
-  const baselineRules: PolicyRule[] = BASELINE_BASH_ALLOW.map((pattern) => ({
+
+  const baselineToolRules: PolicyRule[] = BASELINE_TOOL_ALLOW.filter(
+    (tool) => !merged.some((rule) => rule.surface === tool),
+  ).map((surface) => ({ surface, pattern: "*", state: "allow", synthetic: true }));
+
+  const baselineBashRules: PolicyRule[] = BASELINE_BASH_ALLOW.map((pattern) => ({
     surface: "bash",
     pattern,
     state: "allow",
     synthetic: true,
   }));
+
   const catchAlls = merged.filter((rule) => rule.pattern === "*");
   const specifics = merged.filter((rule) => rule.pattern !== "*");
-  return { rules: [defaultRule, ...catchAlls, ...baselineRules, ...specifics].map(compileRule) };
+
+  return {
+    rules: [defaultRule, ...catchAlls, ...baselineToolRules, ...baselineBashRules, ...specifics].map(compileRule),
+  };
 }
 
 function mergeScopeRules(base: readonly PolicyRule[], override: readonly PolicyRule[]): PolicyRule[] {
