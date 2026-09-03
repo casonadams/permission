@@ -22,7 +22,6 @@ export interface DecisionComponent {
   readonly surface: string;
   readonly value: string;
   readonly decision: Decision;
-  readonly askReason?: string;
 }
 
 export interface ToolCallDecision {
@@ -56,28 +55,15 @@ function bashComponents(rules: readonly CompiledRule[], call: ToolCallCheck): De
   const analysis = bashAnalysis(call);
   const components: DecisionComponent[] = [];
   for (const command of analysis.commands) {
-    const decision = decideSurface(rules, "bash", [command], "first");
-    const askReason =
-      decision.state === "ask"
-        ? decision.matchedPattern
-          ? `rule '${decision.matchedPattern}'`
-          : "unlisted command"
-        : undefined;
     components.push({
       surface: "bash",
       value: command,
-      decision,
-      askReason,
+      decision: decideSurface(rules, "bash", [command], "first"),
     });
   }
   if (analysis.suspicious) {
     const full = stringInput(call.input, "command") ?? "";
-    components.push({
-      surface: "bash",
-      value: full,
-      decision: { state: "ask" },
-      askReason: "dynamic substitution or syntax",
-    });
+    components.push({ surface: "bash", value: full, decision: { state: "ask" } });
   }
   components.push(...pathComponents(rules, analysis.pathTokens, call));
   return components;
@@ -100,8 +86,7 @@ function nonBashComponents(rules: readonly CompiledRule[], call: ToolCallCheck):
 function mcpComponent(rules: readonly CompiledRule[], call: ToolCallCheck): DecisionComponent {
   const targets = extractMcpTargets(call.input);
   const decision = decideSurface(rules, "mcp", targets.length > 0 ? targets : ["*"], "first");
-  const askReason = decision.state === "ask" ? "unlisted MCP tool" : undefined;
-  return { surface: "mcp", value: targets[0] ?? "*", decision, askReason };
+  return { surface: "mcp", value: targets[0] ?? "*", decision };
 }
 
 function standardToolComponent(
@@ -112,12 +97,10 @@ function standardToolComponent(
   if (toolPath) {
     const values = pathPolicyValues(toolPath, call.cwd);
     const decision = decideSurface(rules, call.toolName, values.length > 0 ? values : ["*"], "first");
-    const askReason = decision.state === "ask" ? `unlisted ${call.toolName} tool` : undefined;
-    return { surface: call.toolName, value: toolPath, decision, askReason };
+    return { surface: call.toolName, value: toolPath, decision };
   }
   const decision = decideSurface(rules, call.toolName, ["*"], "first");
-  const askReason = decision.state === "ask" ? `unlisted tool '${call.toolName}'` : undefined;
-  return { surface: call.toolName, value: "*", decision, askReason };
+  return { surface: call.toolName, value: "*", decision };
 }
 
 function pathComponents(
@@ -131,9 +114,7 @@ function pathComponents(
     const covered = decision.matchedPattern !== undefined;
     const isOutside = !covered && isPathOutsideWorkingDirectory(token, call.cwd);
     const state = covered ? decision.state : isOutside ? "ask" : "allow";
-    const askReason =
-      state === "ask" ? (covered ? `rule '${decision.matchedPattern}'` : "outside workspace") : undefined;
-    components.push({ surface: "path", value: token, decision: { ...decision, state }, askReason });
+    components.push({ surface: "path", value: token, decision: { ...decision, state } });
   }
   return components;
 }

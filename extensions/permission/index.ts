@@ -199,21 +199,20 @@ export function extractSkillName(text: string): string | null {
 }
 
 function describeAsk(components: readonly DecisionComponent[], rawCommand?: string | null): string {
-  const asks = components.filter((c) => c.decision.state === "ask");
-  const lines: string[] = [];
-
   if (rawCommand && components.some((c) => c.surface === "bash")) {
-    const isAllowed = asks.every((a) => a.surface !== "bash");
-    const tag = isAllowed ? " [allowed]" : "";
+    const asks = components.filter((c) => c.decision.state === "ask");
+    const isBashAllowed = asks.every((a) => a.surface !== "bash");
+    const tag = isBashAllowed ? " [allowed]" : "";
     const formatted = formatBashCommand(rawCommand);
-    lines.push(formatted.includes("\n") ? `command${tag}:\n${formatted}` : `command: ${formatted}${tag}`);
+    const header = formatted.includes("\n") ? `bash${tag}:\n${formatted}` : `bash: ${formatted}${tag}`;
+
+    const extraAsks = asks.filter((c) => c.surface !== "bash");
+    if (extraAsks.length === 0) {
+      return header;
+    }
+    const extraLines = extraAsks.map((c) => `${c.surface}: ${c.value}`);
+    return `${header}\n${extraLines.join("\n")}`;
   }
 
-  lines.push("requires approval:");
-  for (const ask of asks) {
-    const reasonSuffix = ask.askReason ? ` [${ask.askReason}]` : "";
-    lines.push(`  • ${ask.surface}: ${ask.value}${reasonSuffix}`);
-  }
-
-  return lines.join("\n");
+  return components.map((component) => `${component.surface}: ${component.value}`).join("\n");
 }
