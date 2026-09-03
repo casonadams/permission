@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { type CompiledRule, compileRule, type PermissionState, type PolicyRule } from "./match";
 
 export interface Policy {
@@ -218,4 +219,56 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 
 function isPermissionState(value: unknown): value is PermissionState {
   return value === "allow" || value === "deny" || value === "ask";
+}
+
+function applyAllowRule(permission: Record<string, unknown>, surface: string, pattern: string): void {
+  const current = permission[surface];
+  const isObj = isPlainRecord(current);
+
+  if (pattern === "*") {
+    if (isObj) (current as Record<string, unknown>)["*"] = "allow";
+    else permission[surface] = "allow";
+    return;
+  }
+
+  if (isObj) {
+    (current as Record<string, unknown>)[pattern] = "allow";
+  } else if (typeof current === "string") {
+    permission[surface] = { "*": current, [pattern]: "allow" };
+  } else {
+    permission[surface] = { [pattern]: "allow" };
+  }
+}
+
+function loadDocForSaving(filePath: string): Record<string, unknown> {
+  if (!existsSync(filePath)) return {};
+  try {
+    const raw = readFileSync(filePath, "utf-8");
+    const parsed: unknown = JSON.parse(stripJsonComments(raw));
+    return isPlainRecord(parsed) ? parsed : {};
+  } catch {
+    throw new Error(`Cannot save rule: '${filePath}' is malformed`);
+  }
+}
+
+function ensurePermissionRoot(doc: Record<string, unknown>): Record<string, unknown> {
+  if (!isPlainRecord(doc.permission)) {
+    const root: Record<string, unknown> = {};
+    doc.permission = root;
+    return root;
+  }
+  return doc.permission;
+}
+
+export function saveAllowRules(filePath: string, rules: readonly { surface: string; pattern: string }[]): void {
+  if (rules.length === 0) return;
+  const doc = loadDocForSaving(filePath);
+  const permission = ensurePermissionRoot(doc);
+
+  for (const { surface, pattern } of rules) {
+    applyAllowRule(permission, surface, pattern);
+  }
+
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, `${JSON.stringify(doc, null, 2)}\n`, "utf-8");
 }

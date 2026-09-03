@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +17,7 @@ state.agentDir = agentDir;
 interface Installed {
   handlers: Map<string, Handler>;
   selections: (string | undefined)[];
+  inputs: (string | undefined)[];
   promptCount: () => number;
   notifications: { message: string; level: string }[];
   call(command: string): Promise<unknown>;
@@ -31,6 +32,7 @@ async function setup(permission: Record<string, unknown>): Promise<Installed> {
     on: (event: string, handler: Handler) => handlers.set(event, handler),
   } as never);
   const selections: (string | undefined)[] = [];
+  const inputs: (string | undefined)[] = [];
   let promptCount = 0;
   const notifications: { message: string; level: string }[] = [];
   const ctx = {
@@ -41,7 +43,7 @@ async function setup(permission: Record<string, unknown>): Promise<Installed> {
         promptCount += 1;
         return selections.shift();
       },
-      input: async () => undefined,
+      input: async () => inputs.shift(),
       notify: async (message: string, level?: string) => {
         notifications.push({ message, level: level ?? "info" });
       },
@@ -51,6 +53,7 @@ async function setup(permission: Record<string, unknown>): Promise<Installed> {
   return {
     handlers,
     selections,
+    inputs,
     promptCount: () => promptCount,
     notifications,
     call: async (command: string) =>
@@ -91,25 +94,42 @@ describe("permission extension adapter", () => {
     expect(await installed.call("rm -rf /tmp/x")).toEqual({ block: true, reason: "destructive" });
   });
 
-  it("records session rules after 'Allow for this session'", async () => {
+  it("allows single execution on 'Allow' but prompts again on next call", async () => {
     const installed = await setup({ permission: { bash: "ask" } });
-    installed.selections.push("Allow for this session");
+    installed.selections.push("Allow", "Allow");
+    expect(await installed.call("npm test")).toBeUndefined();
+    expect(await installed.call("npm test")).toBeUndefined();
+    expect(installed.promptCount()).toBe(2);
+  });
+
+  it("persists rules and avoids re-prompting on 'Always allow'", async () => {
+    const installed = await setup({ permission: { bash: "ask" } });
+    installed.selections.push("Always allow");
     expect(await installed.call("npm test")).toBeUndefined();
     expect(await installed.call("npm test")).toBeUndefined();
     expect(installed.promptCount()).toBe(1);
+
+    const saved = JSON.parse(readFileSync(join(agentDir, "permission.json"), "utf-8"));
+    expect(saved.permission.bash["npm test"]).toBe("allow");
   });
 
-  it("does not prompt again for a different command after session approval", async () => {
+  it("denies with custom reason on 'Deny with reason'", async () => {
     const installed = await setup({ permission: { bash: "ask" } });
-    installed.selections.push("Allow for this session");
-    await installed.call("npm test");
-    expect(await installed.call("npm run build")).toEqual({ block: true, reason: expect.any(String) });
+    installed.selections.push("Deny with reason");
+    installed.inputs.push("not allowed right now");
+    expect(await installed.call("npm test")).toEqual({
+      block: true,
+      reason: 'Permission denied by user: "not allowed right now". Do not retry this operation.',
+    });
   });
 
   it("blocks asks when the prompt is dismissed", async () => {
     const installed = await setup({ permission: { bash: "ask" } });
     installed.selections.push(undefined);
-    expect(await installed.call("npm test")).toEqual({ block: true, reason: expect.stringContaining("denied") });
+    expect(await installed.call("npm test")).toEqual({
+      block: true,
+      reason: "Permission denied by user. Do not retry this operation without explicit user request.",
+    });
   });
 
   it("gates skills through the input event", async () => {
@@ -120,11 +140,14 @@ describe("permission extension adapter", () => {
     expect(await installed.input("plain text")).toEqual({ action: "continue" });
   });
 
-  it("session-approved skills skip later prompts", async () => {
+  it("always-allowed skills persist rule and skip later prompts", async () => {
     const installed = await setup({ permission: { skill: "ask" } });
-    installed.selections.push("Allow for this session");
+    installed.selections.push("Always allow");
     expect(await installed.input("/skill:deploy")).toEqual({ action: "continue" });
     expect(await installed.input("/skill:deploy")).toEqual({ action: "continue" });
     expect(installed.promptCount()).toBe(1);
+
+    const saved = JSON.parse(readFileSync(join(agentDir, "permission.json"), "utf-8"));
+    expect(saved.permission.skill.deploy).toBe("allow");
   });
 });

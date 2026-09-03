@@ -83,9 +83,8 @@ Each key under `permission` is a surface:
 
 - `allow` permits the action silently.
 - `deny` blocks it, optionally returning a configured reason.
-- `ask` opens an approval prompt with Allow, Allow for this session, Deny, and
-  Deny with reason. Dismissing the prompt counts as deny. With no interactive
-  UI, every `ask` blocks.
+- `ask` opens an approval prompt with Allow, Always allow, and Deny with reason.
+  Dismissing the prompt counts as deny. With no interactive UI, every `ask` blocks.
 - A string is shorthand for a catch-all. For example, `"read": "allow"` means
   `"read": { "*": "allow" }`.
 - Last matching pattern wins. Put broad rules before specific exceptions.
@@ -139,11 +138,10 @@ backticks), process substitution, parentheses, unbalanced quotes, or dangling
 operators always prompt, and a matching `deny` rule still applies to the raw
 command text.
 
-### Session approvals
+### Always allow rules
 
-Choosing **Allow for this session** records an allow rule for that exact
-subcommand, parent directory (paths), or tool. Session approvals are
-in-memory: they end when the session ends or a new session starts.
+Choosing **Always allow** saves an allow rule to `permission.json` (project policy
+if present, otherwise global policy) and allows the action for the active session.
 
 ## MCP
 

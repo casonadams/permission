@@ -1,6 +1,9 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { decideSurface } from "./match";
-import { buildPolicy, parsePolicyScope, type ScopeRules, stripJsonComments } from "./policy";
+import { buildPolicy, parsePolicyScope, type ScopeRules, saveAllowRules, stripJsonComments } from "./policy";
 
 const scope = (rules: ScopeRules["rules"], universal?: ScopeRules["universal"]): ScopeRules => ({ rules, universal });
 
@@ -152,5 +155,52 @@ describe("buildPolicy", () => {
       reason: "destructive",
       matchedPattern: "rm *",
     });
+  });
+});
+
+describe("saveAllowRules", () => {
+  it("appends rules to an existing file without losing other config", () => {
+    const dir = mkdtempSync(join(tmpdir(), "policy-save-"));
+    const path = join(dir, "permission.json");
+    writeFileSync(path, JSON.stringify({ permission: { "*": "ask", bash: { "git status": "allow" } } }));
+
+    saveAllowRules(path, [{ surface: "bash", pattern: "cargo test" }]);
+    const saved = JSON.parse(readFileSync(path, "utf-8"));
+    expect(saved.permission.bash["git status"]).toBe("allow");
+    expect(saved.permission.bash["cargo test"]).toBe("allow");
+    expect(saved.permission["*"]).toBe("ask");
+    rmSync(dir, { recursive: true });
+  });
+
+  it("converts a string surface action into a pattern map with catch-all preserved", () => {
+    const dir = mkdtempSync(join(tmpdir(), "policy-save-"));
+    const path = join(dir, "permission.json");
+    writeFileSync(path, JSON.stringify({ permission: { bash: "ask" } }));
+
+    saveAllowRules(path, [{ surface: "bash", pattern: "cargo test *" }]);
+    const saved = JSON.parse(readFileSync(path, "utf-8"));
+    expect(saved.permission.bash["*"]).toBe("ask");
+    expect(saved.permission.bash["cargo test *"]).toBe("allow");
+    rmSync(dir, { recursive: true });
+  });
+
+  it("creates the file and directories if missing", () => {
+    const dir = mkdtempSync(join(tmpdir(), "policy-save-"));
+    const path = join(dir, "nested", "permission.json");
+
+    saveAllowRules(path, [{ surface: "read", pattern: "*" }]);
+    const saved = JSON.parse(readFileSync(path, "utf-8"));
+    expect(saved.permission.read).toBe("allow");
+    rmSync(dir, { recursive: true });
+  });
+
+  it("refuses to overwrite a malformed file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "policy-save-"));
+    const path = join(dir, "permission.json");
+    writeFileSync(path, "{ malformed json");
+
+    expect(() => saveAllowRules(path, [{ surface: "bash", pattern: "x" }])).toThrow("malformed");
+    expect(readFileSync(path, "utf-8")).toBe("{ malformed json");
+    rmSync(dir, { recursive: true });
   });
 });

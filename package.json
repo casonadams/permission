@@ -47,7 +47,7 @@
   },
   "pi": {
     "extensions": [
-      "./extensions"
+      "./extensions/permission/index.ts"
     ]
   },
   "peerDependencies": {

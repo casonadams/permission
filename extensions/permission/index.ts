@@ -1,9 +1,10 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { getAgentDir, getPackageDir } from "@earendil-works/pi-coding-agent";
 import { type DecisionComponent, decideToolCall, type ToolCallCheck } from "./decide";
 import { type CompiledRule, compileRule, decideSurface } from "./match";
-import { buildPolicy, loadPolicy, type Policy } from "./policy";
+import { buildPolicy, loadPolicy, type Policy, saveAllowRules } from "./policy";
 import { promptPermission } from "./prompt";
 
 const DENY_REASON = "denied by permission policy";
@@ -15,6 +16,7 @@ export default function permissionExtension(pi: ExtensionAPI): void {
   let policy: Policy = buildPolicy(null, null);
   let sessionRules: CompiledRule[] = [];
   let infrastructureDirs: readonly string[] = [];
+  let targetPolicyPath = "";
 
   pi.on("session_start", (_event, ctx) => {
     sessionRules = [];
@@ -26,10 +28,10 @@ export default function permissionExtension(pi: ExtensionAPI): void {
       join(ctx.cwd, CONFIG_DIR_NAME, "npm"),
       join(ctx.cwd, CONFIG_DIR_NAME, "git"),
     ];
-    policy = loadPolicy({
-      globalPath: join(agentDir, "permission.json"),
-      projectPath: join(ctx.cwd, CONFIG_DIR_NAME, "agent", "permission.json"),
-    }).policy;
+    const globalPath = join(agentDir, "permission.json");
+    const projectPath = join(ctx.cwd, CONFIG_DIR_NAME, "agent", "permission.json");
+    targetPolicyPath = existsSync(projectPath) ? projectPath : globalPath;
+    policy = loadPolicy({ globalPath, projectPath }).policy;
   });
 
   pi.on("tool_call", async (event, ctx) => {
@@ -46,39 +48,62 @@ export default function permissionExtension(pi: ExtensionAPI): void {
 
     const outcome = await promptPermission(ctx.ui, "Permission required", describeAsk(components));
     if (!outcome.approved) return { block: true, reason: outcome.reason ?? DENY_REASON };
-    if (outcome.forSession) {
+    if (outcome.always) {
       sessionRules.push(...sessionDrafts.map((draft) => compileRule({ ...draft, state: "allow" })));
+      persistRules(ctx, targetPolicyPath, sessionDrafts);
     }
     return undefined;
   });
 
   pi.on("input", async (event, ctx) => {
-    const skillName = extractSkillName(event.text);
-    if (!skillName) return { action: "continue" };
-
-    const decision = decideSurface([...policy.rules, ...sessionRules], "skill", [skillName], "first");
-    if (decision.state === "allow") return { action: "continue" };
-    if (decision.state === "deny") {
-      if (ctx.hasUI) ctx.ui.notify(`Skill '${skillName}' is denied by permission policy`, "warning");
-      return { action: "handled" };
-    }
-    if (!ctx.hasUI) {
-      notifyBlockedSkill(ctx, skillName);
-      return { action: "handled" };
-    }
-
-    const outcome = await promptPermission(
-      ctx.ui,
-      "Permission required",
-      `skill: ${skillName}${decision.reason ? `\n${decision.reason}` : ""}`,
-    );
-    if (outcome.approved) {
-      if (outcome.forSession) sessionRules.push(compileRule({ surface: "skill", pattern: skillName, state: "allow" }));
-      return { action: "continue" };
-    }
-    ctx.ui.notify(`Skill '${skillName}' blocked: ${outcome.reason ?? DENY_REASON}`, "warning");
-    return { action: "handled" };
+    return handleSkillInput(event.text, ctx, [...policy.rules, ...sessionRules], (name) => {
+      sessionRules.push(compileRule({ surface: "skill", pattern: name, state: "allow" }));
+      persistRules(ctx, targetPolicyPath, [{ surface: "skill", pattern: name }]);
+    });
   });
+}
+
+async function handleSkillInput(
+  text: string,
+  ctx: ExtensionContext,
+  rules: readonly CompiledRule[],
+  onAlwaysAllow: (name: string) => void,
+): Promise<{ action: "continue" | "handled" }> {
+  const skillName = extractSkillName(text);
+  if (!skillName) return { action: "continue" };
+
+  const decision = decideSurface(rules, "skill", [skillName], "first");
+  if (decision.state === "allow") return { action: "continue" };
+  if (decision.state === "deny") {
+    if (ctx.hasUI) ctx.ui.notify(`Skill '${skillName}' is denied by permission policy`, "warning");
+    return { action: "handled" };
+  }
+  if (!ctx.hasUI) {
+    notifyBlockedSkill(ctx, skillName);
+    return { action: "handled" };
+  }
+
+  const promptMsg = `skill: ${skillName}${decision.reason ? `\n${decision.reason}` : ""}`;
+  const outcome = await promptPermission(ctx.ui, "Permission required", promptMsg);
+  if (outcome.approved) {
+    if (outcome.always) onAlwaysAllow(skillName);
+    return { action: "continue" };
+  }
+  ctx.ui.notify(`Skill '${skillName}' blocked: ${outcome.reason ?? DENY_REASON}`, "warning");
+  return { action: "handled" };
+}
+
+function persistRules(
+  ctx: ExtensionContext,
+  targetPath: string,
+  drafts: readonly { surface: string; pattern: string }[],
+): void {
+  try {
+    saveAllowRules(targetPath, drafts);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (ctx.hasUI) ctx.ui.notify(`Failed to save permission rule: ${message}`, "warning");
+  }
 }
 
 function notifyBlockedSkill(ctx: ExtensionContext, skillName: string): void {
