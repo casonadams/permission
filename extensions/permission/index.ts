@@ -215,10 +215,16 @@ export function extractSkillName(text: string): string | null {
   return name || null;
 }
 
-function describeAsk(components: readonly DecisionComponent[], rawCommand?: string | null): string {
+export function describeAsk(components: readonly DecisionComponent[], rawCommand?: string | null): string {
   if (rawCommand && components.some((c) => c.surface === "bash")) {
     const formatted = formatBashCommand(rawCommand);
-    return formatted.includes("\n") ? `bash:\n${formatted}` : `bash: ${formatted}`;
+    return limitPromptLines(formatted.includes("\n") ? `bash:\n${formatted}` : `bash: ${formatted}`);
   }
-  return components.map((component) => `${component.surface}: ${component.value}`).join("\n");
+  return limitPromptLines(components.map((component) => `${component.surface}: ${component.value}`).join("\n"));
+}
+
+export function limitPromptLines(text: string, max = 4): string {
+  const lines = text.split("\n");
+  if (lines.length <= max) return text;
+  return `${lines.slice(0, max).join("\n")}\n… +${lines.length - max} more lines`;
 }

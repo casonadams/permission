@@ -79,6 +79,17 @@ describe("permission extension adapter", () => {
     expect(extractSkillName("hello")).toBeNull();
   });
 
+  it("limits prompt messages to 4 lines", async () => {
+    const { describeAsk, limitPromptLines } = await import("./index");
+    expect(limitPromptLines("a\nb\nc")).toBe("a\nb\nc");
+    expect(limitPromptLines("a\nb\nc\nd\ne\nf")).toBe("a\nb\nc\nd\n… +2 more lines");
+    const components = [
+      { surface: "bash", value: "x", decision: { state: "ask" as const } },
+      { surface: "path", value: "y", decision: { state: "ask" as const } },
+    ];
+    expect(describeAsk(components)).toBe("bash: x\npath: y");
+  });
+
   it("parses multi-drafts text for multi-surface always allow", async () => {
     const { parseMultiDrafts } = await import("./index");
     const fallbacks = [
