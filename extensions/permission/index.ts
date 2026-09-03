@@ -215,19 +215,8 @@ export function extractSkillName(text: string): string | null {
 
 function describeAsk(components: readonly DecisionComponent[], rawCommand?: string | null): string {
   if (rawCommand && components.some((c) => c.surface === "bash")) {
-    const asks = components.filter((c) => c.decision.state === "ask");
-    const isBashAllowed = asks.every((a) => a.surface !== "bash");
-    const tag = isBashAllowed ? " [allowed]" : "";
     const formatted = formatBashCommand(rawCommand);
-    const header = formatted.includes("\n") ? `bash${tag}:\n${formatted}` : `bash: ${formatted}${tag}`;
-
-    const extraAsks = asks.filter((c) => c.surface !== "bash");
-    if (extraAsks.length === 0) {
-      return header;
-    }
-    const extraLines = extraAsks.map((c) => `${c.surface}: ${c.value}`);
-    return `${header}\n${extraLines.join("\n")}`;
+    return formatted.includes("\n") ? `bash:\n${formatted}` : `bash: ${formatted}`;
   }
-
   return components.map((component) => `${component.surface}: ${component.value}`).join("\n");
 }
