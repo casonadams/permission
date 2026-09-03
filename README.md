@@ -51,8 +51,6 @@ minimal policy:
     },
     "bash": {
       "*": "ask",
-      "git status": "allow",
-      "git diff*": "allow",
       "rm -rf *": { "action": "deny", "reason": "destructive" }
     }
   }
@@ -137,6 +135,18 @@ Fail-closed by design: commands containing command substitution (`$(...)`,
 backticks), process substitution, parentheses, unbalanced quotes, or dangling
 operators always prompt, and a matching `deny` rule still applies to the raw
 command text.
+
+Common read-only inspection commands are allowed by default so they do not need
+to be manually listed in `permission.json`:
+- Git read inspection (`git status`, `git diff`, `git log`, `git show`, `git rev-parse`, ...)
+- File listing & navigation (`pwd`, `ls`, `dir`, `tree`, `stat`, `file`, `cd`)
+- Search tools (`grep`, `rg`, `ag`, `fd`, `which`, `whereis`, `type`, `tokei`)
+- File viewing & filters (`cat`, `head`, `tail`, `wc`, `nl`, `sort`, `uniq`, `cut`, `jq`, `awk`)
+- System info & queries (`uname`, `whoami`, `date`, `--version`, `--help`)
+
+Any specific rule in `permission.json` overrides these defaults. Even for
+default-allowed commands, the `path` surface still checks every referenced file
+against path rules and workspace boundaries.
 
 ### Always allow rules
 

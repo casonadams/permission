@@ -156,6 +156,38 @@ describe("buildPolicy", () => {
       matchedPattern: "rm *",
     });
   });
+
+  it("defaults safe inspection commands to allow under ask policy without explicit config", () => {
+    const policy = buildPolicy(scope([], "ask"), null);
+    expect(decideSurface(policy.rules, "bash", ["git status"], "first").state).toBe("allow");
+    expect(decideSurface(policy.rules, "bash", ["git diff HEAD~1"], "first").state).toBe("allow");
+    expect(decideSurface(policy.rules, "bash", ["ls -la"], "first").state).toBe("allow");
+    expect(decideSurface(policy.rules, "bash", ["cat package.json"], "first").state).toBe("allow");
+    expect(decideSurface(policy.rules, "bash", ["rg pattern"], "first").state).toBe("allow");
+    expect(decideSurface(policy.rules, "bash", ["node --version"], "first").state).toBe("allow");
+
+    // Non-baseline commands still fall back to ask
+    expect(decideSurface(policy.rules, "bash", ["npm test"], "first").state).toBe("ask");
+    expect(decideSurface(policy.rules, "bash", ["git push origin main"], "first").state).toBe("ask");
+  });
+
+  it("allows user-configured rules to override baseline allow", () => {
+    const policy = buildPolicy(
+      scope([
+        { surface: "bash", pattern: "*", state: "ask" },
+        { surface: "bash", pattern: "cat *", state: "deny", reason: "no cat" },
+      ]),
+      null,
+    );
+    // cat was overridden to deny
+    expect(decideSurface(policy.rules, "bash", ["cat notes.txt"], "first")).toEqual({
+      state: "deny",
+      reason: "no cat",
+      matchedPattern: "cat *",
+    });
+    // ls is still covered by baseline
+    expect(decideSurface(policy.rules, "bash", ["ls -la"], "first").state).toBe("allow");
+  });
 });
 
 describe("saveAllowRules", () => {
