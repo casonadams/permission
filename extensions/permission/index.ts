@@ -55,16 +55,14 @@ export default function permissionExtension(pi: ExtensionAPI): void {
         pattern && sessionDrafts.length > 0
           ? sessionDrafts.map((draft, i) => (i === 0 ? { ...draft, pattern } : draft))
           : sessionDrafts;
-      sessionRules.push(...drafts.map((draft) => compileRule({ ...draft, state: "allow" })));
-      persistRules(ctx, targetPolicyPath, drafts);
+      activateRules(ctx, targetPolicyPath, sessionRules, drafts);
     }
     return undefined;
   });
 
   pi.on("input", async (event, ctx) => {
     return handleSkillInput(event.text, ctx, [...policy.rules, ...sessionRules], (name) => {
-      sessionRules.push(compileRule({ surface: "skill", pattern: name, state: "allow" }));
-      persistRules(ctx, targetPolicyPath, [{ surface: "skill", pattern: name }]);
+      activateRules(ctx, targetPolicyPath, sessionRules, [{ surface: "skill", pattern: name }]);
     });
   });
 }
@@ -84,10 +82,7 @@ async function handleSkillInput(
     if (ctx.hasUI) ctx.ui.notify(`Skill '${skillName}' is denied by permission policy`, "warning");
     return { action: "handled" };
   }
-  if (!ctx.hasUI) {
-    notifyBlockedSkill(ctx, skillName);
-    return { action: "handled" };
-  }
+  if (!ctx.hasUI) return { action: "handled" };
 
   const promptMsg = `skill: ${skillName}${decision.reason ? `\n${decision.reason}` : ""}`;
   const outcome = await promptPermission(ctx.ui, "Permission required", promptMsg, skillName);
@@ -99,21 +94,19 @@ async function handleSkillInput(
   return { action: "handled" };
 }
 
-function persistRules(
+function activateRules(
   ctx: ExtensionContext,
   targetPath: string,
+  sessionRules: CompiledRule[],
   drafts: readonly { surface: string; pattern: string }[],
 ): void {
+  sessionRules.push(...drafts.map((draft) => compileRule({ ...draft, state: "allow" })));
   try {
     saveAllowRules(targetPath, drafts);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (ctx.hasUI) ctx.ui.notify(`Failed to save permission rule: ${message}`, "warning");
   }
-}
-
-function notifyBlockedSkill(ctx: ExtensionContext, skillName: string): void {
-  if (ctx.hasUI) ctx.ui.notify(`Skill '${skillName}' requires approval but no UI is available`, "warning");
 }
 
 export function extractSkillName(text: string): string | null {

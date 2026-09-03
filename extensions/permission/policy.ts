@@ -213,7 +213,7 @@ function consumeString(input: string, start: number): ScanSegment {
   return { output, nextIndex: index };
 }
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
+export function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

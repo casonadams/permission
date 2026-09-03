@@ -62,21 +62,7 @@ function ruleMatches(compiled: CompiledRule, surface: string, value: string): bo
   return compiled.surfaceRe.test(surface) && compiled.patternRe.test(value);
 }
 
-function lastMatch(rules: readonly CompiledRule[], surface: string, value: string): Decision | null {
-  for (let i = rules.length - 1; i >= 0; i--) {
-    const compiled = rules[i];
-    if (!ruleMatches(compiled, surface, value)) continue;
-    const { rule } = compiled;
-    return {
-      state: rule.state,
-      reason: rule.reason,
-      matchedPattern: rule.synthetic ? undefined : rule.pattern,
-    };
-  }
-  return null;
-}
-
-function lastMatchAny(rules: readonly CompiledRule[], surface: string, values: readonly string[]): Decision | null {
+function lastMatch(rules: readonly CompiledRule[], surface: string, values: readonly string[]): Decision | null {
   for (let i = rules.length - 1; i >= 0; i--) {
     const compiled = rules[i];
     if (!values.some((value) => ruleMatches(compiled, surface, value))) continue;
@@ -102,13 +88,13 @@ export function decideSurface(
   kind: "first" | "any",
 ): Decision {
   if (kind === "any") {
-    return lastMatchAny(rules, surface, values) ?? { state: "ask" };
+    return lastMatch(rules, surface, values) ?? { state: "ask" };
   }
   for (const value of values) {
-    const match = lastMatch(rules, surface, value);
+    const match = lastMatch(rules, surface, [value]);
     if (match && match.matchedPattern !== undefined) return match;
   }
-  return lastMatch(rules, surface, values[0] ?? "*") ?? { state: "ask" };
+  return lastMatch(rules, surface, [values[0] ?? "*"]) ?? { state: "ask" };
 }
 
 export function foldMostRestrictive(decisions: readonly Decision[]): Decision | null {
@@ -118,9 +104,4 @@ export function foldMostRestrictive(decisions: readonly Decision[]): Decision | 
     if (decision.state === "ask" && worst === null) worst = decision;
   }
   return worst;
-}
-
-export function isMostRestrictive(a: Decision, b: Decision): Decision {
-  const rank: Record<PermissionState, number> = { allow: 0, ask: 1, deny: 2 };
-  return rank[a.state] >= rank[b.state] ? a : b;
 }

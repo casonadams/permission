@@ -1,6 +1,7 @@
 import { realpathSync } from "node:fs";
 import { posix } from "node:path";
 import { expandHomePath } from "./match";
+import { isPlainRecord } from "./policy";
 
 export const READ_ONLY_PATH_TOOLS = new Set(["read", "grep", "find", "ls"]);
 export const PATH_BEARING_TOOLS = new Set([...READ_ONLY_PATH_TOOLS, "write", "edit"]);
@@ -49,9 +50,7 @@ export function pathPolicyValues(pathValue: string, cwd?: string): string[] {
 
 function cleanPathLiteral(pathValue: string): string {
   const trimmed = pathValue.trim();
-  if (!trimmed) return "";
-  const expanded = expandHomePath(trimmed);
-  return expanded;
+  return trimmed ? expandHomePath(trimmed) : "";
 }
 
 function absolutePathFor(literal: string, cwd?: string): string | null {
@@ -112,8 +111,4 @@ export function isInfrastructureRead(
   const base = cwd ?? process.cwd();
   const canonical = canonicalPath(expandHomePath(pathValue.trim()), base);
   return infrastructureDirs.some((dir) => isPathWithinDirectory(canonical, canonicalPath(expandHomePath(dir), base)));
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
