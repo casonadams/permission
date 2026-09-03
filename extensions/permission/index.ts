@@ -123,19 +123,52 @@ async function promptAndResolveToolCall(
 ): Promise<{ block?: boolean; reason?: string } | undefined> {
   const rawCommand = event.toolName === "bash" ? stringInput(event.input, "command") : null;
   const rawInput = rawCommand ?? extractToolInputPath(event.toolName, event.input) ?? undefined;
+  const defaultPattern =
+    decision.sessionDrafts.length > 1
+      ? decision.sessionDrafts.map((d) => `${d.surface}: ${d.pattern}`).join("\n")
+      : decision.sessionDrafts[0]?.pattern;
   const outcome = await promptPermission(ctx.ui, "Permission required", describeAsk(decision.components, rawCommand), {
     rawInput,
-    defaultPattern: decision.sessionDrafts[0]?.pattern,
+    defaultPattern,
   });
   if (!outcome.approved) return { block: true, reason: outcome.reason ?? DENY_REASON };
   if (outcome.editedInput) {
     applyEditedInput(event.toolName, event.input, outcome.editedInput);
   }
   if (outcome.always) {
-    const drafts = resolveAlwaysDrafts(decision.sessionDrafts, outcome.pattern);
+    const drafts =
+      decision.sessionDrafts.length > 1 && outcome.pattern
+        ? parseMultiDrafts(outcome.pattern, decision.sessionDrafts)
+        : resolveAlwaysDrafts(decision.sessionDrafts, outcome.pattern);
     activateRules(ctx, session.targetPolicyPath, session.sessionRules, drafts);
   }
   return undefined;
+}
+
+export function parseMultiDrafts(
+  text: string,
+  fallbackDrafts: readonly { surface: string; pattern: string }[],
+): readonly { surface: string; pattern: string }[] {
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  if (lines.length === 0) return fallbackDrafts;
+
+  const result: { surface: string; pattern: string }[] = [];
+  for (const line of lines) {
+    const colonIndex = line.indexOf(":");
+    if (colonIndex !== -1) {
+      const surface = line.slice(0, colonIndex).trim();
+      const pattern = line.slice(colonIndex + 1).trim();
+      if (surface && pattern) {
+        result.push({ surface, pattern });
+        continue;
+      }
+    }
+    result.push({ surface: fallbackDrafts[0]?.surface ?? "bash", pattern: line });
+  }
+  return result.length > 0 ? result : fallbackDrafts;
 }
 
 function resolveAlwaysDrafts(
@@ -166,13 +199,23 @@ export function extractSkillName(text: string): string | null {
 }
 
 function describeAsk(components: readonly DecisionComponent[], rawCommand?: string | null): string {
+  const asks = components.filter((c) => c.decision.state === "ask");
+  const lines: string[] = [];
+
   if (rawCommand && components.some((c) => c.surface === "bash")) {
-    const formatted = formatBashCommand(rawCommand);
-    const nonBash = components.filter((c) => c.surface !== "bash");
-    const bashSection = `bash:\n${formatted}`;
-    return nonBash.length > 0
-      ? `${bashSection}\n${nonBash.map((c) => `${c.surface}: ${c.value}`).join("\n")}`
-      : bashSection;
+    lines.push(`command:\n${formatBashCommand(rawCommand)}`);
   }
-  return components.map((component) => `${component.surface}: ${component.value}`).join("\n");
+
+  lines.push("requires approval:");
+  for (const ask of asks) {
+    const reasonSuffix = ask.askReason ? ` (${ask.askReason})` : "";
+    lines.push(`  • ${ask.surface}: ${ask.value}${reasonSuffix}`);
+  }
+
+  const allowed = components.filter((c) => c.decision.state === "allow" && c.surface === "bash");
+  if (allowed.length > 0 && asks.every((a) => a.surface !== "bash")) {
+    lines.push("  [command itself is allowed]");
+  }
+
+  return lines.join("\n");
 }

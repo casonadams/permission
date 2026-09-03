@@ -79,6 +79,23 @@ describe("permission extension adapter", () => {
     expect(extractSkillName("hello")).toBeNull();
   });
 
+  it("parses multi-drafts text for multi-surface always allow", async () => {
+    const { parseMultiDrafts } = await import("./index");
+    const fallbacks = [
+      { surface: "bash", pattern: "python3 *" },
+      { surface: "path", pattern: "/var/log/*" },
+    ];
+    // Keep both
+    expect(parseMultiDrafts("bash: python3 *\npath: /var/log/*", fallbacks)).toEqual([
+      { surface: "bash", pattern: "python3 *" },
+      { surface: "path", pattern: "/var/log/*" },
+    ]);
+    // Delete path line -> only save bash
+    expect(parseMultiDrafts("bash: python3 *", fallbacks)).toEqual([{ surface: "bash", pattern: "python3 *" }]);
+    // Empty text -> returns fallbacks
+    expect(parseMultiDrafts("", fallbacks)).toEqual(fallbacks);
+  });
+
   it("blocks bash commands when no UI is available", async () => {
     const installed = await setup({ permission: { bash: "ask" } });
     const result = await installed.handlers.get("tool_call")?.(
