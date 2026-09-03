@@ -128,7 +128,7 @@ function sessionDraft(component: DecisionComponent, cwd?: string): { surface: st
   return { surface: component.surface, pattern: "*" };
 }
 
-function stringInput(input: unknown, key: string): string | null {
+export function stringInput(input: unknown, key: string): string | null {
   if (typeof input !== "object" || input === null) return null;
   const value = (input as Record<string, unknown>)[key];
   return typeof value === "string" && value.trim().length > 0 ? value : null;

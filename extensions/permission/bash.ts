@@ -34,6 +34,35 @@ export function analyzeBashCommand(command: string): BashAnalysis {
   return { commands, pathTokens, suspicious: structuralSuspicious };
 }
 
+export function formatBashCommand(command: string): string {
+  const { tokens } = tokenize(command);
+  if (tokens.length === 0) return command;
+  const hasOperators = tokens.some((t) => t.kind === "separator" && t.raw !== "\n");
+  if (!hasOperators) return command;
+
+  const lines: string[] = [];
+  let current: string[] = [];
+
+  for (const token of tokens) {
+    if (token.kind === "separator") {
+      if (current.length > 0) {
+        lines.push(current.join(" "));
+        current = [];
+      }
+      if (token.raw.trim()) {
+        current.push(token.raw);
+      }
+      continue;
+    }
+    current.push(token.raw);
+  }
+  if (current.length > 0) {
+    lines.push(current.join(" "));
+  }
+
+  return lines.length > 1 ? lines.map((line, i) => (i === 0 ? line : `  ${line}`)).join("\n") : command;
+}
+
 function splitSegments(tokens: readonly Token[]): Segment[] {
   const segments: Segment[] = [];
   let current: Token[] = [];

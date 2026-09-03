@@ -81,7 +81,7 @@ Each key under `permission` is a surface:
 
 - `allow` permits the action silently.
 - `deny` blocks it, optionally returning a configured reason.
-- `ask` opens an approval prompt with Allow, Always allow, and Deny with reason.
+- `ask` opens an approval prompt with Allow, Edit / View, Always allow, and Deny with reason.
   Dismissing the prompt counts as deny. With no interactive UI, every `ask` blocks.
 - A string is shorthand for a catch-all. For example, `"read": "allow"` means
   `"read": { "*": "allow" }`.
@@ -148,10 +148,12 @@ Any specific rule in `permission.json` overrides these defaults. Even for
 default-allowed commands, the `path` surface still checks every referenced file
 against path rules and workspace boundaries.
 
-### Always allow rules
+### Edit / View and Always allow
 
-Choosing **Always allow** saves an allow rule to `permission.json` (project policy
-if present, otherwise global policy) and allows the action for the active session.
+- Choosing **Edit / View** opens an interactive editor with cursor navigation and
+  scrolling to review the full command or modify arguments before execution.
+- Choosing **Always allow** opens an editor to generalize the rule pattern and
+  saves it to `permission.json`.
 
 ## MCP
 

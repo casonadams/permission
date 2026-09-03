@@ -2,10 +2,18 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { getAgentDir, getPackageDir } from "@earendil-works/pi-coding-agent";
-import { type DecisionComponent, decideToolCall, type ToolCallCheck } from "./decide";
+import { formatBashCommand } from "./bash";
+import {
+  type DecisionComponent,
+  decideToolCall,
+  stringInput,
+  type ToolCallCheck,
+  type ToolCallDecision,
+} from "./decide";
 import { type CompiledRule, compileRule, decideSurface } from "./match";
 import { buildPolicy, loadPolicy, type Policy, saveAllowRules } from "./policy";
 import { promptPermission } from "./prompt";
+import { extractToolInputPath } from "./tool-paths";
 
 const DENY_REASON = "denied by permission policy";
 const NO_UI_REASON = "permission required but no interactive UI is available";
@@ -41,23 +49,13 @@ export default function permissionExtension(pi: ExtensionAPI): void {
       cwd: ctx.cwd,
       infrastructureDirs,
     };
-    const { decision, components, sessionDrafts } = decideToolCall(policy, sessionRules, call);
+    const toolDecision = decideToolCall(policy, sessionRules, call);
+    const { decision } = toolDecision;
     if (decision.state === "allow") return undefined;
     if (decision.state === "deny") return { block: true, reason: decision.reason ?? DENY_REASON };
     if (!ctx.hasUI) return { block: true, reason: NO_UI_REASON };
 
-    const defaultPattern = sessionDrafts[0]?.pattern;
-    const outcome = await promptPermission(ctx.ui, "Permission required", describeAsk(components), defaultPattern);
-    if (!outcome.approved) return { block: true, reason: outcome.reason ?? DENY_REASON };
-    if (outcome.always) {
-      const pattern = outcome.pattern;
-      const drafts =
-        pattern && sessionDrafts.length > 0
-          ? sessionDrafts.map((draft, i) => (i === 0 ? { ...draft, pattern } : draft))
-          : sessionDrafts;
-      activateRules(ctx, targetPolicyPath, sessionRules, drafts);
-    }
-    return undefined;
+    return promptAndResolveToolCall(event, ctx, toolDecision, { targetPolicyPath, sessionRules });
   });
 
   pi.on("input", async (event, ctx) => {
@@ -85,7 +83,10 @@ async function handleSkillInput(
   if (!ctx.hasUI) return { action: "handled" };
 
   const promptMsg = `skill: ${skillName}${decision.reason ? `\n${decision.reason}` : ""}`;
-  const outcome = await promptPermission(ctx.ui, "Permission required", promptMsg, skillName);
+  const outcome = await promptPermission(ctx.ui, "Permission required", promptMsg, {
+    rawInput: skillName,
+    defaultPattern: skillName,
+  });
   if (outcome.approved) {
     if (outcome.always) onAlwaysAllow(outcome.pattern ?? skillName);
     return { action: "continue" };
@@ -109,6 +110,54 @@ function activateRules(
   }
 }
 
+interface SessionContext {
+  readonly targetPolicyPath: string;
+  readonly sessionRules: CompiledRule[];
+}
+
+async function promptAndResolveToolCall(
+  event: { toolName: string; input: unknown },
+  ctx: ExtensionContext,
+  decision: ToolCallDecision,
+  session: SessionContext,
+): Promise<{ block?: boolean; reason?: string } | undefined> {
+  const rawCommand = event.toolName === "bash" ? stringInput(event.input, "command") : null;
+  const rawInput = rawCommand ?? extractToolInputPath(event.toolName, event.input) ?? undefined;
+  const outcome = await promptPermission(ctx.ui, "Permission required", describeAsk(decision.components, rawCommand), {
+    rawInput,
+    defaultPattern: decision.sessionDrafts[0]?.pattern,
+  });
+  if (!outcome.approved) return { block: true, reason: outcome.reason ?? DENY_REASON };
+  if (outcome.editedInput) {
+    applyEditedInput(event.toolName, event.input, outcome.editedInput);
+  }
+  if (outcome.always) {
+    const drafts = resolveAlwaysDrafts(decision.sessionDrafts, outcome.pattern);
+    activateRules(ctx, session.targetPolicyPath, session.sessionRules, drafts);
+  }
+  return undefined;
+}
+
+function resolveAlwaysDrafts(
+  sessionDrafts: readonly { surface: string; pattern: string }[],
+  pattern?: string,
+): readonly { surface: string; pattern: string }[] {
+  if (pattern && sessionDrafts.length > 0) {
+    return sessionDrafts.map((draft, i) => (i === 0 ? { ...draft, pattern } : draft));
+  }
+  return sessionDrafts;
+}
+
+function applyEditedInput(toolName: string, input: unknown, edited: string): void {
+  if (typeof input !== "object" || input === null) return;
+  const record = input as Record<string, unknown>;
+  if (toolName === "bash" || "command" in record) {
+    record.command = edited;
+  } else if ("path" in record) {
+    record.path = edited;
+  }
+}
+
 export function extractSkillName(text: string): string | null {
   const trimmed = text.trim();
   if (!trimmed.startsWith("/skill:")) return null;
@@ -116,6 +165,14 @@ export function extractSkillName(text: string): string | null {
   return name || null;
 }
 
-function describeAsk(components: readonly DecisionComponent[]): string {
+function describeAsk(components: readonly DecisionComponent[], rawCommand?: string | null): string {
+  if (rawCommand && components.some((c) => c.surface === "bash")) {
+    const formatted = formatBashCommand(rawCommand);
+    const nonBash = components.filter((c) => c.surface !== "bash");
+    const bashSection = `bash:\n${formatted}`;
+    return nonBash.length > 0
+      ? `${bashSection}\n${nonBash.map((c) => `${c.surface}: ${c.value}`).join("\n")}`
+      : bashSection;
+  }
   return components.map((component) => `${component.surface}: ${component.value}`).join("\n");
 }

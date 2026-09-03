@@ -1,5 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { analyzeBashCommand } from "./bash";
+import { analyzeBashCommand, formatBashCommand } from "./bash";
+
+describe("formatBashCommand: compound command formatting", () => {
+  it("keeps single simple commands on one line", () => {
+    expect(formatBashCommand("git status")).toBe("git status");
+    expect(formatBashCommand("python3 -c 'print(1)'")).toBe("python3 -c 'print(1)'");
+  });
+
+  it("splits compound commands on operators with indentation", () => {
+    const formatted = formatBashCommand("git status && cargo test");
+    expect(formatted).toBe("git status\n  && cargo test");
+  });
+
+  it("formats multi-stage pipelines and chains", () => {
+    const formatted = formatBashCommand("git checkout main && pnpm test || echo failed");
+    expect(formatted).toBe("git checkout main\n  && pnpm test\n  || echo failed");
+  });
+
+  it("does not split operators inside quotes", () => {
+    const formatted = formatBashCommand("echo 'a && b' && ls");
+    expect(formatted).toBe("echo 'a && b'\n  && ls");
+  });
+});
 
 describe("analyzeBashCommand: command splitting", () => {
   it("splits compound commands on separators", () => {

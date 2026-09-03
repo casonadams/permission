@@ -141,6 +141,34 @@ describe("permission extension adapter", () => {
     expect(saved.permission.bash).toBe("ask");
   });
 
+  it("allows editing command input via 'Edit / View' and executes mutated input", async () => {
+    const installed = await setup({ permission: { bash: "ask" } });
+    installed.selections.push("Edit / View");
+    installed.editors.push("npm run safe");
+
+    const inputObj = { command: "npm run risky" };
+    const res = await installed.handlers.get("tool_call")?.(
+      { toolName: "bash", input: inputObj } as never,
+      {
+        cwd: "/repo",
+        hasUI: true,
+        ui: { select: async () => installed.selections.shift(), editor: async () => installed.editors.shift() },
+      } as never,
+    );
+    expect(res).toBeUndefined();
+    expect(inputObj.command).toBe("npm run safe");
+  });
+
+  it("cancels execution if 'Edit / View' editor is dismissed", async () => {
+    const installed = await setup({ permission: { bash: "ask" } });
+    installed.selections.push("Edit / View");
+    installed.editors.push(undefined);
+    expect(await installed.call("npm test")).toEqual({
+      block: true,
+      reason: "Permission denied by user. Do not retry this operation without explicit user request.",
+    });
+  });
+
   it("denies with custom reason on 'Deny with reason'", async () => {
     const installed = await setup({ permission: { bash: "ask" } });
     installed.selections.push("Deny with reason");
