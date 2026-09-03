@@ -203,18 +203,16 @@ function describeAsk(components: readonly DecisionComponent[], rawCommand?: stri
   const lines: string[] = [];
 
   if (rawCommand && components.some((c) => c.surface === "bash")) {
-    lines.push(`command:\n${formatBashCommand(rawCommand)}`);
+    const isAllowed = asks.every((a) => a.surface !== "bash");
+    const tag = isAllowed ? " [allowed]" : "";
+    const formatted = formatBashCommand(rawCommand);
+    lines.push(formatted.includes("\n") ? `command${tag}:\n${formatted}` : `command: ${formatted}${tag}`);
   }
 
   lines.push("requires approval:");
   for (const ask of asks) {
     const reasonSuffix = ask.askReason ? ` (${ask.askReason})` : "";
     lines.push(`  • ${ask.surface}: ${ask.value}${reasonSuffix}`);
-  }
-
-  const allowed = components.filter((c) => c.decision.state === "allow" && c.surface === "bash");
-  if (allowed.length > 0 && asks.every((a) => a.surface !== "bash")) {
-    lines.push("  [command itself is allowed]");
   }
 
   return lines.join("\n");
