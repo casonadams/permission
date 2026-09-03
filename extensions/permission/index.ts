@@ -164,25 +164,27 @@ export function parseMultiDrafts(
   text: string,
   fallbackDrafts: readonly { surface: string; pattern: string }[],
 ): readonly { surface: string; pattern: string }[] {
-  const lines = text
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-  if (lines.length === 0) return fallbackDrafts;
-
+  const lines = text.split("\n");
   const result: { surface: string; pattern: string }[] = [];
-  for (const line of lines) {
-    const colonIndex = line.indexOf(":");
-    if (colonIndex !== -1) {
-      const surface = line.slice(0, colonIndex).trim();
-      const pattern = line.slice(colonIndex + 1).trim();
-      if (surface && pattern) {
-        result.push({ surface, pattern });
-        continue;
-      }
+  let current: { surface: string; pattern: string } | null = null;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const match = line.match(/^([a-z_][a-z0-9_-]*)\s*:\s*(.*)$/i);
+    if (match) {
+      if (current) result.push(current);
+      current = { surface: match[1].toLowerCase(), pattern: match[2].trim() };
+    } else if (current) {
+      current.pattern += `${current.pattern ? "\n" : ""}${line}`;
+    } else {
+      const fallbackSurface = fallbackDrafts[0]?.surface ?? "bash";
+      current = { surface: fallbackSurface, pattern: line };
     }
-    result.push({ surface: fallbackDrafts[0]?.surface ?? "bash", pattern: line });
   }
+  if (current) result.push(current);
+
   return result.length > 0 ? result : fallbackDrafts;
 }
 

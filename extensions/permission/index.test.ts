@@ -92,6 +92,13 @@ describe("permission extension adapter", () => {
     ]);
     // Delete path line -> only save bash
     expect(parseMultiDrafts("bash: python3 *", fallbacks)).toEqual([{ surface: "bash", pattern: "python3 *" }]);
+    // Multi-line command continuation
+    expect(
+      parseMultiDrafts('bash: python3 -c "\n  import sys\n  print(sys.version)\n"\npath: /var/log/*', fallbacks),
+    ).toEqual([
+      { surface: "bash", pattern: 'python3 -c "\nimport sys\nprint(sys.version)\n"' },
+      { surface: "path", pattern: "/var/log/*" },
+    ]);
     // Empty text -> returns fallbacks
     expect(parseMultiDrafts("", fallbacks)).toEqual(fallbacks);
   });
