@@ -12,7 +12,7 @@ import {
 } from "./decide";
 import { type CompiledRule, compileRule, decideSurface } from "./match";
 import { buildPolicy, loadPolicy, type Policy, saveAllowRules } from "./policy";
-import { promptPermission } from "./prompt";
+import { type PromptDetails, promptPermission } from "./prompt";
 import { extractToolInputPath } from "./tool-paths";
 
 const DENY_REASON = "denied by permission policy";
@@ -86,6 +86,8 @@ async function handleSkillInput(
   const outcome = await promptPermission(ctx.ui, "Permission required", promptMsg, {
     rawInput: skillName,
     defaultPattern: skillName,
+    inputSurface: "skill",
+    ruleSurface: "skill",
   });
   if (outcome.approved) {
     if (outcome.always) onAlwaysAllow(outcome.pattern ?? skillName);
@@ -122,15 +124,13 @@ async function promptAndResolveToolCall(
   session: SessionContext,
 ): Promise<{ block?: boolean; reason?: string } | undefined> {
   const rawCommand = event.toolName === "bash" ? stringInput(event.input, "command") : null;
-  const rawInput = rawCommand ?? extractToolInputPath(event.toolName, event.input) ?? undefined;
-  const defaultPattern =
-    decision.sessionDrafts.length > 1
-      ? decision.sessionDrafts.map((d) => `${d.surface}: ${d.pattern}`).join("\n")
-      : decision.sessionDrafts[0]?.pattern;
-  const outcome = await promptPermission(ctx.ui, "Permission required", describeAsk(decision.components, rawCommand), {
-    rawInput,
-    defaultPattern,
-  });
+  const details = buildPromptDetails(event, decision.sessionDrafts);
+  const outcome = await promptPermission(
+    ctx.ui,
+    "Permission required",
+    describeAsk(decision.components, rawCommand),
+    details,
+  );
   if (!outcome.approved) return { block: true, reason: outcome.reason ?? DENY_REASON };
   if (outcome.editedInput) {
     applyEditedInput(event.toolName, event.input, outcome.editedInput);
@@ -143,6 +143,21 @@ async function promptAndResolveToolCall(
     activateRules(ctx, session.targetPolicyPath, session.sessionRules, drafts);
   }
   return undefined;
+}
+
+function buildPromptDetails(
+  event: { toolName: string; input: unknown },
+  sessionDrafts: readonly { surface: string; pattern: string }[],
+): PromptDetails {
+  const rawCommand = event.toolName === "bash" ? stringInput(event.input, "command") : null;
+  const rawInput = rawCommand ?? extractToolInputPath(event.toolName, event.input) ?? undefined;
+  const defaultPattern =
+    sessionDrafts.length > 1
+      ? sessionDrafts.map((d) => `${d.surface}: ${d.pattern}`).join("\n")
+      : sessionDrafts[0]?.pattern;
+  const ruleSurfaces = [...new Set(sessionDrafts.map((d) => d.surface))];
+  const ruleSurface = ruleSurfaces.length > 0 ? ruleSurfaces.join(" + ") : undefined;
+  return { rawInput, defaultPattern, inputSurface: event.toolName, ruleSurface };
 }
 
 export function parseMultiDrafts(

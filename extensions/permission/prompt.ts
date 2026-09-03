@@ -17,6 +17,8 @@ export function formatUserDenial(custom?: string): string {
 export interface PromptDetails {
   readonly rawInput?: string;
   readonly defaultPattern?: string;
+  readonly inputSurface?: string;
+  readonly ruleSurface?: string;
 }
 
 export async function promptPermission(
@@ -41,9 +43,9 @@ async function handleChoice(
     case "Allow":
       return { approved: true, always: false };
     case "Edit / View":
-      return resolveEditView(ui, details?.rawInput);
+      return resolveEditView(ui, details?.rawInput, details?.inputSurface);
     case "Always allow":
-      return resolveAlwaysAllow(ui, details?.defaultPattern ?? details?.rawInput);
+      return resolveAlwaysAllow(ui, details?.defaultPattern ?? details?.rawInput, details?.ruleSurface);
     case "Deny with reason": {
       const reason = await ui.input("Reason:");
       if (reason === undefined) return null;
@@ -54,7 +56,11 @@ async function handleChoice(
   }
 }
 
-async function resolveEditView(ui: ExtensionContext["ui"], rawInput?: string): Promise<PromptOutcome | null> {
+async function resolveEditView(
+  ui: ExtensionContext["ui"],
+  rawInput?: string,
+  surface?: string,
+): Promise<PromptOutcome | null> {
   if (!rawInput) {
     return { approved: true, always: false };
   }
@@ -62,14 +68,19 @@ async function resolveEditView(ui: ExtensionContext["ui"], rawInput?: string): P
   if (typeof promptEditor !== "function") {
     return { approved: true, always: false, editedInput: rawInput };
   }
-  const edited = await promptEditor("Edit command / arguments before running:", rawInput);
+  const label = surface === "bash" ? "bash command" : surface ? `${surface} input` : "command / arguments";
+  const edited = await promptEditor(`Edit ${label} before running:`, rawInput);
   if (edited === undefined) {
     return null;
   }
   return { approved: true, always: false, editedInput: edited.trim() || rawInput };
 }
 
-async function resolveAlwaysAllow(ui: ExtensionContext["ui"], defaultPattern?: string): Promise<PromptOutcome | null> {
+async function resolveAlwaysAllow(
+  ui: ExtensionContext["ui"],
+  defaultPattern?: string,
+  surface?: string,
+): Promise<PromptOutcome | null> {
   if (!defaultPattern) {
     return { approved: true, always: true };
   }
@@ -77,7 +88,8 @@ async function resolveAlwaysAllow(ui: ExtensionContext["ui"], defaultPattern?: s
   if (typeof promptEditor !== "function") {
     return { approved: true, always: true, pattern: defaultPattern };
   }
-  const edited = await promptEditor("Rule pattern to always allow:", defaultPattern);
+  const label = surface ? ` (${surface})` : "";
+  const edited = await promptEditor(`Rule pattern to save to permission.json${label}:`, defaultPattern);
   if (edited === undefined) {
     return null;
   }
