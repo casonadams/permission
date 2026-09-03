@@ -211,7 +211,7 @@ function describeAsk(components: readonly DecisionComponent[], rawCommand?: stri
 
   lines.push("requires approval:");
   for (const ask of asks) {
-    const reasonSuffix = ask.askReason ? ` (${ask.askReason})` : "";
+    const reasonSuffix = ask.askReason ? ` [${ask.askReason}]` : "";
     lines.push(`  • ${ask.surface}: ${ask.value}${reasonSuffix}`);
   }
 
