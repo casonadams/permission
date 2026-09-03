@@ -9,17 +9,21 @@ describe("formatBashCommand: compound command formatting", () => {
 
   it("splits compound commands on operators with indentation", () => {
     const formatted = formatBashCommand("git status && cargo test");
-    expect(formatted).toBe("git status\n  && cargo test");
+    expect(formatted).toBe("git status &&\n  cargo test");
   });
 
   it("formats multi-stage pipelines and chains", () => {
     const formatted = formatBashCommand("git checkout main && pnpm test || echo failed");
-    expect(formatted).toBe("git checkout main\n  && pnpm test\n  || echo failed");
+    expect(formatted).toBe("git checkout main &&\n  pnpm test ||\n  echo failed");
+  });
+
+  it("breaks after ;, not before", () => {
+    expect(formatBashCommand("git add .; git commit -m 'x'")).toBe("git add .;\n  git commit -m 'x'");
   });
 
   it("does not split operators inside quotes", () => {
     const formatted = formatBashCommand("echo 'a && b' && ls");
-    expect(formatted).toBe("echo 'a && b'\n  && ls");
+    expect(formatted).toBe("echo 'a && b' &&\n  ls");
   });
 });
 

@@ -45,13 +45,17 @@ export function formatBashCommand(command: string): string {
 
   for (const token of tokens) {
     if (token.kind === "separator") {
-      if (current.length > 0) {
-        lines.push(current.join(" "));
-        current = [];
+      if (token.raw === "\n") {
+        if (current.length > 0) {
+          lines.push(current.join(" "));
+          current = [];
+        }
+        continue;
       }
-      if (token.raw.trim()) {
-        current.push(token.raw);
-      }
+      if (current.length === 0) continue;
+      const line = current.join(" ");
+      lines.push(token.raw === ";" ? `${line};` : `${line} ${token.raw}`);
+      current = [];
       continue;
     }
     current.push(token.raw);
